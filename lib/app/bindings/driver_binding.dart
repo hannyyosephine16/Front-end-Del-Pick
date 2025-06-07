@@ -10,7 +10,7 @@ import 'package:del_pick/data/datasources/remote/order_remote_datasource.dart';
 import 'package:del_pick/data/datasources/remote/tracking_remote_datasource.dart';
 
 // Import the controller file once it's created
-// import 'package:del_pick/features/driver/controllers/driver_home_controller.dart';
+import 'package:del_pick/features/driver/controllers/driver_home_controller.dart';
 // import 'package:del_pick/features/driver/controllers/driver_request_controller.dart';
 // import 'package:del_pick/features/driver/controllers/delivery_controller.dart';
 // import 'package:del_pick/features/driver/controllers/driver_location_controller.dart';
@@ -47,7 +47,7 @@ class DriverBinding extends Bindings {
     Get.lazyPut<TrackingRepository>(() => TrackingRepository(Get.find()));
 
     // Controllers - uncomment when the controller files are created
-    /*
+
     Get.lazyPut<DriverHomeController>(
       () => DriverHomeController(
         driverRepository: Get.find(),
@@ -55,6 +55,7 @@ class DriverBinding extends Bindings {
         locationService: Get.find(),
       ),
     );
+    /*
     Get.lazyPut<DriverRequestController>(
       () => DriverRequestController(
         driverRepository: Get.find(),
