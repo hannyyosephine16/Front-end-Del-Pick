@@ -1,3 +1,8 @@
+import 'package:del_pick/Models/driver.dart';
+import 'package:del_pick/data/models/driver/driver_model.dart';
+
+import '../../../Models/store.dart';
+
 class UserModel {
   final int id;
   final String name;
@@ -7,6 +12,8 @@ class UserModel {
   final String? avatar;
   final DateTime? createdAt;
   final DateTime? updatedAt;
+  final DriverModel? driver;
+  final StoreModel? store;
 
   UserModel({
     required this.id,
@@ -17,6 +24,8 @@ class UserModel {
     this.avatar,
     this.createdAt,
     this.updatedAt,
+    this.driver,
+    this.store,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
@@ -27,14 +36,18 @@ class UserModel {
       phone: json['phone'] as String?,
       role: json['role'] as String,
       avatar: json['avatar'] as String?,
-      createdAt:
-          json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'] as String)
-              : null,
-      updatedAt:
-          json['updatedAt'] != null
-              ? DateTime.parse(json['updatedAt'] as String)
-              : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
+      driver: json['driver'] != null
+          ? DriverModel.fromJson(json['driver'] as Map<String, dynamic>)
+          : null,
+      store: json['store'] != null
+          ? StoreModel.fromJson(json['store'] as Map<String, dynamic>)
+          : null,
     );
   }
 
@@ -48,6 +61,8 @@ class UserModel {
       'avatar': avatar,
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
+      'driver': driver?.toJson(),
+      'store': store?.toJson(),
     };
   }
 
@@ -60,6 +75,8 @@ class UserModel {
     String? avatar,
     DateTime? createdAt,
     DateTime? updatedAt,
+    DriverModel? driver,
+    StoreModel? store,
   }) {
     return UserModel(
       id: id ?? this.id,
@@ -70,6 +87,8 @@ class UserModel {
       avatar: avatar ?? this.avatar,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      driver: driver ?? this.driver,
+      store: store ?? this.store,
     );
   }
 

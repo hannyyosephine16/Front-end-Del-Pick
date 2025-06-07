@@ -1,25 +1,34 @@
+import 'package:del_pick/data/models/driver/driver_model.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/features/auth/controllers/auth_controller.dart';
-import 'package:del_pick/core/constants/app_constants.dart';
+import 'package:del_pick/core/widgets/custom_button.dart';
+import 'package:del_pick/core/widgets/loading_widget.dart';
+import 'package:del_pick/core/widgets/error_widget.dart' as custom_error;
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
+import 'package:del_pick/data/models/auth/user_model.dart';
+import 'package:del_pick/core/constants/app_constants.dart';
+
+import '../../../Models/store.dart';
+import '../controllers/profile_controller.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final authController = Get.find<AuthController>();
+    final AuthController authController = Get.find<AuthController>();
+    final ProfileController profileController = Get.put(ProfileController());
 
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
         title: const Text('Profile'),
         backgroundColor: AppColors.primary,
-        foregroundColor: Colors.white,
+        foregroundColor: AppColors.textOnPrimary,
         elevation: 0,
         actions: [
           IconButton(
@@ -29,353 +38,300 @@ class ProfileScreen extends StatelessWidget {
         ],
       ),
       body: Obx(() {
-        final user = authController.currentUser;
-        if (user == null) {
-          return const Center(child: CircularProgressIndicator());
+        if (profileController.isLoading && profileController.user == null) {
+          return const LoadingWidget(message: 'Loading profile...');
         }
 
-        return SingleChildScrollView(
-          child: Column(
-            children: [
-              // Header Section with Avatar and Basic Info
-              Container(
-                width: double.infinity,
-                decoration: BoxDecoration(
-                  color: AppColors.primary,
-                  borderRadius: const BorderRadius.only(
-                    bottomLeft: Radius.circular(30),
-                    bottomRight: Radius.circular(30),
-                  ),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(
-                    AppDimensions.paddingXL,
-                    0,
-                    AppDimensions.paddingXL,
-                    AppDimensions.paddingXL,
-                  ),
-                  child: Column(
-                    children: [
-                      const SizedBox(height: AppDimensions.spacingMD),
-                      // Profile Avatar
-                      CircleAvatar(
-                        radius: 50,
-                        backgroundColor: Colors.white,
-                        backgroundImage: user.avatar != null
-                            ? NetworkImage(user.avatar!)
-                            : null,
-                        child: user.avatar == null
-                            ? Icon(
-                                Icons.person,
-                                size: 50,
-                                color: AppColors.primary,
-                              )
-                            : null,
-                      ),
-                      const SizedBox(height: AppDimensions.spacingMD),
+        if (profileController.hasError && profileController.user == null) {
+          return custom_error.ErrorWidget(
+            message: profileController.errorMessage,
+            onRetry: () => profileController.loadProfile(),
+          );
+        }
 
-                      // Name
-                      Text(
-                        user.name,
-                        style: AppTextStyles.h4.copyWith(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: AppDimensions.spacingSM),
+        final user = profileController.user ?? authController.currentUser;
+        if (user == null) {
+          return const custom_error.ErrorWidget(
+            message: 'User data not found',
+          );
+        }
 
-                      // Role Badge
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          _getRoleDisplayName(user.role),
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              const SizedBox(height: AppDimensions.spacingXL),
-
-              // Profile Information Section
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppDimensions.paddingXL,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Basic Information
-                    _buildSectionTitle('Informasi Dasar'),
-                    const SizedBox(height: AppDimensions.spacingMD),
-
-                    _buildInfoCard([
-                      _buildInfoRow(
-                        icon: Icons.email,
-                        label: 'Email',
-                        value: user.email,
-                      ),
-                      if (user.phone != null)
-                        _buildInfoRow(
-                          icon: Icons.phone,
-                          label: 'Nomor Telepon',
-                          value: user.phone!,
-                        ),
-                    ]),
-
-                    const SizedBox(height: AppDimensions.spacingXL),
-
-                    // Role-specific Information
-                    if (authController.isDriver) ...[
-                      _buildDriverSpecificInfo(authController),
-                    ] else if (authController.isStore) ...[
-                      _buildStoreSpecificInfo(authController),
-                    ] else if (authController.isCustomer) ...[
-                      _buildCustomerSpecificInfo(authController),
-                    ],
-
-                    const SizedBox(height: AppDimensions.spacingXL),
-
-                    // Settings Section
-                    _buildSectionTitle('Pengaturan'),
-                    const SizedBox(height: AppDimensions.spacingMD),
-
-                    _buildSettingsCard(),
-
-                    const SizedBox(height: AppDimensions.spacingXL),
-
-                    // Logout Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () =>
-                            _showLogoutDialog(context, authController),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.error,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(
-                            vertical: AppDimensions.paddingMD,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.logout),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Keluar',
-                              style: AppTextStyles.bodyLarge.copyWith(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: AppDimensions.spacingXL),
-                  ],
-                ),
-              ),
-            ],
+        return RefreshIndicator(
+          onRefresh: () => profileController.loadProfile(),
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.all(AppDimensions.paddingLG),
+            child: Column(
+              children: [
+                _buildProfileHeader(user),
+                const SizedBox(height: AppDimensions.spacingXL),
+                _buildUserInfo(user),
+                const SizedBox(height: AppDimensions.spacingLG),
+                _buildRoleSpecificInfo(user),
+                const SizedBox(height: AppDimensions.spacingXL),
+                _buildActionButtons(authController),
+              ],
+            ),
           ),
         );
       }),
     );
   }
 
-  Widget _buildDriverSpecificInfo(AuthController authController) {
-    // Get driver data from storage or API
-    return Obx(() {
-      // You might need to get this from a driver controller
-      // For now, using placeholder data
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildSectionTitle('Informasi Driver'),
-          const SizedBox(height: AppDimensions.spacingMD),
-
-          _buildInfoCard([
-            _buildInfoRow(
-              icon: Icons.directions_car,
-              label: 'Nomor Kendaraan',
-              value: 'B 1234 XYZ', // Get from driver data
-            ),
-            _buildInfoRow(
-              icon: Icons.star,
-              label: 'Rating',
-              value: '4.8 (125 ulasan)', // Get from driver data
-            ),
-            _buildInfoRow(
-              icon: Icons.location_on,
-              label: 'Status',
-              value: 'Aktif', // Get from driver status
-              valueColor: AppColors.success,
-            ),
-          ]),
-
-          const SizedBox(height: AppDimensions.spacingMD),
-
-          // Driver Stats
-          Row(
-            children: [
-              Expanded(
-                child: _buildStatCard(
-                  'Total Pengantaran',
-                  '245',
-                  Icons.delivery_dining,
-                  AppColors.primary,
-                ),
-              ),
-              const SizedBox(width: AppDimensions.spacingMD),
-              Expanded(
-                child: _buildStatCard(
-                  'Pendapatan Bulan Ini',
-                  'Rp 2.5M',
-                  Icons.account_balance_wallet,
-                  AppColors.success,
-                ),
-              ),
-            ],
-          ),
-        ],
-      );
-    });
-  }
-
-  Widget _buildStoreSpecificInfo(AuthController authController) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Informasi Toko'),
-        const SizedBox(height: AppDimensions.spacingMD),
-
-        _buildInfoCard([
-          _buildInfoRow(
-            icon: Icons.store,
-            label: 'Nama Toko',
-            value: 'Warung Makan Sederhana', // Get from store data
-          ),
-          _buildInfoRow(
-            icon: Icons.location_on,
-            label: 'Alamat',
-            value: 'Jl. Sisingamangaraja No. 123', // Get from store data
-          ),
-          _buildInfoRow(
-            icon: Icons.access_time,
-            label: 'Jam Operasional',
-            value: '08:00 - 22:00', // Get from store data
-          ),
-          _buildInfoRow(
-            icon: Icons.check_circle,
-            label: 'Status Toko',
-            value: 'Buka',
-            valueColor: AppColors.success,
-          ),
-        ]),
-
-        const SizedBox(height: AppDimensions.spacingMD),
-
-        // Store Stats
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Total Menu',
-                '24',
-                Icons.restaurant_menu,
-                AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: AppDimensions.spacingMD),
-            Expanded(
-              child: _buildStatCard(
-                'Pesanan Bulan Ini',
-                '156',
-                Icons.shopping_bag,
-                AppColors.warning,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCustomerSpecificInfo(AuthController authController) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildSectionTitle('Informasi Customer'),
-        const SizedBox(height: AppDimensions.spacingMD),
-        Row(
-          children: [
-            Expanded(
-              child: _buildStatCard(
-                'Total Pesanan',
-                '28',
-                Icons.shopping_bag,
-                AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: AppDimensions.spacingMD),
-            Expanded(
-              child: _buildStatCard(
-                'Toko Favorit',
-                '5',
-                Icons.favorite,
-                AppColors.error,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildSectionTitle(String title) {
-    return Text(
-      title,
-      style: AppTextStyles.h5.copyWith(
-        fontWeight: FontWeight.bold,
-      ),
-    );
-  }
-
-  Widget _buildInfoCard(List<Widget> children) {
+  Widget _buildProfileHeader(UserModel user) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+      padding: const EdgeInsets.all(AppDimensions.paddingXL),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
+            color: AppColors.textSecondary.withOpacity(0.1),
             blurRadius: 10,
             offset: const Offset(0, 2),
           ),
         ],
       ),
       child: Column(
-        children: children,
+        children: [
+          // Avatar
+          Stack(
+            alignment: Alignment.bottomRight,
+            children: [
+              CircleAvatar(
+                radius: 50,
+                backgroundColor: AppColors.primary.withOpacity(0.1),
+                backgroundImage: user.avatar != null && user.avatar!.isNotEmpty
+                    ? NetworkImage(user.avatar!)
+                    : null,
+                child: user.avatar == null || user.avatar!.isEmpty
+                    ? Text(
+                        user.name.isNotEmpty ? user.name[0].toUpperCase() : 'U',
+                        style: AppTextStyles.h3.copyWith(
+                          color: AppColors.primary,
+                        ),
+                      )
+                    : null,
+              ),
+              Container(
+                padding: const EdgeInsets.all(4),
+                decoration: BoxDecoration(
+                  color: _getRoleColor(user.role),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: AppColors.surface, width: 2),
+                ),
+                child: Icon(
+                  _getRoleIcon(user.role),
+                  color: AppColors.surface,
+                  size: 16,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppDimensions.spacingLG),
+
+          // Name
+          Text(
+            user.name,
+            style: AppTextStyles.h4,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppDimensions.spacingSM),
+
+          // Role Badge
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: AppDimensions.paddingMD,
+              vertical: AppDimensions.paddingSM,
+            ),
+            decoration: BoxDecoration(
+              color: _getRoleColor(user.role).withOpacity(0.1),
+              borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+            ),
+            child: Text(
+              _getRoleDisplayName(user.role),
+              style: AppTextStyles.bodyMedium.copyWith(
+                color: _getRoleColor(user.role),
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildUserInfo(UserModel user) {
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textSecondary.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Personal Information',
+            style: AppTextStyles.h6,
+          ),
+          const SizedBox(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.email_outlined,
+            label: 'Email',
+            value: user.email,
+          ),
+          const Divider(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.phone_outlined,
+            label: 'Phone',
+            value: user.phone ?? 'Not provided',
+          ),
+          const Divider(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.calendar_today_outlined,
+            label: 'Member Since',
+            value: user.createdAt != null
+                ? _formatDate(user.createdAt!)
+                : 'Unknown',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRoleSpecificInfo(UserModel user) {
+    switch (user.role) {
+      case AppConstants.roleDriver:
+        return _buildDriverInfo(user.driver);
+      case AppConstants.roleStore:
+        return _buildStoreInfo(user.store);
+      default:
+        return const SizedBox.shrink();
+    }
+  }
+
+  Widget _buildDriverInfo(DriverModel? driverData) {
+    if (driverData == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textSecondary.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Driver Information',
+            style: AppTextStyles.h6,
+          ),
+          const SizedBox(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.directions_car_outlined,
+            label: 'Vehicle Number',
+            value: driverData.vehicleNumber,
+          ),
+          const Divider(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.star_outline,
+            label: 'Rating',
+            value: driverData.displayRating,
+          ),
+          const Divider(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.circle,
+            label: 'Status',
+            value: driverData.statusDisplayName,
+            valueColor: _getDriverStatusColor(driverData.status),
+          ),
+          if (driverData.hasLocation) ...[
+            const Divider(height: AppDimensions.spacingLG),
+            _buildInfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Last Location',
+              value: '${driverData.latitude}, ${driverData.longitude}',
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStoreInfo(StoreModel? storeModel) {
+    if (storeModel == null) return const SizedBox.shrink();
+
+    return Container(
+      padding: const EdgeInsets.all(AppDimensions.paddingLG),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.textSecondary.withOpacity(0.1),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Store Information',
+            style: AppTextStyles.h6,
+          ),
+          const SizedBox(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.store_outlined,
+            label: 'Store Name',
+            value: storeModel.name,
+          ),
+          if (storeModel.description != null) ...[
+            const Divider(height: AppDimensions.spacingLG),
+            _buildInfoRow(
+              icon: Icons.description_outlined,
+              label: 'Description',
+              value: storeModel.description!,
+            ),
+          ],
+          if (storeModel.address != null) ...[
+            const Divider(height: AppDimensions.spacingLG),
+            _buildInfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Address',
+              value: storeModel.address!,
+            ),
+          ],
+          const Divider(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.access_time_outlined,
+            label: 'Operating Hours',
+            value: storeModel.openHours,
+          ),
+          const Divider(height: AppDimensions.spacingLG),
+          _buildInfoRow(
+            icon: Icons.circle,
+            label: 'Status',
+            value: storeModel.statusDisplayName,
+            valueColor: _getStoreStatusColor(storeModel.status),
+          ),
+        ],
       ),
     );
   }
@@ -386,35 +342,87 @@ class ProfileScreen extends StatelessWidget {
     required String value,
     Color? valueColor,
   }) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          Icon(
-            icon,
-            color: AppColors.primary,
-            size: 20,
-          ),
-          const SizedBox(width: AppDimensions.spacingMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  label,
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(
+          icon,
+          size: 20,
+          color: AppColors.textSecondary,
+        ),
+        const SizedBox(width: AppDimensions.spacingMD),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  value,
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    fontWeight: FontWeight.w500,
-                    color: valueColor ?? AppColors.textPrimary,
-                  ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: AppTextStyles.bodyMedium.copyWith(
+                  color: valueColor ?? AppColors.textPrimary,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons(AuthController authController) {
+    return Column(
+      children: [
+        CustomButton.outlined(
+          text: 'Edit Profile',
+          onPressed: () => Get.toNamed(Routes.EDIT_PROFILE),
+          icon: Icons.edit_outlined,
+          isExpanded: true,
+        ),
+        const SizedBox(height: AppDimensions.spacingMD),
+        CustomButton.outlined(
+          text: 'Settings',
+          onPressed: () => Get.toNamed(Routes.SETTINGS),
+          icon: Icons.settings_outlined,
+          isExpanded: true,
+        ),
+        const SizedBox(height: AppDimensions.spacingLG),
+        CustomButton(
+          text: 'Logout',
+          onPressed: () => _showLogoutDialog(authController),
+          icon: Icons.logout,
+          backgroundColor: AppColors.error,
+          foregroundColor: AppColors.textOnPrimary,
+          isExpanded: true,
+        ),
+      ],
+    );
+  }
+
+  void _showLogoutDialog(AuthController authController) {
+    Get.dialog(
+      AlertDialog(
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () {
+              Get.back();
+              authController.logout();
+            },
+            child: Text(
+              'Logout',
+              style: TextStyle(color: AppColors.error),
             ),
           ),
         ],
@@ -422,142 +430,41 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildStatCard(
-    String title,
-    String value,
-    IconData icon,
-    Color color,
-  ) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingLG),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          Icon(
-            icon,
-            color: color,
-            size: 30,
-          ),
-          const SizedBox(height: AppDimensions.spacingSM),
-          Text(
-            value,
-            style: AppTextStyles.h5.copyWith(
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            title,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: AppColors.textSecondary,
-            ),
-            textAlign: TextAlign.center,
-          ),
-        ],
-      ),
-    );
+  // Helper methods
+  Color _getRoleColor(String role) {
+    switch (role) {
+      case AppConstants.roleDriver:
+        return AppColors.driverActive;
+      case AppConstants.roleStore:
+        return AppColors.storeOpen;
+      case AppConstants.roleAdmin:
+        return AppColors.warning;
+      default:
+        return AppColors.primary;
+    }
   }
 
-  Widget _buildSettingsCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            spreadRadius: 1,
-            blurRadius: 10,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Column(
-        children: [
-          _buildSettingItem(
-            icon: Icons.edit,
-            title: 'Edit Profile',
-            onTap: () => Get.toNamed(Routes.EDIT_PROFILE),
-          ),
-          const Divider(height: 1),
-          _buildSettingItem(
-            icon: Icons.lock,
-            title: 'Ubah Password',
-            onTap: () {
-              // Navigate to change password
-            },
-          ),
-          const Divider(height: 1),
-          _buildSettingItem(
-            icon: Icons.notifications,
-            title: 'Notifikasi',
-            onTap: () {
-              // Navigate to notification settings
-            },
-          ),
-          const Divider(height: 1),
-          _buildSettingItem(
-            icon: Icons.help,
-            title: 'Bantuan',
-            onTap: () {
-              // Navigate to help
-            },
-          ),
-          const Divider(height: 1),
-          _buildSettingItem(
-            icon: Icons.info,
-            title: 'Tentang Aplikasi',
-            onTap: () {
-              // Show about dialog
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSettingItem({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return ListTile(
-      leading: Icon(
-        icon,
-        color: AppColors.primary,
-      ),
-      title: Text(
-        title,
-        style: AppTextStyles.bodyMedium,
-      ),
-      trailing: const Icon(
-        Icons.chevron_right,
-        color: AppColors.textSecondary,
-      ),
-      onTap: onTap,
-    );
+  IconData _getRoleIcon(String role) {
+    switch (role) {
+      case AppConstants.roleDriver:
+        return Icons.delivery_dining;
+      case AppConstants.roleStore:
+        return Icons.store;
+      case AppConstants.roleAdmin:
+        return Icons.admin_panel_settings;
+      default:
+        return Icons.person;
+    }
   }
 
   String _getRoleDisplayName(String role) {
     switch (role) {
       case AppConstants.roleCustomer:
-        return 'Pelanggan';
+        return 'Customer';
       case AppConstants.roleDriver:
         return 'Driver';
       case AppConstants.roleStore:
-        return 'Pemilik Toko';
+        return 'Store Owner';
       case AppConstants.roleAdmin:
         return 'Administrator';
       default:
@@ -565,34 +472,33 @@ class ProfileScreen extends StatelessWidget {
     }
   }
 
-  void _showLogoutDialog(BuildContext context, AuthController authController) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Konfirmasi Logout'),
-          content: const Text('Apakah Anda yakin ingin keluar dari aplikasi?'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text(
-                'Batal',
-                style: TextStyle(color: AppColors.textSecondary),
-              ),
-            ),
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                authController.logout();
-              },
-              child: Text(
-                'Keluar',
-                style: TextStyle(color: AppColors.error),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+  Color _getDriverStatusColor(String status) {
+    switch (status) {
+      case 'active':
+        return AppColors.driverActive;
+      case 'busy':
+        return AppColors.driverBusy;
+      case 'inactive':
+        return AppColors.driverInactive;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  Color _getStoreStatusColor(String status) {
+    switch (status) {
+      case 'active':
+        return AppColors.storeOpen;
+      case 'inactive':
+        return AppColors.storeClosed;
+      case 'suspended':
+        return AppColors.error;
+      default:
+        return AppColors.textSecondary;
+    }
+  }
+
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 }

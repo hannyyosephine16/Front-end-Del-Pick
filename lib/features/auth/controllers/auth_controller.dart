@@ -376,6 +376,11 @@ class AuthController extends GetxController {
     }
   }
 
+  void updateCurrentUser(UserModel user) {
+    _currentUser.value = user;
+    _userRole.value = user.role;
+  }
+
   // Quick access methods
   String get userName => currentUser?.name ?? '';
   String get userEmail => currentUser?.email ?? '';
