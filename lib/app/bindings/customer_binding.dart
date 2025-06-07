@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:del_pick/features/customer/controllers/store_controller.dart';
+import 'package:del_pick/features/customer/controllers/store_detail_controller.dart';
 import 'package:del_pick/features/customer/controllers/home_controller.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
 import 'package:del_pick/data/repositories/tracking_repository.dart';
@@ -14,19 +15,18 @@ import 'package:del_pick/data/providers/order_provider.dart';
 class CustomerBinding extends Bindings {
   @override
   void dependencies() {
-    // Providers
+// Providers
     Get.lazyPut<StoreProvider>(() => StoreProvider());
     Get.lazyPut<MenuProvider>(() => MenuProvider());
     Get.lazyPut<OrderProvider>(() => OrderProvider());
     Get.lazyPut<TrackingProvider>(() => TrackingProvider());
-
-    // Repositories
+// Repositories
     Get.lazyPut<StoreRepository>(() => StoreRepository(Get.find()));
     Get.lazyPut<MenuRepository>(() => MenuRepository(Get.find()));
     Get.lazyPut<OrderRepository>(() => OrderRepository(Get.find()));
     Get.lazyPut<TrackingRepository>(() => TrackingRepository(Get.find()));
 
-    // Controllers
+// Controllers
     Get.lazyPut<HomeController>(
       () => HomeController(
         storeRepository: Get.find(),
@@ -41,5 +41,6 @@ class CustomerBinding extends Bindings {
         locationService: Get.find(),
       ),
     );
+    Get.lazyPut<StoreDetailController>(() => StoreDetailController());
   }
 }

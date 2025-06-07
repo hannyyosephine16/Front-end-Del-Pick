@@ -121,8 +121,53 @@ class AppPages {
       page: () => const StoreDetailScreen(),
       binding: CustomerBinding(),
     ),
+    GetPage(
+      name: Routes.MENU,
+      page: () => const MenuScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.MENU_ITEM_DETAIL,
+      page: () => const MenuItemDetailScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.CART,
+      page: () => const CartScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.CHECKOUT,
+      page: () => const CheckoutScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.ORDER_HISTORY,
+      page: () => const OrderHistoryScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.ORDER_DETAIL,
+      page: () => const CustomerOrderDetailScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.ORDER_TRACKING,
+      page: () => const OrderTrackingScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.REVIEW,
+      page: () => const ReviewScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.CUSTOMER_PROFILE,
+      page: () => const CustomerProfileScreen(),
+      binding: CustomerBinding(),
+    ),
 
-    // Store routes - LENGKAPKAN INI
+    // Store routes
     GetPage(
       name: Routes.STORE_DASHBOARD,
       page: () => const StoreDashboardScreen(),

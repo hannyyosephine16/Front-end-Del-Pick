@@ -53,6 +53,9 @@ class AppColors {
   static const Color storeClosed = Color(0xFFF44336);
   static const Color storeBusy = Color(0xFFFF9800);
 
+  // Other colors
+  static const Color divider = Color(0xFFE2E8F0);
+
   // Rating colors
   static const Color rating = Color(0xFFFFD700);
   static const Color ratingStar = Color(0xFFFFC107);
@@ -126,6 +129,21 @@ class AppColors {
         return driverInactive;
       case 'busy':
         return driverBusy;
+      default:
+        return textSecondary;
+    }
+  }
+
+  static Color getStoreStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'open':
+        return storeOpen;
+      case 'inactive':
+      case 'closed':
+        return storeClosed;
+      case 'busy':
+        return storeBusy;
       default:
         return textSecondary;
     }
