@@ -50,6 +50,7 @@ import 'package:del_pick/features/store/screens/order_detail_screen.dart';
 import 'package:del_pick/features/store/screens/store_profile_screen.dart';
 import 'package:del_pick/features/store/screens/store_settings_screen.dart';
 
+import '../../core/middleware/role_middleware.dart';
 import '../../features/driver/screens/driver_main_screen.dart';
 import 'app_routes.dart';
 import '../bindings/auth_binding.dart';
@@ -99,6 +100,7 @@ class AppPages {
       name: Routes.PROFILE,
       page: () => const ProfileScreen(),
       binding: AuthBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: Routes.EDIT_PROFILE,
@@ -173,6 +175,7 @@ class AppPages {
       name: Routes.STORE_DASHBOARD,
       page: () => const StoreDashboardScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.STORE_ANALYTICS,

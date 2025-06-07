@@ -1,5 +1,5 @@
 import 'package:get/get.dart';
-import '../../../Services/location_service.dart';
+import '../../../core/services/external/location_service.dart';
 import '../../../data/repositories/driver_repository.dart';
 
 // Driver Location Controller
