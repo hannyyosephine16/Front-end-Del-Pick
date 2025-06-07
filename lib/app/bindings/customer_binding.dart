@@ -12,14 +12,22 @@ import 'package:del_pick/data/providers/store_provider.dart';
 import 'package:del_pick/data/providers/menu_provider.dart';
 import 'package:del_pick/data/providers/order_provider.dart';
 
+import '../../data/datasources/remote/order_remote_datasource.dart';
+import '../../data/datasources/remote/store_remote_datasource.dart';
+
 class CustomerBinding extends Bindings {
   @override
   void dependencies() {
+    // Data sources
+    Get.lazyPut<StoreRemoteDataSource>(() => StoreRemoteDataSource(Get.find()));
+    Get.lazyPut<OrderRemoteDataSource>(() => OrderRemoteDataSource(Get.find()));
+
 // Providers
     Get.lazyPut<StoreProvider>(() => StoreProvider());
     Get.lazyPut<MenuProvider>(() => MenuProvider());
     Get.lazyPut<OrderProvider>(() => OrderProvider());
     Get.lazyPut<TrackingProvider>(() => TrackingProvider());
+
 // Repositories
     Get.lazyPut<StoreRepository>(() => StoreRepository(Get.find()));
     Get.lazyPut<MenuRepository>(() => MenuRepository(Get.find()));

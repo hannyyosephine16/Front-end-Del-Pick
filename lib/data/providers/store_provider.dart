@@ -17,92 +17,30 @@ class StoreProvider {
   Future<Response> getNearbyStores({
     required double latitude,
     required double longitude,
-    Map<String, dynamic>? params,
   }) async {
-    final queryParams = {
+    final params = {
       'latitude': latitude.toString(),
       'longitude': longitude.toString(),
-      ...?params,
     };
-
     return await _apiService.get(
       ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
+      queryParameters: params,
     );
   }
 
-  Future<Response> getStoreById(int storeId) async {
-    return await _apiService.get('${ApiEndpoints.getAllStores}/$storeId');
+  Future<Response> getStoreDetail(int storeId) async {
+    return await _apiService.get(ApiEndpoints.getStoreById(storeId));
   }
 
-  Future<Response> searchStores({
-    required String query,
-    double? latitude,
-    double? longitude,
-    Map<String, dynamic>? params,
-  }) async {
-    final queryParams = {
-      'search': query,
-      if (latitude != null) 'latitude': latitude.toString(),
-      if (longitude != null) 'longitude': longitude.toString(),
-      ...?params,
-    };
-
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
-    );
+  Future<Response> createStore(Map<String, dynamic> data) async {
+    return await _apiService.post(ApiEndpoints.createStore, data: data);
   }
 
-  Future<Response> getStoresByCategory({
-    required String category,
-    double? latitude,
-    double? longitude,
-    Map<String, dynamic>? params,
-  }) async {
-    final queryParams = {
-      'category': category,
-      if (latitude != null) 'latitude': latitude.toString(),
-      if (longitude != null) 'longitude': longitude.toString(),
-      ...?params,
-    };
-
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
-    );
+  Future<Response> updateStore(int storeId, Map<String, dynamic> data) async {
+    return await _apiService.put(ApiEndpoints.updateStore(storeId), data: data);
   }
 
-  Future<Response> getStoresWithFilters({
-    String? search,
-    String? category,
-    String? sortBy,
-    String? sortOrder,
-    double? latitude,
-    double? longitude,
-    double? radius,
-    String? status,
-    int? page,
-    int? limit,
-  }) async {
-    final queryParams = <String, dynamic>{};
-
-    if (search != null && search.isNotEmpty) queryParams['search'] = search;
-    if (category != null && category.isNotEmpty)
-      queryParams['category'] = category;
-    if (sortBy != null && sortBy.isNotEmpty) queryParams['sortBy'] = sortBy;
-    if (sortOrder != null && sortOrder.isNotEmpty)
-      queryParams['sortOrder'] = sortOrder;
-    if (latitude != null) queryParams['latitude'] = latitude.toString();
-    if (longitude != null) queryParams['longitude'] = longitude.toString();
-    if (radius != null) queryParams['radius'] = radius.toString();
-    if (status != null && status.isNotEmpty) queryParams['status'] = status;
-    if (page != null) queryParams['page'] = page.toString();
-    if (limit != null) queryParams['limit'] = limit.toString();
-
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
-    );
+  Future<Response> deleteStore(int storeId) async {
+    return await _apiService.delete(ApiEndpoints.deleteStore(storeId));
   }
 }
