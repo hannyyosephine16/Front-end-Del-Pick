@@ -62,9 +62,7 @@ class StoreModel {
       latitude: (json['latitude'] as num?)?.toDouble(),
       longitude: (json['longitude'] as num?)?.toDouble(),
       distance: (json['distance'] as num?)?.toDouble(),
-      // status: json['status'] as String? ?? 'active',
-      status: json['status'] as String,
-      // image: json['image'] as String?,
+      status: json['status'] as String? ?? 'active',
       user: json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
           : null,
@@ -149,6 +147,24 @@ class StoreModel {
   bool get isOpen => status == 'active';
   bool get isClosed => status == 'inactive';
 
+  // Add the missing statusDisplayName getter
+  String get statusDisplayName {
+    switch (status) {
+      case 'active':
+        return 'Active';
+      case 'inactive':
+        return 'Inactive';
+      case 'closed':
+        return 'Closed';
+      case 'maintenance':
+        return 'Under Maintenance';
+      case 'suspended':
+        return 'Suspended';
+      default:
+        return status;
+    }
+  }
+
   bool isOpenNow() {
     if (openTime == null || closeTime == null) return false;
 
@@ -179,29 +195,16 @@ class StoreModel {
     }
   }
 
-  String get displayRating => rating?.toStringAsFixed(1) ?? '0.0';
-  String get displayDistance =>
-      distance != null ? '${distance!.toStringAsFixed(1)} km' : '';
-
-  String get statusDisplayName {
-    switch (status) {
-      case 'active':
-        return 'Buka';
-      case 'inactive':
-        return 'Tutup';
-      case 'suspended':
-        return 'Ditangguhkan';
-      default:
-        return status;
-    }
-  }
-
   String get operationalHours {
     if (openTime != null && closeTime != null) {
       return '$openTime - $closeTime';
     }
     return 'Tidak tersedia';
   }
+
+  String get displayRating => rating?.toStringAsFixed(1) ?? '0.0';
+  String get displayDistance =>
+      distance != null ? '${distance!.toStringAsFixed(1)} km' : '';
 
   @override
   bool operator ==(Object other) =>
