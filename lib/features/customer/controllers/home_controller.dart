@@ -7,6 +7,7 @@ import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
+import 'package:del_pick/app/routes/app_routes.dart';
 
 class HomeController extends GetxController {
   final StoreRepository _storeRepository;
@@ -138,27 +139,77 @@ class HomeController extends GetxController {
     await loadHomeData();
   }
 
+  // Navigation methods
   void navigateToStores() {
-    Get.toNamed('/store_list');
+    Get.toNamed(Routes.STORE_LIST);
   }
 
   void navigateToOrders() {
-    Get.toNamed('/order_history');
+    Get.toNamed(Routes.ORDER_HISTORY);
   }
 
   void navigateToStoreDetail(int storeId) {
-    Get.toNamed('/store_detail', arguments: {'storeId': storeId});
+    Get.toNamed(Routes.STORE_DETAIL, arguments: {'storeId': storeId});
   }
 
   void navigateToOrderDetail(int orderId) {
-    Get.toNamed('/order_detail', arguments: {'orderId': orderId});
+    Get.toNamed(Routes.ORDER_DETAIL, arguments: {'orderId': orderId});
   }
 
   void navigateToCart() {
-    Get.toNamed('/cart');
+    Get.toNamed(Routes.CART);
   }
 
   void navigateToProfile() {
-    Get.toNamed('/profile');
+    Get.toNamed(Routes.PROFILE);
+  }
+
+  // New method for "See All" navigation with context
+  void navigateToAllStores({String? source}) {
+    // Pass additional context if needed
+    final arguments = <String, dynamic>{};
+
+    if (source != null) {
+      arguments['source'] = source;
+    }
+
+    // Pass current location if available
+    if (_hasLocation.value) {
+      final position = _locationService.currentPosition;
+      if (position != null) {
+        arguments['userLatitude'] = position.latitude;
+        arguments['userLongitude'] = position.longitude;
+      }
+    }
+
+    // Navigate to store list with arguments
+    Get.toNamed(
+      Routes.STORE_LIST,
+      arguments: arguments.isNotEmpty ? arguments : null,
+    );
+  }
+
+  // Method to navigate to specific store categories or filters
+  void navigateToStoresWithFilter({
+    String? category,
+    String? searchQuery,
+    Map<String, dynamic>? filters,
+  }) {
+    final arguments = <String, dynamic>{};
+
+    if (category != null) arguments['category'] = category;
+    if (searchQuery != null) arguments['searchQuery'] = searchQuery;
+    if (filters != null) arguments['filters'] = filters;
+
+    // Pass current location if available
+    if (_hasLocation.value) {
+      final position = _locationService.currentPosition;
+      if (position != null) {
+        arguments['userLatitude'] = position.latitude;
+        arguments['userLongitude'] = position.longitude;
+      }
+    }
+
+    Get.toNamed(Routes.STORE_LIST, arguments: arguments);
   }
 }
