@@ -21,8 +21,10 @@ import 'package:del_pick/Services/tracking_service.dart';
 import 'package:del_pick/Services/driver_service.dart';
 import 'package:del_pick/Services/image_service.dart';
 import 'package:del_pick/Services/core/token_service.dart';
+import 'package:provider/provider.dart';
 
 import '../../Models/order_enum.dart';
+import '../../Services/cart_manager.dart';
 import '../Driver/track_order.dart';
 
 class CartScreen extends StatefulWidget {
@@ -82,7 +84,8 @@ class _CartScreenState extends State<CartScreen> with TickerProviderStateMixin {
   @override
   void initState() {
     super.initState();
-
+    final cartManager = Provider.of<CartManager>(context, listen: false);
+    cartManager.initialize();
     // Initialize with completed order if available
     if (widget.completedOrder != null) {
       _orderCreated = true;
