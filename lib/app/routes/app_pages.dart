@@ -112,11 +112,6 @@ class AppPages {
       binding: CustomerBinding(),
     ),
     GetPage(
-      name: Routes.STORE_LIST,
-      page: () => StoreListScreen(),
-      binding: CustomerBinding(),
-    ),
-    GetPage(
       name: Routes.STORE_DETAIL,
       page: () => const StoreDetailScreen(),
       binding: CustomerBinding(),
@@ -164,6 +159,11 @@ class AppPages {
     GetPage(
       name: Routes.CUSTOMER_PROFILE,
       page: () => const CustomerProfileScreen(),
+      binding: CustomerBinding(),
+    ),
+    GetPage(
+      name: Routes.STORE_LIST,
+      page: () => const StoreListScreen(),
       binding: CustomerBinding(),
     ),
 

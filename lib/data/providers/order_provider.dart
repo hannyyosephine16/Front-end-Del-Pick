@@ -17,6 +17,17 @@ class OrderProvider {
     );
   }
 
+  Future<Response> getUserOrders({Map<String, dynamic>? params}) async {
+    return await _apiService.get(
+      ApiEndpoints.userOrders,
+      queryParameters: params,
+    );
+  }
+
+  Future<Response> getOrderById(int orderId) async {
+    return await _apiService.get(ApiEndpoints.getOrderById(orderId));
+  }
+
   Future<Response> getOrdersByStore({Map<String, dynamic>? params}) async {
     return await _apiService.get(
       ApiEndpoints.storeOrders,

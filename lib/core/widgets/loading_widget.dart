@@ -5,7 +5,11 @@ class LoadingWidget extends StatelessWidget {
   final String? message;
   final double size;
 
-  const LoadingWidget({super.key, this.message, this.size = 50});
+  const LoadingWidget({
+    super.key,
+    this.message,
+    this.size = 24.0,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -17,16 +21,17 @@ class LoadingWidget extends StatelessWidget {
             width: size,
             height: size,
             child: const CircularProgressIndicator(
-              valueColor: AlwaysStoppedAnimation<Color>(AppColors.primary),
+              color: AppColors.primary,
+              strokeWidth: 3,
             ),
           ),
           if (message != null) ...[
             const SizedBox(height: 16),
             Text(
               message!,
-              style: const TextStyle(
-                fontSize: 16,
+              style: TextStyle(
                 color: AppColors.textSecondary,
+                fontSize: 14,
               ),
             ),
           ],

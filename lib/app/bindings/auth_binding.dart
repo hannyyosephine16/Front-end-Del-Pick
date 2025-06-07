@@ -34,6 +34,8 @@ class AuthBinding extends Bindings {
     Get.lazyPut<ForgetPasswordController>(
       () => ForgetPasswordController(Get.find()),
     );
-    Get.lazyPut<ProfileController>(() => ProfileController(Get.find()));
+    Get.lazyPut<ProfileController>(
+      () => ProfileController(authRepository: Get.find()),
+    );
   }
 }

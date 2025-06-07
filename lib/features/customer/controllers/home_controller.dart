@@ -97,29 +97,48 @@ class HomeController extends GetxController {
 
   Future<void> _loadNearbyStores() async {
     try {
-      final position = await _locationService.getCurrentLocation();
+      // PERBAIKAN: Selalu load all stores dulu untuk home
+      final result = await _storeRepository.getAllStores();
 
-      if (position != null) {
-        final result = await _storeRepository.getNearbyStores(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
-
-        if (result.isSuccess && result.data != null) {
-          // Limit to 5 stores for home screen
-          _nearbyStores.value = result.data!.take(5).toList();
-        }
+      if (result.isSuccess && result.data != null) {
+        // Limit to 5 stores for home screen
+        _nearbyStores.value = result.data!.take(5).toList();
+        print(
+            'HomeController: Loaded ${_nearbyStores.length} stores for home'); // Debug
       } else {
-        // Fallback to get all stores
-        final result = await _storeRepository.getAllStores();
-        if (result.isSuccess && result.data != null) {
-          _nearbyStores.value = result.data!.take(5).toList();
-        }
+        print(
+            'HomeController: Failed to load stores: ${result.message}'); // Debug
       }
     } catch (e) {
-      // Handle error silently for now
+      print('HomeController: Exception loading stores: $e'); // Debug
     }
   }
+
+  // Future<void> _loadNearbyStores() async {
+  //   try {
+  //     final position = await _locationService.getCurrentLocation();
+  //
+  //     if (position != null) {
+  //       final result = await _storeRepository.getNearbyStores(
+  //         latitude: position.latitude,
+  //         longitude: position.longitude,
+  //       );
+  //
+  //       if (result.isSuccess && result.data != null) {
+  //         // Limit to 5 stores for home screen
+  //         _nearbyStores.value = result.data!.take(5).toList();
+  //       }
+  //     } else {
+  //       // Fallback to get all stores
+  //       final result = await _storeRepository.getAllStores();
+  //       if (result.isSuccess && result.data != null) {
+  //         _nearbyStores.value = result.data!.take(5).toList();
+  //       }
+  //     }
+  //   } catch (e) {
+  //     // Handle error silently for now
+  //   }
+  // }
 
   Future<void> _loadRecentOrders() async {
     try {
