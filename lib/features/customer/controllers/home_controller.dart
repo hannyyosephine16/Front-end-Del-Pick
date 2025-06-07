@@ -17,9 +17,9 @@ class HomeController extends GetxController {
     required StoreRepository storeRepository,
     required OrderRepository orderRepository,
     required LocationService locationService,
-  }) : _storeRepository = storeRepository,
-       _orderRepository = orderRepository,
-       _locationService = locationService;
+  })  : _storeRepository = storeRepository,
+        _orderRepository = orderRepository,
+        _locationService = locationService;
 
   // Observable state
   final RxBool _isLoading = false.obs;
