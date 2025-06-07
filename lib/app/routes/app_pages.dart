@@ -50,6 +50,7 @@ import 'package:del_pick/features/store/screens/order_detail_screen.dart';
 import 'package:del_pick/features/store/screens/store_profile_screen.dart';
 import 'package:del_pick/features/store/screens/store_settings_screen.dart';
 
+import '../../features/driver/screens/driver_main_screen.dart';
 import 'app_routes.dart';
 import '../bindings/auth_binding.dart';
 import '../bindings/customer_binding.dart';
@@ -215,6 +216,11 @@ class AppPages {
     ),
 
     // Driver routes
+    GetPage(
+      name: Routes.DRIVER_MAIN,
+      page: () => const DriverMainScreen(),
+      binding: DriverBinding(),
+    ),
     GetPage(
       name: Routes.DRIVER_HOME,
       page: () => const DriverHomeScreen(),

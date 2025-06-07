@@ -33,11 +33,15 @@ class DriverModel {
       userId: json['userId'] as int,
       vehicleNumber:
           json['vehicle_number'] as String? ?? json['vehicleNumber'] as String,
-      rating: (json['rating'] as num?)?.toDouble() ?? 0.0,
-      reviewsCount:
-          json['reviews_count'] as int? ?? json['reviewsCount'] as int? ?? 0,
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
+      // FIX: Handle both String and num for rating
+      rating: _parseDouble(json['rating']) ?? 0.0,
+      // FIX: Handle both String and num for reviewsCount
+      reviewsCount: _parseInt(json['reviews_count']) ??
+          _parseInt(json['reviewsCount']) ??
+          0,
+      // FIX: Handle both String and num for latitude/longitude
+      latitude: _parseDouble(json['latitude']),
+      longitude: _parseDouble(json['longitude']),
       status: json['status'] as String? ?? 'inactive',
       user: json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
@@ -49,6 +53,28 @@ class DriverModel {
           ? DateTime.parse(json['updatedAt'] as String)
           : null,
     );
+  }
+
+  // Helper method to safely parse double from dynamic value
+  static double? _parseDouble(dynamic value) {
+    if (value == null) return null;
+    if (value is double) return value;
+    if (value is int) return value.toDouble();
+    if (value is String) {
+      return double.tryParse(value);
+    }
+    return null;
+  }
+
+  // Helper method to safely parse int from dynamic value
+  static int? _parseInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) {
+      return int.tryParse(value);
+    }
+    return null;
   }
 
   Map<String, dynamic> toJson() {

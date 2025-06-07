@@ -363,7 +363,7 @@ class AuthController extends GetxController {
         Get.offAllNamed(Routes.CUSTOMER_HOME);
         break;
       case AppConstants.roleDriver:
-        Get.offAllNamed(Routes.DRIVER_HOME);
+        Get.offAllNamed(Routes.DRIVER_MAIN);
         break;
       case AppConstants.roleStore:
         Get.offAllNamed(Routes.STORE_DASHBOARD);

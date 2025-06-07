@@ -1,3 +1,4 @@
+// lib/features/store/screens/store_dashboard_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
@@ -9,28 +10,24 @@ class StoreDashboardScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: AppBar(
-        backgroundColor: Colors.blue[700],
+        backgroundColor: Colors.orange[600],
         elevation: 0,
         title: Row(
           children: [
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Icon(Icons.store, color: Colors.blue[700], size: 20),
+            CircleAvatar(
+              backgroundColor: Colors.white,
+              child: Icon(Icons.store, color: Colors.orange[600]),
             ),
             const SizedBox(width: 12),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: const [
                 Text(
-                  'Warung Makan Sederhana',
+                  'Warung Sederhana',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
                 Text(
@@ -52,26 +49,27 @@ class StoreDashboardScreen extends StatelessWidget {
           ),
           const SizedBox(width: 16),
         ],
+        automaticallyImplyLeading: false,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Today's Summary Card
+            // Revenue Card
             Container(
               width: double.infinity,
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
                 gradient: LinearGradient(
-                  colors: [Colors.blue[700]!, Colors.blue[500]!],
+                  colors: [Colors.orange[600]!, Colors.orange[400]!],
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
                 ),
                 borderRadius: BorderRadius.circular(16),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.blue.withOpacity(0.3),
+                    color: Colors.orange.withOpacity(0.3),
                     blurRadius: 10,
                     offset: const Offset(0, 4),
                   ),
@@ -84,7 +82,7 @@ class StoreDashboardScreen extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Penjualan Hari Ini',
+                        'Pendapatan Hari Ini',
                         style: TextStyle(
                           color: Colors.white70,
                           fontSize: 14,
@@ -99,7 +97,7 @@ class StoreDashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Rp 450.000',
+                    'Rp 850.000',
                     style: TextStyle(
                       color: Colors.white,
                       fontSize: 28,
@@ -108,7 +106,7 @@ class StoreDashboardScreen extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   const Text(
-                    '15 Pesanan • Rating 4.7 ⭐',
+                    '23 Pesanan • 4.6 ⭐',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 12,
@@ -120,38 +118,25 @@ class StoreDashboardScreen extends StatelessWidget {
 
             const SizedBox(height: 24),
 
-            // Quick Stats Grid
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 12,
-              mainAxisSpacing: 12,
-              childAspectRatio: 1.3,
+            // Quick Stats
+            Row(
               children: [
-                _buildStatCard(
-                  'Pesanan Baru',
-                  '3',
-                  Icons.shopping_cart,
-                  Colors.orange,
+                Expanded(
+                  child: _buildStatCard(
+                    'Pesanan Aktif',
+                    '5',
+                    Icons.receipt_long,
+                    Colors.blue,
+                  ),
                 ),
-                _buildStatCard(
-                  'Siap Diantar',
-                  '2',
-                  Icons.check_circle,
-                  Colors.green,
-                ),
-                _buildStatCard(
-                  'Menu Aktif',
-                  '24',
-                  Icons.restaurant_menu,
-                  Colors.purple,
-                ),
-                _buildStatCard(
-                  'Stok Habis',
-                  '1',
-                  Icons.warning,
-                  Colors.red,
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildStatCard(
+                    'Menu Items',
+                    '42',
+                    Icons.restaurant_menu,
+                    Colors.green,
+                  ),
                 ),
               ],
             ),
@@ -178,47 +163,30 @@ class StoreDashboardScreen extends StatelessWidget {
 
             const SizedBox(height: 12),
 
-            // Orders List
+            // Recent Orders List
             _buildOrderCard(
-              orderId: '#DL003',
-              customerName: 'Maya Sari',
-              items: '2x Nasi Gudeg, 1x Es Teh',
-              total: '35.000',
-              time: '10:45',
-              status: 'Baru',
-              statusColor: Colors.orange,
-              actionText: 'Terima',
-            ),
-
-            const SizedBox(height: 12),
-
-            _buildOrderCard(
-              orderId: '#DL004',
+              orderId: '#ST001',
               customerName: 'Budi Santoso',
-              items: '1x Ayam Bakar, 1x Nasi Putih',
-              total: '28.000',
-              time: '10:30',
-              status: 'Diproses',
-              statusColor: Colors.blue,
-              actionText: 'Siap',
+              items: '2x Nasi Gudeg, 1x Es Teh',
+              total: '25.000',
+              status: 'Perlu Konfirmasi',
+              statusColor: Colors.orange,
             ),
 
             const SizedBox(height: 12),
 
             _buildOrderCard(
-              orderId: '#DL005',
-              customerName: 'Lisa Permata',
-              items: '3x Bakso Urat, 2x Es Jeruk',
-              total: '42.000',
-              time: '10:15',
-              status: 'Siap',
-              statusColor: Colors.green,
-              actionText: 'Selesai',
+              orderId: '#ST002',
+              customerName: 'Siti Aminah',
+              items: '1x Ayam Bakar, 1x Nasi Putih',
+              total: '18.000',
+              status: 'Sedang Disiapkan',
+              statusColor: Colors.blue,
             ),
 
             const SizedBox(height: 24),
 
-            // Quick Actions
+            // Action Buttons
             Row(
               children: [
                 Expanded(
@@ -257,33 +225,6 @@ class StoreDashboardScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Colors.blue[700],
-        unselectedItemColor: Colors.grey[600],
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.dashboard),
-            label: 'Dashboard',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.shopping_bag),
-            label: 'Pesanan',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.restaurant_menu),
-            label: 'Menu',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.analytics),
-            label: 'Analitik',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Pengaturan',
-          ),
-        ],
-      ),
     );
   }
 
@@ -304,38 +245,30 @@ class StoreDashboardScreen extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Icon(icon, color: color, size: 20),
               Container(
-                padding: const EdgeInsets.all(8),
+                padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
                   color: color.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(8),
+                  borderRadius: BorderRadius.circular(4),
                 ),
-                child: Icon(icon, color: color, size: 20),
+                child: Icon(icon, color: color, size: 12),
               ),
-              if (title == 'Stok Habis' && value != '0')
-                Container(
-                  width: 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
             ],
           ),
           const SizedBox(height: 8),
           Text(
             value,
             style: const TextStyle(
-              fontSize: 24,
+              fontSize: 18,
               fontWeight: FontWeight.bold,
             ),
           ),
+          const SizedBox(height: 2),
           Text(
             title,
             style: TextStyle(
@@ -353,10 +286,8 @@ class StoreDashboardScreen extends StatelessWidget {
     required String customerName,
     required String items,
     required String total,
-    required String time,
     required String status,
     required Color statusColor,
-    required String actionText,
   }) {
     return Container(
       padding: const EdgeInsets.all(16),
@@ -377,62 +308,43 @@ class StoreDashboardScreen extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    orderId,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    customerName,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      fontSize: 14,
-                    ),
-                  ),
-                ],
+              Text(
+                orderId,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: statusColor.withOpacity(0.1),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Text(
-                      status,
-                      style: TextStyle(
-                        color: statusColor,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w500,
-                      ),
-                    ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    time,
-                    style: TextStyle(
-                      color: Colors.grey[600],
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          Text(
+            customerName,
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
+              fontSize: 14,
+            ),
+          ),
+          const SizedBox(height: 4),
           Text(
             items,
             style: TextStyle(
-              color: Colors.grey[700],
+              color: Colors.grey[600],
               fontSize: 13,
             ),
           ),
@@ -441,28 +353,18 @@ class StoreDashboardScreen extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Total: Rp $total',
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                  color: Colors.green,
+                'Total:',
+                style: TextStyle(
+                  color: Colors.grey[600],
+                  fontSize: 12,
                 ),
               ),
-              ElevatedButton(
-                onPressed: () {},
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: statusColor,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  minimumSize: Size.zero,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                ),
-                child: Text(
-                  actionText,
-                  style: const TextStyle(fontSize: 12),
+              Text(
+                'Rp $total',
+                style: TextStyle(
+                  color: Colors.green[600],
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
                 ),
               ),
             ],

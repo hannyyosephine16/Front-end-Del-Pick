@@ -30,6 +30,7 @@ abstract class Routes {
 
   // Driver routes
   static const DRIVER_HOME = '/driver/home';
+  static const DRIVER_MAIN = '/driver/main';
   static const DRIVER_REQUESTS = '/driver/requests';
   static const REQUEST_DETAIL = '/driver/request_detail';
   static const DELIVERY = '/driver/delivery';
