@@ -1,3 +1,4 @@
+// lib/features/customer/widgets/menu_item_card.dart
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:del_pick/data/models/menu/menu_item_model.dart';
@@ -9,13 +10,17 @@ import 'package:del_pick/core/constants/app_constants.dart';
 class MenuItemCard extends StatelessWidget {
   final MenuItemModel menuItem;
   final VoidCallback onTap;
-  final VoidCallback onAddToCart;
+  final VoidCallback? onAddToCart;
+  final Widget? quantityWidget;
+
   const MenuItemCard({
     super.key,
     required this.menuItem,
     required this.onTap,
-    required this.onAddToCart,
+    this.onAddToCart,
+    this.quantityWidget,
   });
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -32,7 +37,7 @@ class MenuItemCard extends StatelessWidget {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-// Menu item image
+              // Menu item image
               ClipRRect(
                 borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
                 child: SizedBox(
@@ -43,28 +48,30 @@ class MenuItemCard extends StatelessWidget {
                           imageUrl: menuItem.imageUrl!,
                           fit: BoxFit.cover,
                           placeholder: (context, url) => Container(
-                            color: AppColors.surface,
-                            child: const Center(
-                              child: CircularProgressIndicator(),
-                            ),
-                          ),
-                          errorWidget: (context, url, error) => Container(
-                            color: AppColors.surface,
+                            color: AppColors.border,
                             child: const Icon(
                               Icons.restaurant,
                               color: AppColors.textSecondary,
                             ),
                           ),
+                          errorWidget: (context, url, error) => Container(
+                            color: AppColors.border,
+                            child: const Icon(
+                              Icons.broken_image,
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
                         )
                       : Container(
-                          color: AppColors.surface,
-                          child: const Icon(
-                            Icons.restaurant,
-                            color: AppColors.textSecondary,
+                          color: AppColors.border,
+                          child: Image.asset(
+                            AppConstants.defaultFoodImageUrl,
+                            fit: BoxFit.cover,
                           ),
                         ),
                 ),
               ),
+
               const SizedBox(width: AppDimensions.spacingMD),
 
               // Menu item details
@@ -72,7 +79,7 @@ class MenuItemCard extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Menu item name and availability
+                    // Name and availability
                     Row(
                       children: [
                         Expanded(
@@ -83,7 +90,7 @@ class MenuItemCard extends StatelessWidget {
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                        if (!menuItem.canOrder)
+                        if (!menuItem.isAvailable || !menuItem.isInStock)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 6,
@@ -94,7 +101,9 @@ class MenuItemCard extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              'Out of Stock',
+                              !menuItem.isAvailable
+                                  ? 'Unavailable'
+                                  : 'Out of Stock',
                               style: AppTextStyles.labelSmall.copyWith(
                                 color: AppColors.error,
                               ),
@@ -107,19 +116,40 @@ class MenuItemCard extends StatelessWidget {
 
                     // Description
                     if (menuItem.description != null &&
-                        menuItem.description!.isNotEmpty) ...[
+                        menuItem.description!.isNotEmpty)
                       Text(
                         menuItem.description!,
-                        style: AppTextStyles.bodySmall.copyWith(
+                        style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.textSecondary,
                         ),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: AppDimensions.spacingSM),
-                    ],
 
-                    // Price and Add button
+                    const SizedBox(height: AppDimensions.spacingSM),
+
+                    // Category
+                    if (menuItem.category != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: AppColors.primary.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          menuItem.category!,
+                          style: AppTextStyles.labelSmall.copyWith(
+                            color: AppColors.primary,
+                          ),
+                        ),
+                      ),
+
+                    const SizedBox(height: AppDimensions.spacingSM),
+
+                    // Price and actions
                     Row(
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
@@ -127,10 +157,24 @@ class MenuItemCard extends StatelessWidget {
                           menuItem.formattedPrice,
                           style: AppTextStyles.h6.copyWith(
                             color: AppColors.primary,
-                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        _buildAddButton(),
+
+                        // Quantity widget or add button
+                        if (quantityWidget != null)
+                          quantityWidget!
+                        else if (menuItem.canOrder)
+                          IconButton(
+                            onPressed: onAddToCart ?? onTap,
+                            icon: const Icon(Icons.add),
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppColors.primary,
+                              foregroundColor: AppColors.textOnPrimary,
+                              minimumSize: const Size(36, 36),
+                            ),
+                          )
+                        else
+                          const SizedBox(width: 36, height: 36),
                       ],
                     ),
                   ],
@@ -138,40 +182,6 @@ class MenuItemCard extends StatelessWidget {
               ),
             ],
           ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildAddButton() {
-    return SizedBox(
-      height: 32,
-      child: ElevatedButton(
-        onPressed: menuItem.canOrder ? onAddToCart : null,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
-          foregroundColor: AppColors.textOnPrimary,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppDimensions.paddingMD,
-          ),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-          ),
-          elevation: 0,
-        ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.add, size: 16),
-            const SizedBox(width: 4),
-            Text(
-              'Add',
-              style: AppTextStyles.labelSmall.copyWith(
-                color: AppColors.textOnPrimary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
         ),
       ),
     );

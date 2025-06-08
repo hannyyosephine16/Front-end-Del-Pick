@@ -80,4 +80,19 @@ class StoreProvider {
   Future<Response> getStoreDetail(int storeId) async {
     return await _apiService.get(ApiEndpoints.getStoreById(storeId));
   }
+
+  Future<Response> getStoreById(int storeId) async {
+    return await _apiService.get(ApiEndpoints.getStoreById(storeId));
+  }
+
+  // Future<Response> updateStoreStatus(
+  //     int storeId,
+  //     Map<String, dynamic> data,
+  //     )
+  // async {
+  //   return await _apiService.patch(
+  //     ApiEndpoints.updateStoreStatus(storeId),
+  //     data: data,
+  //   );
+  // }
 }

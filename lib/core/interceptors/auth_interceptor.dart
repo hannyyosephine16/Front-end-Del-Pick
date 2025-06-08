@@ -36,9 +36,6 @@ class AuthInterceptor extends Interceptor {
       print('AuthInterceptor: No token available'); // Debug
     }
 
-    print('AuthInterceptor: Request to ${options.path}'); // Debug
-    print('AuthInterceptor: Headers: ${options.headers}'); // Debug
-
     handler.next(options);
     // }
   }
@@ -70,7 +67,6 @@ class AuthInterceptor extends Interceptor {
     } else if (err.response?.statusCode == 403) {
       _handleForbidden(err);
     }
-
     handler.next(err);
   }
 

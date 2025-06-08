@@ -166,7 +166,7 @@ class AppPages {
     ),
     GetPage(
       name: Routes.STORE_LIST,
-      page: () => const StoreListScreen(),
+      page: () => StoreListScreen(),
       binding: CustomerBinding(),
     ),
 

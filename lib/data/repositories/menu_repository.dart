@@ -18,10 +18,9 @@ class MenuRepository {
 
       if (response.statusCode == 200) {
         final data = response.data['data'] as Map<String, dynamic>;
-        final menuItems =
-            (data['menuItems'] as List)
-                .map((json) => MenuItemModel.fromJson(json))
-                .toList();
+        final menuItems = (data['menuItems'] as List)
+            .map((json) => MenuItemModel.fromJson(json))
+            .toList();
 
         final paginatedResponse = PaginatedResponse<MenuItemModel>(
           data: menuItems,
@@ -54,10 +53,9 @@ class MenuRepository {
 
       if (response.statusCode == 200) {
         final data = response.data['data'] as Map<String, dynamic>;
-        final menuItems =
-            (data['menuItems'] as List)
-                .map((json) => MenuItemModel.fromJson(json))
-                .toList();
+        final menuItems = (data['menuItems'] as List)
+            .map((json) => MenuItemModel.fromJson(json))
+            .toList();
         return Result.success(menuItems);
       } else {
         return Result.failure(

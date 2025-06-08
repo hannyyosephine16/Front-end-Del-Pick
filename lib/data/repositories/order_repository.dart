@@ -5,6 +5,8 @@ import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/core/utils/result.dart';
 
+import '../../core/errors/error_handler.dart';
+
 class OrderRepository {
   final OrderProvider _orderProvider;
 
@@ -23,7 +25,11 @@ class OrderRepository {
         );
       }
     } catch (e) {
-      return Result.failure(e.toString());
+      if (e is Exception) {
+        final failure = ErrorHandler.handleException(e);
+        return Result.failure(ErrorHandler.getErrorMessage(failure));
+      }
+      return Result.failure('An unexpected error occurred');
     }
   }
 
@@ -35,10 +41,9 @@ class OrderRepository {
 
       if (response.statusCode == 200) {
         final data = response.data['data'] as Map<String, dynamic>;
-        final orders =
-            (data['orders'] as List)
-                .map((json) => OrderModel.fromJson(json))
-                .toList();
+        final orders = (data['orders'] as List)
+            .map((json) => OrderModel.fromJson(json))
+            .toList();
 
         final paginatedResponse = PaginatedResponse<OrderModel>(
           data: orders,
@@ -67,10 +72,9 @@ class OrderRepository {
 
       if (response.statusCode == 200) {
         final data = response.data['data'] as Map<String, dynamic>;
-        final orders =
-            (data['orders'] as List)
-                .map((json) => OrderModel.fromJson(json))
-                .toList();
+        final orders = (data['orders'] as List)
+            .map((json) => OrderModel.fromJson(json))
+            .toList();
 
         final paginatedResponse = PaginatedResponse<OrderModel>(
           data: orders,

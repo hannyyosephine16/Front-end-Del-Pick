@@ -4,6 +4,8 @@ import 'package:del_pick/data/providers/store_provider.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/core/utils/result.dart';
 
+import '../../core/errors/error_handler.dart';
+
 class StoreRepository {
   final StoreProvider _storeProvider;
 
@@ -11,7 +13,6 @@ class StoreRepository {
 
   Future<Result<List<StoreModel>>> getAllStores() async {
     try {
-      print('=== StoreRepository.getAllStores START ===');
       final response = await _storeProvider.getAllStores();
 
       print('Response Status: ${response.statusCode}');
@@ -99,6 +100,26 @@ class StoreRepository {
     } catch (e) {
       print('Nearby stores error: $e');
       return Result.failure(e.toString());
+    }
+  }
+
+  Future<Result<StoreModel>> getStoreById(int id) async {
+    try {
+      final response = await _storeProvider.getStoreById(id);
+
+      if (response.statusCode == 200) {
+        final store =
+            StoreModel.fromJson(response.data['data'] as Map<String, dynamic>);
+        return Result.success(store);
+      } else {
+        return Result.failure(response.data['message'] ?? 'Store not found');
+      }
+    } catch (e) {
+      if (e is Exception) {
+        final failure = ErrorHandler.handleException(e);
+        return Result.failure(ErrorHandler.getErrorMessage(failure));
+      }
+      return Result.failure('An unexpected error occurred');
     }
   }
 }
