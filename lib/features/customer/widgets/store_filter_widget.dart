@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 
 class StoreFilterWidget extends StatelessWidget {
@@ -19,7 +20,10 @@ class StoreFilterWidget extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Sort by', style: AppTextStyles.h6),
+          Text(
+            'Sort By',
+            style: AppTextStyles.h6,
+          ),
           const SizedBox(height: 16),
           ListTile(
             leading: const Icon(Icons.location_on),

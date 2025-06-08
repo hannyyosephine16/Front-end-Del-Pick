@@ -115,14 +115,22 @@ class AppPages {
       binding: CustomerBinding(),
     ),
     GetPage(
+      name: Routes.STORE_LIST,
+      page: () => StoreListScreen(),
+      binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
+    ),
+    GetPage(
       name: Routes.STORE_DETAIL,
       page: () => const StoreDetailScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.MENU,
       page: () => const MenuScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.MENU_ITEM_DETAIL,

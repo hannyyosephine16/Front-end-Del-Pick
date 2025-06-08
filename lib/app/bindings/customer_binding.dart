@@ -1,8 +1,10 @@
 import 'package:get/get.dart';
 import 'package:del_pick/features/customer/controllers/store_controller.dart';
-import 'package:del_pick/features/customer/controllers/store_detail_controller.dart';
 import 'package:del_pick/features/customer/controllers/home_controller.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
+import 'package:del_pick/features/customer/controllers/store_detail_controller.dart';
+import 'package:del_pick/features/customer/controllers/checkout_controller.dart';
+import 'package:del_pick/features/customer/controllers/order_history_controller.dart';
 import 'package:del_pick/data/repositories/tracking_repository.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/menu_repository.dart';
@@ -12,29 +14,22 @@ import 'package:del_pick/data/providers/store_provider.dart';
 import 'package:del_pick/data/providers/menu_provider.dart';
 import 'package:del_pick/data/providers/order_provider.dart';
 
-import '../../data/datasources/remote/order_remote_datasource.dart';
-import '../../data/datasources/remote/store_remote_datasource.dart';
-
 class CustomerBinding extends Bindings {
   @override
   void dependencies() {
-    // Data sources
-    Get.lazyPut<StoreRemoteDataSource>(() => StoreRemoteDataSource(Get.find()));
-    Get.lazyPut<OrderRemoteDataSource>(() => OrderRemoteDataSource(Get.find()));
-
-// Providers
+    // Providers
     Get.lazyPut<StoreProvider>(() => StoreProvider());
     Get.lazyPut<MenuProvider>(() => MenuProvider());
     Get.lazyPut<OrderProvider>(() => OrderProvider());
     Get.lazyPut<TrackingProvider>(() => TrackingProvider());
 
-// Repositories
+    // Repositories
     Get.lazyPut<StoreRepository>(() => StoreRepository(Get.find()));
     Get.lazyPut<MenuRepository>(() => MenuRepository(Get.find()));
     Get.lazyPut<OrderRepository>(() => OrderRepository(Get.find()));
     Get.lazyPut<TrackingRepository>(() => TrackingRepository(Get.find()));
 
-// Controllers
+    // Controllers
     Get.lazyPut<HomeController>(
       () => HomeController(
         storeRepository: Get.find(),
@@ -49,6 +44,26 @@ class CustomerBinding extends Bindings {
         locationService: Get.find(),
       ),
     );
-    Get.lazyPut<StoreDetailController>(() => StoreDetailController());
+
+    Get.lazyPut<StoreDetailController>(
+      () => StoreDetailController(
+        storeRepository: Get.find(),
+        menuRepository: Get.find(),
+        cartController: Get.find(),
+      ),
+    );
+
+    Get.lazyPut<CheckoutController>(
+      () => CheckoutController(
+        orderRepository: Get.find(),
+        cartController: Get.find(),
+      ),
+    );
+
+    Get.lazyPut<OrderHistoryController>(
+      () => OrderHistoryController(
+        orderRepository: Get.find(),
+      ),
+    );
   }
 }

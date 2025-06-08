@@ -9,7 +9,6 @@ class CustomerRepository {
   final CustomerProvider _customerProvider;
 
   CustomerRepository(this._customerProvider);
-
   Future<Result<PaginatedResponse<CustomerModel>>> getAllCustomers({
     Map<String, dynamic>? params,
   }) async {
@@ -17,10 +16,19 @@ class CustomerRepository {
       final response = await _customerProvider.getAllCustomers(params: params);
 
       if (response.statusCode == 200) {
-        final paginatedResponse = PaginatedResponse.fromJson(
-          response.data,
-          (json) => CustomerModel.fromJson(json),
+        final data = response.data['data'] as Map<String, dynamic>;
+        final customers = (data['customers'] as List)
+            .map((json) => CustomerModel.fromJson(json))
+            .toList();
+
+        final paginatedResponse = PaginatedResponse<CustomerModel>(
+          data: customers,
+          totalItems: data['totalItems'] ?? 0,
+          totalPages: data['totalPages'] ?? 0,
+          currentPage: data['currentPage'] ?? 1,
+          limit: params?['limit'] ?? 10,
         );
+
         return Result.success(paginatedResponse);
       } else {
         return Result.failure(
@@ -31,6 +39,29 @@ class CustomerRepository {
       return Result.failure(e.toString());
     }
   }
+
+  // Future<Result<PaginatedResponse<CustomerModel>>> getAllCustomers({
+  //   Map<String, dynamic>? params,
+  // })
+  // async {
+  //   try {
+  //     final response = await _customerProvider.getAllCustomers(params: params);
+  //
+  //     if (response.statusCode == 200) {
+  //       final paginatedResponse = PaginatedResponse.fromJson(
+  //         response.data,
+  //         (json) => CustomerModel.fromJson(json),
+  //       );
+  //       return Result.success(paginatedResponse);
+  //     } else {
+  //       return Result.failure(
+  //         response.data['message'] ?? 'Failed to fetch customers',
+  //       );
+  //     }
+  //   } catch (e) {
+  //     return Result.failure(e.toString());
+  //   }
+  // }
 
   Future<Result<CustomerModel>> getCustomerById(int customerId) async {
     try {

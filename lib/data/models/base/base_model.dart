@@ -33,10 +33,9 @@ class ApiResponseModel<T> {
     return ApiResponseModel<T>(
       statusCode: json['statusCode'] as int? ?? 200,
       message: json['message'] as String,
-      data:
-          json['data'] != null && fromJsonT != null
-              ? fromJsonT(json['data'])
-              : json['data'] as T?,
+      data: json['data'] != null && fromJsonT != null
+          ? fromJsonT(json['data'])
+          : json['data'] as T?,
       errors: json['errors'] as String?,
       success: json['success'] as bool?,
     );
@@ -67,6 +66,8 @@ class PaginatedResponse<T> {
   final int totalPages;
   final int currentPage;
   final int limit;
+  final bool hasNextPage;
+  final bool hasPreviousPage;
 
   PaginatedResponse({
     required this.data,
@@ -74,18 +75,15 @@ class PaginatedResponse<T> {
     required this.totalPages,
     required this.currentPage,
     required this.limit,
-  });
+  })  : hasNextPage = currentPage < totalPages,
+        hasPreviousPage = currentPage > 1;
 
   factory PaginatedResponse.fromJson(
     Map<String, dynamic> json,
-    T Function(Map<String, dynamic>) fromJsonT,
+    List<T> data,
   ) {
     return PaginatedResponse<T>(
-      data:
-          (json['data'] as List?)
-              ?.map((item) => fromJsonT(item as Map<String, dynamic>))
-              .toList() ??
-          [],
+      data: data,
       totalItems: json['totalItems'] as int? ?? 0,
       totalPages: json['totalPages'] as int? ?? 0,
       currentPage: json['currentPage'] as int? ?? 1,
@@ -100,13 +98,10 @@ class PaginatedResponse<T> {
       'totalPages': totalPages,
       'currentPage': currentPage,
       'limit': limit,
+      'hasNextPage': hasNextPage,
+      'hasPreviousPage': hasPreviousPage,
     };
   }
-
-  bool get hasNextPage => currentPage < totalPages;
-  bool get hasPreviousPage => currentPage > 1;
-  bool get isEmpty => data.isEmpty;
-  bool get isNotEmpty => data.isNotEmpty;
 
   @override
   String toString() {

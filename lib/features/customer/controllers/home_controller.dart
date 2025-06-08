@@ -24,6 +24,7 @@ class HomeController extends GetxController {
 
   // Observable state
   final RxBool _isLoading = false.obs;
+  final RxBool _isLoadingOrders = false.obs;
   final RxList<StoreModel> _nearbyStores = <StoreModel>[].obs;
   final RxList<OrderModel> _recentOrders = <OrderModel>[].obs;
   final RxString _greeting = ''.obs;
@@ -34,6 +35,7 @@ class HomeController extends GetxController {
 
   // Getters
   bool get isLoading => _isLoading.value;
+  bool get isLoadingOrders => _isLoadingOrders.value;
   List<StoreModel> get nearbyStores => _nearbyStores;
   List<OrderModel> get recentOrders => _recentOrders;
   String get greeting => _greeting.value;
@@ -140,17 +142,24 @@ class HomeController extends GetxController {
   //   }
   // }
 
-  Future<void> _loadRecentOrders() async {
+  Future<void> _loadRecentOrders({int limit = 3}) async {
+    _isLoadingOrders.value = true;
     try {
       final result = await _orderRepository.getOrdersByUser(
-        params: {'limit': 3, 'page': 1},
+        params: {'limit': limit, 'page': 1},
       );
 
       if (result.isSuccess && result.data != null) {
         _recentOrders.value = result.data!.data;
+      } else {
+        // Don't show error for recent orders, just empty list
+        _recentOrders.clear();
       }
     } catch (e) {
-      // Handle error silently for now
+      // Silent error for recent orders
+      _recentOrders.clear();
+    } finally {
+      _isLoadingOrders.value = false;
     }
   }
 
@@ -163,12 +172,24 @@ class HomeController extends GetxController {
     Get.toNamed(Routes.STORE_LIST);
   }
 
+  void searchStores() {
+    Get.toNamed('/customer/store_list');
+  }
+
+  void navigateToStoreList() {
+    Get.toNamed(Routes.STORE_LIST);
+  }
+
   void navigateToOrders() {
     Get.toNamed(Routes.ORDER_HISTORY);
   }
 
   void navigateToStoreDetail(int storeId) {
     Get.toNamed(Routes.STORE_DETAIL, arguments: {'storeId': storeId});
+  }
+
+  void navigateToOrderHistory() {
+    Get.toNamed('/customer/order_history');
   }
 
   void navigateToOrderDetail(int orderId) {
