@@ -7,7 +7,7 @@ import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
-import 'package:del_pick/app/routes/app_routes.dart';
+import 'package:del_pick/core/constants/app_constants.dart';
 
 class HomeController extends GetxController {
   final StoreRepository _storeRepository;
@@ -24,18 +24,18 @@ class HomeController extends GetxController {
 
   // Observable state
   final RxBool _isLoading = false.obs;
-  final RxBool _isLoadingOrders = false.obs;
   final RxList<StoreModel> _nearbyStores = <StoreModel>[].obs;
   final RxList<OrderModel> _recentOrders = <OrderModel>[].obs;
   final RxString _greeting = ''.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool _hasError = false.obs;
-  final RxBool _hasLocation = false.obs;
-  final RxString _currentAddress = 'Getting location...'.obs;
+  final RxBool _hasLocation =
+      true.obs; // Always true since we use default location
+  final RxString _currentAddress =
+      'Institut Teknologi Del'.obs; // Set default address
 
   // Getters
   bool get isLoading => _isLoading.value;
-  bool get isLoadingOrders => _isLoadingOrders.value;
   List<StoreModel> get nearbyStores => _nearbyStores;
   List<OrderModel> get recentOrders => _recentOrders;
   String get greeting => _greeting.value;
@@ -46,11 +46,15 @@ class HomeController extends GetxController {
   bool get hasStores => _nearbyStores.isNotEmpty;
   bool get hasOrders => _recentOrders.isNotEmpty;
 
+  // Customer location (default IT Del coordinates)
+  double get customerLatitude => AppConstants.defaultLatitude;
+  double get customerLongitude => AppConstants.defaultLongitude;
+
   @override
   void onInit() {
     super.onInit();
     _setGreeting();
-    _getCurrentLocation();
+    _setDefaultLocation();
     loadHomeData();
   }
 
@@ -65,21 +69,12 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
-    try {
-      final position = await _locationService.getCurrentLocation();
-      if (position != null) {
-        _hasLocation.value = true;
-        // You might want to implement reverse geocoding here
-        _currentAddress.value = 'Institut Teknologi Del';
-      } else {
-        _hasLocation.value = false;
-        _currentAddress.value = 'Location not available';
-      }
-    } catch (e) {
-      _hasLocation.value = false;
-      _currentAddress.value = 'Location error';
-    }
+  void _setDefaultLocation() {
+    // Always use IT Del as customer location
+    _hasLocation.value = true;
+    _currentAddress.value = 'Institut Teknologi Del';
+    print('Customer location set to: ${_currentAddress.value}');
+    print('Coordinates: ${customerLatitude}, ${customerLongitude}');
   }
 
   Future<void> loadHomeData() async {
@@ -92,6 +87,7 @@ class HomeController extends GetxController {
     } catch (e) {
       _hasError.value = true;
       _errorMessage.value = 'Failed to load data';
+      print('Error loading home data: $e');
     } finally {
       _isLoading.value = false;
     }
@@ -99,67 +95,46 @@ class HomeController extends GetxController {
 
   Future<void> _loadNearbyStores() async {
     try {
-      // PERBAIKAN: Selalu load all stores dulu untuk home
-      final result = await _storeRepository.getAllStores();
+      // Always use default IT Del coordinates for customer location
+      final result = await _storeRepository.getNearbyStores(
+        latitude: customerLatitude,
+        longitude: customerLongitude,
+      );
 
       if (result.isSuccess && result.data != null) {
         // Limit to 5 stores for home screen
         _nearbyStores.value = result.data!.take(5).toList();
-        print(
-            'HomeController: Loaded ${_nearbyStores.length} stores for home'); // Debug
+        print('Loaded ${_nearbyStores.length} nearby stores');
       } else {
-        print(
-            'HomeController: Failed to load stores: ${result.message}'); // Debug
+        print('Failed to load nearby stores: ${result.message}');
+        // Fallback to get all stores
+        final fallbackResult = await _storeRepository.getAllStores();
+        if (fallbackResult.isSuccess && fallbackResult.data != null) {
+          _nearbyStores.value = fallbackResult.data!.take(5).toList();
+          print('Loaded ${_nearbyStores.length} stores as fallback');
+        }
       }
     } catch (e) {
-      print('HomeController: Exception loading stores: $e'); // Debug
+      print('Error loading nearby stores: $e');
+      // Handle error silently for now
     }
   }
 
-  // Future<void> _loadNearbyStores() async {
-  //   try {
-  //     final position = await _locationService.getCurrentLocation();
-  //
-  //     if (position != null) {
-  //       final result = await _storeRepository.getNearbyStores(
-  //         latitude: position.latitude,
-  //         longitude: position.longitude,
-  //       );
-  //
-  //       if (result.isSuccess && result.data != null) {
-  //         // Limit to 5 stores for home screen
-  //         _nearbyStores.value = result.data!.take(5).toList();
-  //       }
-  //     } else {
-  //       // Fallback to get all stores
-  //       final result = await _storeRepository.getAllStores();
-  //       if (result.isSuccess && result.data != null) {
-  //         _nearbyStores.value = result.data!.take(5).toList();
-  //       }
-  //     }
-  //   } catch (e) {
-  //     // Handle error silently for now
-  //   }
-  // }
-
-  Future<void> _loadRecentOrders({int limit = 3}) async {
-    _isLoadingOrders.value = true;
+  Future<void> _loadRecentOrders() async {
     try {
       final result = await _orderRepository.getOrdersByUser(
-        params: {'limit': limit, 'page': 1},
+        params: {'limit': 3, 'page': 1},
       );
 
       if (result.isSuccess && result.data != null) {
         _recentOrders.value = result.data!.data;
+        print('Loaded ${_recentOrders.length} recent orders');
       } else {
-        // Don't show error for recent orders, just empty list
-        _recentOrders.clear();
+        print('Failed to load recent orders: ${result.message}');
       }
     } catch (e) {
-      // Silent error for recent orders
-      _recentOrders.clear();
-    } finally {
-      _isLoadingOrders.value = false;
+      print('Error loading recent orders: $e');
+      // Handle error silently for now
     }
   }
 
@@ -167,89 +142,36 @@ class HomeController extends GetxController {
     await loadHomeData();
   }
 
-  // Navigation methods
   void navigateToStores() {
-    Get.toNamed(Routes.STORE_LIST);
-  }
-
-  void searchStores() {
-    Get.toNamed('/customer/store_list');
-  }
-
-  void navigateToStoreList() {
-    Get.toNamed(Routes.STORE_LIST);
+    Get.toNamed('/store_list');
   }
 
   void navigateToOrders() {
-    Get.toNamed(Routes.ORDER_HISTORY);
+    Get.toNamed('/order_history');
   }
 
   void navigateToStoreDetail(int storeId) {
-    Get.toNamed(Routes.STORE_DETAIL, arguments: {'storeId': storeId});
-  }
-
-  void navigateToOrderHistory() {
-    Get.toNamed('/customer/order_history');
+    Get.toNamed('/store_detail', arguments: {'storeId': storeId});
   }
 
   void navigateToOrderDetail(int orderId) {
-    Get.toNamed(Routes.ORDER_DETAIL, arguments: {'orderId': orderId});
+    Get.toNamed('/order_detail', arguments: {'orderId': orderId});
   }
 
   void navigateToCart() {
-    Get.toNamed(Routes.CART);
+    Get.toNamed('/cart');
   }
 
   void navigateToProfile() {
-    Get.toNamed(Routes.PROFILE);
+    Get.toNamed('/profile');
   }
 
-  // New method for "See All" navigation with context
-  void navigateToAllStores({String? source}) {
-    // Pass additional context if needed
-    final arguments = <String, dynamic>{};
-
-    if (source != null) {
-      arguments['source'] = source;
-    }
-
-    // Pass current location if available
-    if (_hasLocation.value) {
-      final position = _locationService.currentPosition;
-      if (position != null) {
-        arguments['userLatitude'] = position.latitude;
-        arguments['userLongitude'] = position.longitude;
-      }
-    }
-
-    // Navigate to store list with arguments
-    Get.toNamed(
-      Routes.STORE_LIST,
-      arguments: arguments.isNotEmpty ? arguments : null,
-    );
-  }
-
-  // Method to navigate to specific store categories or filters
-  void navigateToStoresWithFilter({
-    String? category,
-    String? searchQuery,
-    Map<String, dynamic>? filters,
-  }) {
-    final arguments = <String, dynamic>{};
-
-    if (category != null) arguments['category'] = category;
-    if (searchQuery != null) arguments['searchQuery'] = searchQuery;
-    if (filters != null) arguments['filters'] = filters;
-
-    // Pass current location if available
-    if (_hasLocation.value) {
-      final position = _locationService.currentPosition;
-      if (position != null) {
-        arguments['userLatitude'] = position.latitude;
-        arguments['userLongitude'] = position.longitude;
-      }
-    }
-
-    Get.toNamed(Routes.STORE_LIST, arguments: arguments);
+  // Method to get customer location for other controllers
+  Map<String, dynamic> getCustomerLocation() {
+    return {
+      'latitude': customerLatitude,
+      'longitude': customerLongitude,
+      'address': _currentAddress.value,
+    };
   }
 }

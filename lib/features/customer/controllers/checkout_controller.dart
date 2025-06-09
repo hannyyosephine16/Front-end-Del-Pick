@@ -1,8 +1,11 @@
-// lib/features/customer/controllers/checkout_controller.dart (Debug Version)
+// lib/features/customer/controllers/checkout_controller.dart
+
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/order/cart_item_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
 
 class CheckoutController extends GetxController {
@@ -11,180 +14,187 @@ class CheckoutController extends GetxController {
 
   // Observable state
   final RxBool _isLoading = false.obs;
+  final RxString _deliveryAddress = 'Institut Teknologi Del'.obs;
+  final RxString _notes = ''.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool _hasError = false.obs;
 
-  // Order data
-  late List<CartItemModel> cartItems;
-  late int storeId;
-  late String storeName;
-  late double subtotal;
-  late double serviceCharge;
-  late double total;
-
   // Getters
   bool get isLoading => _isLoading.value;
-
+  String get deliveryAddress => _deliveryAddress.value;
+  String get notes => _notes.value;
   String get errorMessage => _errorMessage.value;
-
   bool get hasError => _hasError.value;
+
+  // Customer location (default IT Del coordinates)
+  double get customerLatitude => AppConstants.defaultLatitude;
+  double get customerLongitude => AppConstants.defaultLongitude;
+
+  // Get cart data
+  List<CartItemModel> get cartItems => _cartController.cartItems;
+  int get storeId => _cartController.currentStoreId;
+  String get storeName => _cartController.currentStoreName;
+  double get subtotal => _cartController.subtotal;
+  double get serviceCharge => _cartController.serviceCharge;
+  double get total => _cartController.total;
 
   @override
   void onInit() {
     super.onInit();
-    _initializeOrderData();
+    _initializeCheckout();
   }
 
-  void _initializeOrderData() {
-    print('CheckoutController: Initializing order data...');
-
-    final arguments = Get.arguments as Map<String, dynamic>?;
-    if (arguments != null) {
-      print('CheckoutController: Using arguments data');
-      cartItems = arguments['cartItems'] as List<CartItemModel>;
-      storeId = arguments['storeId'] as int;
-      storeName = arguments['storeName'] as String;
-      subtotal = arguments['subtotal'] as double;
-      serviceCharge = arguments['serviceCharge'] as double;
-      total = arguments['total'] as double;
-    } else {
-      print('CheckoutController: Using cart controller data');
-      cartItems = _cartController.cartItems;
-      storeId = _cartController.currentStoreId;
-      storeName = _cartController.currentStoreName;
-      subtotal = _cartController.subtotal;
-      serviceCharge = _cartController.serviceCharge;
-      total = _cartController.total;
-    }
-
-    print('CheckoutController: Cart items count: ${cartItems.length}');
-    print('CheckoutController: Store ID: $storeId');
-    print('CheckoutController: Store name: $storeName');
-    print('CheckoutController: Total: $total');
+  void _initializeCheckout() {
+    // Set default delivery address to IT Del
+    _deliveryAddress.value = 'Institut Teknologi Del';
+    print(
+        'CheckoutController: Initialized with default address: ${_deliveryAddress.value}');
+    print(
+        'CheckoutController: Customer coordinates: $customerLatitude, $customerLongitude');
   }
 
-  Future<void> placeOrderWithNotes({String? notes}) async {
+  void updateNotes(String newNotes) {
+    _notes.value = newNotes;
+  }
+
+  void updateDeliveryAddress(String newAddress) {
+    _deliveryAddress.value = newAddress;
+  }
+
+  Future<void> placeOrder() async {
     if (cartItems.isEmpty) {
-      print('CheckoutController: Cart is empty, cannot place order');
-      Get.snackbar('Error', 'Cart is empty');
+      Get.snackbar(
+        'Error',
+        'Cart is empty',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
       return;
     }
 
-    print('CheckoutController: Starting order placement...');
     _isLoading.value = true;
     _hasError.value = false;
     _errorMessage.value = '';
 
     try {
-      // Prepare order data according to backend API
-      final orderData = {
-        'storeId': storeId,
-        'notes': notes,
-        'items': cartItems.map((item) => item.toApiJson()).toList(),
-      };
+      // Prepare order data according to API requirements
+      final orderData = _prepareOrderData();
 
       print('CheckoutController: Order data prepared:');
-      print('  - Store ID: ${orderData['storeId']}');
-      print('  - Items count: ${(orderData['items'] as List).length}');
-      print('  - Notes: ${orderData['notes']}');
-      print('  - Full data: $orderData');
+      print('- Store ID: ${orderData['storeId']}');
+      print('- Items count: ${orderData['items'].length}');
+      print('- Notes: ${orderData['notes']}');
+      print('- Delivery Address: ${orderData['deliveryAddress']}');
+      print('- Customer Latitude: ${orderData['customerLatitude']}');
+      print('- Customer Longitude: ${orderData['customerLongitude']}');
+      print('- Full data: $orderData');
 
+      // Create order
       final result = await _orderRepository.createOrder(orderData);
+
       print('CheckoutController: API call completed');
       print('CheckoutController: Result success: ${result.isSuccess}');
       print('CheckoutController: Result message: ${result.message}');
 
       if (result.isSuccess && result.data != null) {
         final order = result.data!;
-        print('CheckoutController: Order created successfully');
-        print('CheckoutController: Order ID: ${order.id}');
-        print('CheckoutController: Order code: ${order.code}');
+        print(
+            'CheckoutController: Order created successfully with ID: ${order.id}');
 
-        // Clear cart
+        // Clear cart after successful order
         _cartController.clearCart();
-        print('CheckoutController: Cart cleared');
 
         // Show success message
         Get.snackbar(
-          'Success!',
-          'Order placed successfully! Order #${order.code}',
-          snackPosition: SnackPosition.TOP,
-          duration: const Duration(seconds: 3),
+          'Order Placed',
+          'Your order has been placed successfully! Order ID: ${order.code}',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
         );
 
         // Navigate to order tracking or order detail
-        print('CheckoutController: Navigating to order detail...');
-        Get.offAllNamed('/customer/order_detail', arguments: {
-          'orderId': order.id,
-          'orderCode': order.code,
-        });
+        Get.offNamed(
+          '/order_detail',
+          arguments: {'orderId': order.id, 'orderCode': order.code},
+        );
       } else {
         _hasError.value = true;
         _errorMessage.value = result.message ?? 'Failed to place order';
-
         print(
             'CheckoutController: Order placement failed: ${_errorMessage.value}');
 
         Get.snackbar(
-          'Error',
+          'Order Failed',
           _errorMessage.value,
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Get.theme.colorScheme.error,
-          colorText: Get.theme.colorScheme.onError,
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 4),
         );
       }
     } catch (e) {
       _hasError.value = true;
-      _errorMessage.value = 'An error occurred: ${e.toString()}';
-
-      print('CheckoutController: Exception occurred: $e');
-      print('CheckoutController: Stack trace: ${StackTrace.current}');
+      _errorMessage.value = 'An error occurred while placing order';
+      print('CheckoutController: Exception during order placement: $e');
 
       Get.snackbar(
         'Error',
         _errorMessage.value,
-        snackPosition: SnackPosition.TOP,
-        backgroundColor: Get.theme.colorScheme.error,
-        colorText: Get.theme.colorScheme.onError,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     } finally {
       _isLoading.value = false;
-      print('CheckoutController: Order placement process completed');
     }
   }
 
-  // Missing getters and methods
-  String get deliveryAddress => 'Institut Teknologi Del';
+  Map<String, dynamic> _prepareOrderData() {
+    // Convert cart items to API format
+    final items = cartItems.map((item) => item.toApiJson()).toList();
 
-  int get itemCount => cartItems.fold(0, (sum, item) => sum + item.quantity);
+    final orderData = {
+      'storeId': storeId,
+      'deliveryAddress': _deliveryAddress.value,
+      'customerLatitude': customerLatitude,
+      'customerLongitude': customerLongitude,
+      'notes': _notes.value.isEmpty
+          ? ''
+          : _notes.value, // Always send as string, never null
+      'items': items,
+    };
 
-  bool get isPlacingOrder => _isLoading.value;
-
-  // Notes handling
-  final RxString _notes = ''.obs;
-
-  String get notes => _notes.value;
-
-  void updateNotes(String newNotes) {
-    _notes.value = newNotes;
+    return orderData;
   }
 
-  // Formatting methods
-  String get formattedSubtotal => 'Rp ${subtotal.toStringAsFixed(0)}';
+  // Validate order before placing
+  bool _validateOrder() {
+    if (cartItems.isEmpty) {
+      _errorMessage.value = 'Cart is empty';
+      return false;
+    }
 
-  String get formattedServiceCharge => 'Rp ${serviceCharge.toStringAsFixed(0)}';
+    if (storeId == 0) {
+      _errorMessage.value = 'Invalid store selected';
+      return false;
+    }
 
-  String get formattedTotal => 'Rp ${total.toStringAsFixed(0)}';
+    if (_deliveryAddress.value.isEmpty) {
+      _errorMessage.value = 'Delivery address is required';
+      return false;
+    }
 
-  int get totalItems => cartItems.fold(0, (sum, item) => sum + item.quantity);
-
-  // Updated placeOrder method to use notes
-  Future<void> placeOrder() async {
-    await placeOrderWithNotes(
-        notes: _notes.value.isEmpty ? null : _notes.value);
+    return true;
   }
 
-// Rename the original placeOrder method
-// Future<void> placeOrderWithNotes({String? notes}) async {
-// }
+  // Format currency for display
+  String get formattedSubtotal =>
+      'Rp ${subtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  String get formattedServiceCharge =>
+      'Rp ${serviceCharge.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+  String get formattedTotal =>
+      'Rp ${total.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
 }
