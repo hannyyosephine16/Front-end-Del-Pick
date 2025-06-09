@@ -1,109 +1,190 @@
+// lib/features/customer/controllers/checkout_controller.dart (Debug Version)
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
-import 'package:del_pick/features/customer/controllers/cart_controller.dart';
+import 'package:del_pick/data/models/order/cart_item_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
-import 'package:del_pick/core/errors/error_handler.dart';
-import 'package:del_pick/app/routes/app_routes.dart';
+import 'package:del_pick/features/customer/controllers/cart_controller.dart';
 
 class CheckoutController extends GetxController {
-  final OrderRepository _orderRepository;
-  final CartController _cartController;
-
-  CheckoutController({
-    required OrderRepository orderRepository,
-    required CartController cartController,
-  })  : _orderRepository = orderRepository,
-        _cartController = cartController;
+  final OrderRepository _orderRepository = Get.find<OrderRepository>();
+  final CartController _cartController = Get.find<CartController>();
 
   // Observable state
-  final RxBool _isPlacingOrder = false.obs;
-  final RxString _notes = ''.obs;
-  final RxString _deliveryAddress = 'Institut Teknologi Del'.obs;
+  final RxBool _isLoading = false.obs;
+  final RxString _errorMessage = ''.obs;
+  final RxBool _hasError = false.obs;
+
+  // Order data
+  late List<CartItemModel> cartItems;
+  late int storeId;
+  late String storeName;
+  late double subtotal;
+  late double serviceCharge;
+  late double total;
 
   // Getters
-  bool get isPlacingOrder => _isPlacingOrder.value;
-  String get notes => _notes.value;
-  String get deliveryAddress => _deliveryAddress.value;
+  bool get isLoading => _isLoading.value;
 
-  // Cart info
-  List get cartItems => _cartController.cartItems;
-  int get storeId => _cartController.currentStoreId;
-  String get storeName => _cartController.currentStoreName;
-  double get subtotal => _cartController.subtotal;
-  double get serviceCharge => _cartController.serviceCharge;
-  double get total => _cartController.total;
-  int get itemCount => _cartController.itemCount;
+  String get errorMessage => _errorMessage.value;
 
-  void updateNotes(String value) {
-    _notes.value = value;
+  bool get hasError => _hasError.value;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _initializeOrderData();
   }
 
-  void updateDeliveryAddress(String value) {
-    _deliveryAddress.value = value;
+  void _initializeOrderData() {
+    print('CheckoutController: Initializing order data...');
+
+    final arguments = Get.arguments as Map<String, dynamic>?;
+    if (arguments != null) {
+      print('CheckoutController: Using arguments data');
+      cartItems = arguments['cartItems'] as List<CartItemModel>;
+      storeId = arguments['storeId'] as int;
+      storeName = arguments['storeName'] as String;
+      subtotal = arguments['subtotal'] as double;
+      serviceCharge = arguments['serviceCharge'] as double;
+      total = arguments['total'] as double;
+    } else {
+      print('CheckoutController: Using cart controller data');
+      cartItems = _cartController.cartItems;
+      storeId = _cartController.currentStoreId;
+      storeName = _cartController.currentStoreName;
+      subtotal = _cartController.subtotal;
+      serviceCharge = _cartController.serviceCharge;
+      total = _cartController.total;
+    }
+
+    print('CheckoutController: Cart items count: ${cartItems.length}');
+    print('CheckoutController: Store ID: $storeId');
+    print('CheckoutController: Store name: $storeName');
+    print('CheckoutController: Total: $total');
   }
 
-  Future<void> placeOrder() async {
+  Future<void> placeOrderWithNotes({String? notes}) async {
     if (cartItems.isEmpty) {
+      print('CheckoutController: Cart is empty, cannot place order');
       Get.snackbar('Error', 'Cart is empty');
       return;
     }
 
-    _isPlacingOrder.value = true;
+    print('CheckoutController: Starting order placement...');
+    _isLoading.value = true;
+    _hasError.value = false;
+    _errorMessage.value = '';
 
     try {
       // Prepare order data according to backend API
       final orderData = {
         'storeId': storeId,
-        'notes': notes.isEmpty ? null : notes,
+        'notes': notes,
         'items': cartItems.map((item) => item.toApiJson()).toList(),
       };
 
+      print('CheckoutController: Order data prepared:');
+      print('  - Store ID: ${orderData['storeId']}');
+      print('  - Items count: ${(orderData['items'] as List).length}');
+      print('  - Notes: ${orderData['notes']}');
+      print('  - Full data: $orderData');
+
       final result = await _orderRepository.createOrder(orderData);
+      print('CheckoutController: API call completed');
+      print('CheckoutController: Result success: ${result.isSuccess}');
+      print('CheckoutController: Result message: ${result.message}');
 
       if (result.isSuccess && result.data != null) {
         final order = result.data!;
+        print('CheckoutController: Order created successfully');
+        print('CheckoutController: Order ID: ${order.id}');
+        print('CheckoutController: Order code: ${order.code}');
 
-        // Clear cart after successful order
+        // Clear cart
         _cartController.clearCart();
+        print('CheckoutController: Cart cleared');
 
         // Show success message
         Get.snackbar(
-          'Order Placed',
-          'Your order has been placed successfully!',
+          'Success!',
+          'Order placed successfully! Order #${order.code}',
           snackPosition: SnackPosition.TOP,
+          duration: const Duration(seconds: 3),
         );
 
-        // Navigate to order detail or order history
-        Get.offAllNamed(
-          Routes.ORDER_DETAIL,
-          arguments: {'orderId': order.id},
-        );
+        // Navigate to order tracking or order detail
+        print('CheckoutController: Navigating to order detail...');
+        Get.offAllNamed('/customer/order_detail', arguments: {
+          'orderId': order.id,
+          'orderCode': order.code,
+        });
       } else {
+        _hasError.value = true;
+        _errorMessage.value = result.message ?? 'Failed to place order';
+
+        print(
+            'CheckoutController: Order placement failed: ${_errorMessage.value}');
+
         Get.snackbar(
-          'Order Failed',
-          result.message ?? 'Failed to place order',
+          'Error',
+          _errorMessage.value,
           snackPosition: SnackPosition.TOP,
+          backgroundColor: Get.theme.colorScheme.error,
+          colorText: Get.theme.colorScheme.onError,
         );
       }
     } catch (e) {
-      String errorMessage = 'An unexpected error occurred';
+      _hasError.value = true;
+      _errorMessage.value = 'An error occurred: ${e.toString()}';
 
-      if (e is Exception) {
-        final failure = ErrorHandler.handleException(e);
-        errorMessage = ErrorHandler.getErrorMessage(failure);
-      }
+      print('CheckoutController: Exception occurred: $e');
+      print('CheckoutController: Stack trace: ${StackTrace.current}');
 
       Get.snackbar(
-        'Order Failed',
-        errorMessage,
+        'Error',
+        _errorMessage.value,
         snackPosition: SnackPosition.TOP,
+        backgroundColor: Get.theme.colorScheme.error,
+        colorText: Get.theme.colorScheme.onError,
       );
     } finally {
-      _isPlacingOrder.value = false;
+      _isLoading.value = false;
+      print('CheckoutController: Order placement process completed');
     }
   }
 
+  // Missing getters and methods
+  String get deliveryAddress => 'Institut Teknologi Del';
+
+  int get itemCount => cartItems.fold(0, (sum, item) => sum + item.quantity);
+
+  bool get isPlacingOrder => _isLoading.value;
+
+  // Notes handling
+  final RxString _notes = ''.obs;
+
+  String get notes => _notes.value;
+
+  void updateNotes(String newNotes) {
+    _notes.value = newNotes;
+  }
+
+  // Formatting methods
   String get formattedSubtotal => 'Rp ${subtotal.toStringAsFixed(0)}';
+
   String get formattedServiceCharge => 'Rp ${serviceCharge.toStringAsFixed(0)}';
+
   String get formattedTotal => 'Rp ${total.toStringAsFixed(0)}';
+
+  int get totalItems => cartItems.fold(0, (sum, item) => sum + item.quantity);
+
+  // Updated placeOrder method to use notes
+  Future<void> placeOrder() async {
+    await placeOrderWithNotes(
+        notes: _notes.value.isEmpty ? null : _notes.value);
+  }
+
+// Rename the original placeOrder method
+// Future<void> placeOrderWithNotes({String? notes}) async {
+// }
 }

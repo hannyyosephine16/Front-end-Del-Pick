@@ -30,6 +30,7 @@ class CustomerBinding extends Bindings {
     Get.lazyPut<TrackingRepository>(() => TrackingRepository(Get.find()));
 
     // Controllers
+    Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<HomeController>(
       () => HomeController(
         storeRepository: Get.find(),
@@ -37,7 +38,6 @@ class CustomerBinding extends Bindings {
         locationService: Get.find(),
       ),
     );
-    Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<StoreController>(
       () => StoreController(
         storeRepository: Get.find(),
@@ -53,12 +53,14 @@ class CustomerBinding extends Bindings {
       ),
     );
 
-    Get.lazyPut<CheckoutController>(
-      () => CheckoutController(
-        orderRepository: Get.find(),
-        cartController: Get.find(),
-      ),
-    );
+    Get.lazyPut<CheckoutController>(() => CheckoutController());
+
+    // Get.lazyPut<CheckoutController>(
+    //   () => CheckoutController(
+    //     orderRepository: Get.find(),
+    //     cartController: Get.find(),
+    //   ),
+    // );
 
     Get.lazyPut<OrderHistoryController>(
       () => OrderHistoryController(
