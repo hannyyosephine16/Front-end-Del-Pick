@@ -1,4 +1,4 @@
-// lib/data/models/order/order_model.dart - Fixed null safety
+// lib/data/models/order/order_model.dart - Fixed field mapping
 import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'order_item_model.dart';
@@ -19,7 +19,7 @@ class OrderModel {
   final int storeId;
   final DateTime? estimatedDeliveryTime;
   final List<OrderItemModel>? items;
-  final StoreModel? store; // Made nullable to fix the error
+  final StoreModel? store;
   final UserModel? customer;
   final UserModel? driver;
   final DateTime? createdAt;
@@ -41,7 +41,7 @@ class OrderModel {
     required this.storeId,
     this.estimatedDeliveryTime,
     this.items,
-    this.store, // Made nullable
+    this.store,
     this.customer,
     this.driver,
     this.createdAt,
@@ -52,53 +52,48 @@ class OrderModel {
     return OrderModel(
       id: json['id'] as int,
       code: json['code'] as String,
-      deliveryAddress: json['deliveryAddress'] as String,
+      // ✅ Fixed: Handle both snake_case and camelCase
+      deliveryAddress: json['deliveryAddress'] as String? ??
+          json['delivery_address'] as String,
       subtotal: (json['subtotal'] as num).toDouble(),
-      serviceCharge: (json['serviceCharge'] as num).toDouble(),
+      serviceCharge:
+          (json['serviceCharge'] as num? ?? json['service_charge'] as num)
+              .toDouble(),
       total: (json['total'] as num).toDouble(),
+      // ✅ Fixed: Prioritize snake_case from backend
       orderStatus:
           json['order_status'] as String? ?? json['orderStatus'] as String,
-      deliveryStatus:
-          json['delivery_status'] as String? ??
+      deliveryStatus: json['delivery_status'] as String? ??
           json['deliveryStatus'] as String?,
       orderDate: DateTime.parse(json['orderDate'] as String),
       notes: json['notes'] as String?,
       customerId: json['customerId'] as int,
       driverId: json['driverId'] as int?,
       storeId: json['storeId'] as int,
-      estimatedDeliveryTime:
-          json['estimatedDeliveryTime'] != null
-              ? DateTime.parse(json['estimatedDeliveryTime'] as String)
-              : null,
-      items:
-          json['items'] != null
-              ? (json['items'] as List)
-                  .map(
-                    (item) =>
-                        OrderItemModel.fromJson(item as Map<String, dynamic>),
-                  )
-                  .toList()
-              : null,
-      store:
-          json['store'] != null
-              ? StoreModel.fromJson(json['store'] as Map<String, dynamic>)
-              : null,
-      customer:
-          json['customer'] != null
-              ? UserModel.fromJson(json['customer'] as Map<String, dynamic>)
-              : null,
-      driver:
-          json['driver'] != null
-              ? UserModel.fromJson(json['driver'] as Map<String, dynamic>)
-              : null,
-      createdAt:
-          json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'] as String)
-              : null,
-      updatedAt:
-          json['updatedAt'] != null
-              ? DateTime.parse(json['updatedAt'] as String)
-              : null,
+      estimatedDeliveryTime: json['estimatedDeliveryTime'] != null
+          ? DateTime.parse(json['estimatedDeliveryTime'] as String)
+          : null,
+      items: json['items'] != null
+          ? (json['items'] as List)
+              .map((item) =>
+                  OrderItemModel.fromJson(item as Map<String, dynamic>))
+              .toList()
+          : null,
+      store: json['store'] != null
+          ? StoreModel.fromJson(json['store'] as Map<String, dynamic>)
+          : null,
+      customer: json['customer'] != null
+          ? UserModel.fromJson(json['customer'] as Map<String, dynamic>)
+          : null,
+      driver: json['driver'] != null
+          ? UserModel.fromJson(json['driver'] as Map<String, dynamic>)
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
     );
   }
 
@@ -110,7 +105,7 @@ class OrderModel {
       'subtotal': subtotal,
       'serviceCharge': serviceCharge,
       'total': total,
-      'order_status': orderStatus,
+      'order_status': orderStatus, // Use snake_case for API
       'delivery_status': deliveryStatus,
       'orderDate': orderDate.toIso8601String(),
       'notes': notes,
@@ -223,8 +218,6 @@ class OrderModel {
 
   int get totalItems =>
       items?.fold(0, (sum, item) => sum! + item.quantity) ?? 0;
-
-  // Fixed: Added null check for store
   String get storeName => store?.name ?? 'Unknown Store';
 
   @override
