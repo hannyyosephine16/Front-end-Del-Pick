@@ -1,9 +1,13 @@
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/core/errors/failures.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
+
+import '../../../app/config/app_config.dart';
+import '../../../core/utils/distance_helper.dart';
 
 class StoreController extends GetxController {
   final StoreRepository _storeRepository;
@@ -23,7 +27,7 @@ class StoreController extends GetxController {
   final RxString _errorMessage = ''.obs;
   final RxBool _hasError = false.obs;
   final RxBool _hasLocation = false.obs;
-
+  final Rx<Position?> _userLocation = Rx<Position?>(null);
   // Getters
   bool get isLoading => _isLoading.value;
   List<StoreModel> get stores => _stores;
@@ -31,6 +35,7 @@ class StoreController extends GetxController {
   bool get hasError => _hasError.value;
   bool get hasLocation => _hasLocation.value;
   bool get hasStores => _stores.isNotEmpty;
+  Position? get userLocation => _userLocation.value;
 
   @override
   void onInit() {
@@ -49,6 +54,9 @@ class StoreController extends GetxController {
     try {
       print('StoreController: Calling repository.getAllStores()'); // Debug
 
+      // Get current location first
+      await _getCurrentLocation();
+
       final result = await _storeRepository.getAllStores();
 
       print(
@@ -65,8 +73,15 @@ class StoreController extends GetxController {
             'StoreController: Stores loaded successfully: ${_stores.length}'); // Debug
 
         // Debug: Print first store details
-        if (_stores.isNotEmpty) {
-          print('StoreController: First store: ${_stores.first.name}'); // Debug
+        // if (_stores.isNotEmpty) {
+        //   print('StoreController: First store: ${_stores.first.name}'); // Debug
+        // }
+        // Calculate distances and sort by distance if location available
+        if (_hasLocation.value && _userLocation.value != null) {
+          _calculateDistancesAndSort();
+        } else {
+          // If no location, just show all stores
+          _stores.value = _allStores;
         }
       } else {
         _hasError.value = true;
@@ -159,6 +174,86 @@ class StoreController extends GetxController {
   //   }
   // }
 
+  Future<void> _getCurrentLocation() async {
+    try {
+      final position = await _locationService.getCurrentLocation();
+      if (position != null) {
+        _userLocation.value = position;
+        _hasLocation.value = true;
+      } else {
+        _hasLocation.value = false;
+        // Use default location (IT Del)
+        _userLocation.value = Position(
+          latitude: AppConfig.defaultLatitude,
+          longitude: AppConfig.defaultLongitude,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          heading: 0,
+          speed: 0,
+          headingAccuracy: 0,
+          speedAccuracy: 0,
+        );
+      }
+    } catch (e) {
+      _hasLocation.value = false;
+      // Use default location as fallback
+      _userLocation.value = Position(
+        latitude: AppConfig.defaultLatitude,
+        longitude: AppConfig.defaultLongitude,
+        timestamp: DateTime.now(),
+        accuracy: 0,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        speed: 0,
+        headingAccuracy: 0,
+        speedAccuracy: 0,
+      );
+    }
+  }
+
+  void _calculateDistancesAndSort() {
+    if (_userLocation.value == null) return;
+
+    final userLat = _userLocation.value!.latitude;
+    final userLon = _userLocation.value!.longitude;
+
+    // Calculate distance for each store and create new list with distance
+    final storesWithDistance = _allStores.map((store) {
+      if (store.latitude != null && store.longitude != null) {
+        final distance = DistanceHelper.calculateDistance(
+          userLat,
+          userLon,
+          store.latitude!,
+          store.longitude!,
+        );
+
+        // Update store with calculated distance
+        return store.copyWith(distance: distance);
+      } else {
+        // If store doesn't have coordinates, put it at the end
+        return store.copyWith(distance: 9999.0);
+      }
+    }).toList();
+
+    // Sort by distance (closest first)
+    storesWithDistance.sort((a, b) {
+      final distanceA = a.distance ?? 9999.0;
+      final distanceB = b.distance ?? 9999.0;
+      return distanceA.compareTo(distanceB);
+    });
+
+    // Filter stores within delivery radius (optional - remove if you want all stores)
+    // final nearbyStores = storesWithDistance.where((store) {
+    //   final distance = store.distance ?? 9999.0;
+    //   return distance <= AppConfig.maxDeliveryRadius;
+    // }).toList();
+
+    _stores.value = storesWithDistance;
+  }
+
   Future<void> fetchNearbyStores() async {
     print('StoreController: Starting fetchNearbyStores'); // Debug
     _isLoading.value = true;
@@ -233,6 +328,10 @@ class StoreController extends GetxController {
     });
   }
 
+  void sortStoresByName() {
+    _stores.sort((a, b) => a.name.compareTo(b.name));
+  }
+
   void sortStoresByRating() {
     print('Sorting by rating'); // Debug
     _stores.sort((a, b) {
@@ -243,9 +342,13 @@ class StoreController extends GetxController {
   }
 
   void filterStores(String query) {
-    print('Filtering stores with query: $query'); // Debug
     if (query.isEmpty) {
-      _stores.value = List.from(_allStores);
+      // Reset to original sorted list
+      if (_userLocation.value != null) {
+        _calculateDistancesAndSort();
+      } else {
+        _stores.value = _allStores;
+      }
       return;
     }
 
@@ -254,10 +357,86 @@ class StoreController extends GetxController {
       final name = store.name.toLowerCase();
       final address = store.address.toLowerCase();
       final searchQuery = query.toLowerCase();
+
       return name.contains(searchQuery) || address.contains(searchQuery);
     }).toList();
 
-    _stores.value = filteredStores;
-    print('Filtered results: ${_stores.length}'); // Debug
+    // If user has location, calculate distances for filtered stores
+    if (_userLocation.value != null) {
+      final userLat = _userLocation.value!.latitude;
+      final userLon = _userLocation.value!.longitude;
+
+      final storesWithDistance = filteredStores.map((store) {
+        if (store.latitude != null && store.longitude != null) {
+          final distance = DistanceHelper.calculateDistance(
+            userLat,
+            userLon,
+            store.latitude!,
+            store.longitude!,
+          );
+          return store.copyWith(distance: distance);
+        } else {
+          return store.copyWith(distance: 9999.0);
+        }
+      }).toList();
+
+      // Sort filtered results by distance
+      storesWithDistance.sort((a, b) {
+        final distanceA = a.distance ?? 9999.0;
+        final distanceB = b.distance ?? 9999.0;
+        return distanceA.compareTo(distanceB);
+      });
+
+      _stores.value = storesWithDistance;
+    } else {
+      _stores.value = filteredStores;
+    }
+  }
+
+  void filterStoresByDeliveryRadius() {
+    if (_userLocation.value == null) return;
+
+    final userLat = _userLocation.value!.latitude;
+    final userLon = _userLocation.value!.longitude;
+
+    final nearbyStores = _allStores.where((store) {
+      if (store.latitude != null && store.longitude != null) {
+        return DistanceHelper.isWithinDeliveryRadius(
+          userLat,
+          userLon,
+          store.latitude!,
+          store.longitude!,
+          AppConfig.maxDeliveryRadius,
+        );
+      }
+      return false;
+    }).toList();
+
+    // Calculate distances and sort
+    final storesWithDistance = nearbyStores.map((store) {
+      final distance = DistanceHelper.calculateDistance(
+        userLat,
+        userLon,
+        store.latitude!,
+        store.longitude!,
+      );
+      return store.copyWith(distance: distance);
+    }).toList();
+
+    storesWithDistance.sort((a, b) {
+      final distanceA = a.distance ?? 9999.0;
+      final distanceB = b.distance ?? 9999.0;
+      return distanceA.compareTo(distanceB);
+    });
+
+    _stores.value = storesWithDistance;
+  }
+
+  void clearFilters() {
+    if (_userLocation.value != null) {
+      _calculateDistancesAndSort();
+    } else {
+      _stores.value = _allStores;
+    }
   }
 }

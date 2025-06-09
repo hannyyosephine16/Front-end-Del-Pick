@@ -92,12 +92,11 @@ class StoreCard extends StatelessWidget {
                         child: Text(
                           store.isOpen ? 'Open' : 'Closed',
                           style: AppTextStyles.labelSmall.copyWith(
-                            color: store.isOpen
-                                ? AppColors.success
-                                : AppColors.error,
-                          ),
+                              color: store.isOpen
+                                  ? AppColors.success
+                                  : AppColors.error),
                         ),
-                      ),
+                      )
                     ],
                   ),
 

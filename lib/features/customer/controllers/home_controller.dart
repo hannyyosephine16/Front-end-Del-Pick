@@ -1,5 +1,6 @@
 // lib/features/customer/controllers/home_controller.dart
 
+import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
@@ -8,6 +9,10 @@ import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
+
+import '../../../app/config/app_config.dart';
+import '../../../app/routes/app_routes.dart';
+import '../../../core/utils/distance_helper.dart';
 
 class HomeController extends GetxController {
   final StoreRepository _storeRepository;
@@ -29,10 +34,13 @@ class HomeController extends GetxController {
   final RxString _greeting = ''.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool _hasError = false.obs;
-  final RxBool _hasLocation =
-      true.obs; // Always true since we use default location
-  final RxString _currentAddress =
-      'Institut Teknologi Del'.obs; // Set default address
+  // final RxBool _hasLocation =
+  //     true.obs; // Always true since we use default location
+  final RxBool _hasLocation = false.obs;
+  // final RxString _currentAddress =
+  //     'Institut Teknologi Del'.obs; // Set default address
+  final RxString _currentAddress = 'Getting location...'.obs;
+  final Rx<Position?> _userLocation = Rx<Position?>(null);
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -54,7 +62,8 @@ class HomeController extends GetxController {
   void onInit() {
     super.onInit();
     _setGreeting();
-    _setDefaultLocation();
+    // _setDefaultLocation();
+    _getCurrentLocation();
     loadHomeData();
   }
 
@@ -77,6 +86,50 @@ class HomeController extends GetxController {
     print('Coordinates: ${customerLatitude}, ${customerLongitude}');
   }
 
+  Future<void> _getCurrentLocation() async {
+    try {
+      final position = await _locationService.getCurrentLocation();
+      if (position != null) {
+        _userLocation.value = position;
+        _hasLocation.value = true;
+        // You might want to implement reverse geocoding here
+        _currentAddress.value = 'Institut Teknologi Del';
+      } else {
+        _hasLocation.value = false;
+        _currentAddress.value = 'Location not available';
+        // Use default location as fallback
+        _userLocation.value = Position(
+          latitude: AppConfig.defaultLatitude,
+          longitude: AppConfig.defaultLongitude,
+          timestamp: DateTime.now(),
+          accuracy: 0,
+          altitude: 0,
+          altitudeAccuracy: 0,
+          heading: 0,
+          speed: 0,
+          headingAccuracy: 0,
+          speedAccuracy: 0,
+        );
+      }
+    } catch (e) {
+      _hasLocation.value = false;
+      _currentAddress.value = 'Location error';
+      // Use default location as fallback
+      _userLocation.value = Position(
+        latitude: AppConfig.defaultLatitude,
+        longitude: AppConfig.defaultLongitude,
+        timestamp: DateTime.now(),
+        accuracy: 0,
+        altitude: 0,
+        altitudeAccuracy: 0,
+        heading: 0,
+        speed: 0,
+        headingAccuracy: 0,
+        speedAccuracy: 0,
+      );
+    }
+  }
+
   Future<void> loadHomeData() async {
     _isLoading.value = true;
     _hasError.value = false;
@@ -93,30 +146,78 @@ class HomeController extends GetxController {
     }
   }
 
+  // Future<void> _loadNearbyStores() async {
+  //   try {
+  //     // Always use default IT Del coordinates for customer location
+  //     final result = await _storeRepository.getNearbyStores(
+  //       latitude: customerLatitude,
+  //       longitude: customerLongitude,
+  //     );
+  //
+  //     if (result.isSuccess && result.data != null) {
+  //       // Limit to 5 stores for home screen
+  //       _nearbyStores.value = result.data!.take(5).toList();
+  //       print('Loaded ${_nearbyStores.length} nearby stores');
+  //     } else {
+  //       print('Failed to load nearby stores: ${result.message}');
+  //       // Fallback to get all stores
+  //       final fallbackResult = await _storeRepository.getAllStores();
+  //       if (fallbackResult.isSuccess && fallbackResult.data != null) {
+  //         _nearbyStores.value = fallbackResult.data!.take(5).toList();
+  //         print('Loaded ${_nearbyStores.length} stores as fallback');
+  //       }
+  //     }
+  //   } catch (e) {
+  //     print('Error loading nearby stores: $e');
+  //     // Handle error silently for now
+  //   }
+  // }
+
   Future<void> _loadNearbyStores() async {
     try {
-      // Always use default IT Del coordinates for customer location
-      final result = await _storeRepository.getNearbyStores(
-        latitude: customerLatitude,
-        longitude: customerLongitude,
-      );
+      // Get all stores first
+      final result = await _storeRepository.getAllStores();
 
       if (result.isSuccess && result.data != null) {
-        // Limit to 5 stores for home screen
-        _nearbyStores.value = result.data!.take(5).toList();
-        print('Loaded ${_nearbyStores.length} nearby stores');
-      } else {
-        print('Failed to load nearby stores: ${result.message}');
-        // Fallback to get all stores
-        final fallbackResult = await _storeRepository.getAllStores();
-        if (fallbackResult.isSuccess && fallbackResult.data != null) {
-          _nearbyStores.value = fallbackResult.data!.take(5).toList();
-          print('Loaded ${_nearbyStores.length} stores as fallback');
+        final allStores = result.data!;
+
+        // If we have user location, calculate distances and sort
+        if (_userLocation.value != null) {
+          final userLat = _userLocation.value!.latitude;
+          final userLon = _userLocation.value!.longitude;
+
+          // Calculate distance for each store
+          final storesWithDistance = allStores.map((store) {
+            if (store.latitude != null && store.longitude != null) {
+              final distance = DistanceHelper.calculateDistance(
+                userLat,
+                userLon,
+                store.latitude!,
+                store.longitude!,
+              );
+              return store.copyWith(distance: distance);
+            } else {
+              // If store doesn't have coordinates, put it at the end
+              return store.copyWith(distance: 9999.0);
+            }
+          }).toList();
+
+          // Sort by distance (closest first) and take only 5 stores for home screen
+          storesWithDistance.sort((a, b) {
+            final distanceA = a.distance ?? 9999.0;
+            final distanceB = b.distance ?? 9999.0;
+            return distanceA.compareTo(distanceB);
+          });
+
+          _nearbyStores.value = storesWithDistance.take(5).toList();
+        } else {
+          // If no location, just take first 5 stores
+          _nearbyStores.value = allStores.take(5).toList();
         }
       }
     } catch (e) {
-      print('Error loading nearby stores: $e');
       // Handle error silently for now
+      print('Error loading nearby stores: $e');
     }
   }
 
@@ -143,27 +244,27 @@ class HomeController extends GetxController {
   }
 
   void navigateToStores() {
-    Get.toNamed('/store_list');
+    Get.toNamed(Routes.STORE_LIST);
   }
 
   void navigateToOrders() {
-    Get.toNamed('/order_history');
+    Get.toNamed(Routes.ORDER_HISTORY);
   }
 
   void navigateToStoreDetail(int storeId) {
-    Get.toNamed('/store_detail', arguments: {'storeId': storeId});
+    Get.toNamed(Routes.STORE_DETAIL, arguments: {'storeId': storeId});
   }
 
   void navigateToOrderDetail(int orderId) {
-    Get.toNamed('/order_detail', arguments: {'orderId': orderId});
+    Get.toNamed(Routes.ORDER_DETAIL, arguments: {'orderId': orderId});
   }
 
   void navigateToCart() {
-    Get.toNamed('/cart');
+    Get.toNamed(Routes.CART);
   }
 
   void navigateToProfile() {
-    Get.toNamed('/profile');
+    Get.toNamed(Routes.PROFILE);
   }
 
   // Method to get customer location for other controllers
