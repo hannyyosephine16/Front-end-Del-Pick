@@ -1,10 +1,15 @@
-// lib/features/customer/controllers/store_controller.dart
+// lib/features/customer/controllers/store_controller.dart - Compatible with existing StoreRepository
+
+import 'dart:async';
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/core/errors/failures.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
+import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
+import 'package:del_pick/core/utils/distance_helper.dart';
 
 class StoreController extends GetxController {
   final StoreRepository _storeRepository;
@@ -18,115 +23,229 @@ class StoreController extends GetxController {
 
   // Observable state
   final RxBool _isLoading = false.obs;
+  final RxBool _isLoadingMore = false.obs;
   final RxBool _isSearching = false.obs;
+  final RxList<StoreModel> _allStores = <StoreModel>[].obs;
   final RxList<StoreModel> _stores = <StoreModel>[].obs;
-  final RxList<StoreModel> _allStores = <StoreModel>[].obs; // Original data
   final RxString _errorMessage = ''.obs;
   final RxBool _hasError = false.obs;
   final RxBool _hasLocation = false.obs;
+  final RxDouble _currentLatitude = 0.0.obs;
+  final RxDouble _currentLongitude = 0.0.obs;
+
+  // Search and filter state
   final RxString _searchQuery = ''.obs;
-  final RxString _currentSortBy = 'distance'.obs; // distance, rating, name
+  final RxString _currentSortBy = 'distance'.obs;
+  final RxString _sortOrder = 'ASC'.obs;
+  final RxString _statusFilter = 'active'.obs;
+  final RxDouble _minRatingFilter = 0.0.obs;
+  final RxDouble _maxDistanceFilter = 50.0.obs;
+
+  // Pagination
+  final RxInt _currentPage = 1.obs;
+  final RxBool _hasMoreData = true.obs;
+  final int _itemsPerPage = 10;
+
+  // Debouncer for search
+  Timer? _searchDebouncer;
 
   // Getters
   bool get isLoading => _isLoading.value;
+  bool get isLoadingMore => _isLoadingMore.value;
   bool get isSearching => _isSearching.value;
   List<StoreModel> get stores => _stores;
-  List<StoreModel> get allStores => _allStores;
   String get errorMessage => _errorMessage.value;
   bool get hasError => _hasError.value;
   bool get hasLocation => _hasLocation.value;
   bool get hasStores => _stores.isNotEmpty;
   String get searchQuery => _searchQuery.value;
   String get currentSortBy => _currentSortBy.value;
+  String get sortOrder => _sortOrder.value;
+  int get totalStoresCount => _allStores.length;
+  int get filteredStoresCount => _stores.length;
+
+  // Additional getters for filter widget
+  RxString get statusFilter => _statusFilter;
+  RxDouble get minRatingFilter => _minRatingFilter;
+  RxDouble get maxDistanceFilter => _maxDistanceFilter;
 
   @override
   void onInit() {
     super.onInit();
-    fetchNearbyStores();
+    _getCurrentLocation();
   }
 
-  Future<void> fetchNearbyStores() async {
+  @override
+  void onClose() {
+    _searchDebouncer?.cancel();
+    super.onClose();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      final position = await _locationService.getCurrentLocation();
+      if (position != null) {
+        _hasLocation.value = true;
+        _currentLatitude.value = position.latitude;
+        _currentLongitude.value = position.longitude;
+      } else {
+        _hasLocation.value = false;
+      }
+      // Load stores after getting location
+      await loadStores();
+    } catch (e) {
+      _hasLocation.value = false;
+      // Load stores without location
+      await loadStores();
+    }
+  }
+
+  /// Load stores - use API search if available, fallback to getAllStores + local filter
+  Future<void> loadStores({bool isRefresh = false}) async {
+    if (isRefresh) {
+      _stores.clear();
+      _currentPage.value = 1;
+      _hasMoreData.value = true;
+    }
+
     _isLoading.value = true;
     _hasError.value = false;
     _errorMessage.value = '';
 
     try {
-      // Get current location
-      final position = await _locationService.getCurrentLocation();
-
-      if (position != null) {
-        _hasLocation.value = true;
-
-        // Fetch stores from repository
-        final result = await _storeRepository.getNearbyStores(
-          latitude: position.latitude,
-          longitude: position.longitude,
-        );
-
-        if (result.isSuccess && result.data != null) {
-          _allStores.value = result.data!; // Store original data
-          _applyCurrentFilters(); // Apply current filters and sorting
-        } else {
-          _hasError.value = true;
-          _errorMessage.value = result.message ?? 'Failed to fetch stores';
-        }
+      // Try to use searchStores method if available
+      if (_hasSearchFilters() && _storeRepository.searchStores != null) {
+        await _loadWithApiSearch();
       } else {
-        _hasLocation.value = false;
-        // Fallback to get all stores without location
-        final result = await _storeRepository.getAllStores();
-
-        if (result.isSuccess && result.data != null) {
-          _allStores.value = result.data!; // Store original data
-          _applyCurrentFilters(); // Apply current filters and sorting
-        } else {
-          _hasError.value = true;
-          _errorMessage.value = result.message ?? 'Failed to fetch stores';
-        }
+        // Fallback to getAllStores + local filtering
+        await _loadWithLocalFilter();
       }
     } catch (e) {
       _hasError.value = true;
-      if (e is Exception) {
-        final failure = ErrorHandler.handleException(e);
-        _errorMessage.value = ErrorHandler.getErrorMessage(failure);
-      } else {
-        _errorMessage.value = 'An unexpected error occurred';
-      }
+      _errorMessage.value = 'Failed to load stores: $e';
+      print('Error loading stores: $e');
     } finally {
       _isLoading.value = false;
     }
   }
 
-  Future<void> refreshStores() async {
-    await fetchNearbyStores();
+  /// Check if we have search/filter criteria that would benefit from API search
+  bool _hasSearchFilters() {
+    return _searchQuery.value.isNotEmpty ||
+        _statusFilter.value != 'active' ||
+        _minRatingFilter.value > 0 ||
+        _maxDistanceFilter.value < 50;
   }
 
-  void searchStores(String query) {
-    _isSearching.value = true;
-    _searchQuery.value = query;
+  /// Load stores using API search (if searchStores method exists)
+  Future<void> _loadWithApiSearch() async {
+    try {
+      final result = await _storeRepository.searchStores(
+        search: _searchQuery.value.isEmpty ? null : _searchQuery.value,
+        sortBy: _currentSortBy.value,
+        sortOrder: _sortOrder.value,
+        page: _currentPage.value,
+        limit: _itemsPerPage,
+        status: _statusFilter.value,
+        minRating: _minRatingFilter.value > 0 ? _minRatingFilter.value : null,
+        maxDistance:
+            _maxDistanceFilter.value < 50 ? _maxDistanceFilter.value : null,
+        latitude: _hasLocation.value ? _currentLatitude.value : null,
+        longitude: _hasLocation.value ? _currentLongitude.value : null,
+      );
 
-    // Add small delay for better UX
-    Future.delayed(const Duration(milliseconds: 300), () {
-      _applyCurrentFilters();
-      _isSearching.value = false;
-    });
+      if (result.isSuccess && result.data != null) {
+        final paginatedData = result.data!;
+
+        if (_currentPage.value == 1) {
+          _stores.value = paginatedData.data;
+          _allStores.value = paginatedData.data; // Update allStores too
+        } else {
+          _stores.addAll(paginatedData.data);
+          _allStores.addAll(paginatedData.data);
+        }
+
+        _hasMoreData.value = _currentPage.value < paginatedData.totalPages;
+        _currentPage.value++;
+      } else {
+        _hasError.value = true;
+        _errorMessage.value = result.message ?? 'Failed to load stores';
+      }
+    } catch (e) {
+      // If API search fails, fallback to local filtering
+      print('API search failed, falling back to local filter: $e');
+      await _loadWithLocalFilter();
+    }
   }
 
-  void clearSearch() {
-    _searchQuery.value = '';
-    _applyCurrentFilters();
+  /// Load stores using getAllStores + local filtering
+  Future<void> _loadWithLocalFilter() async {
+    try {
+      final result = await _storeRepository.getAllStores();
+
+      if (result.isSuccess && result.data != null) {
+        List<StoreModel> storesList =
+            result.data!.data; // Access data from PaginatedResponse
+
+        // Calculate distances if location is available
+        if (_hasLocation.value) {
+          storesList = storesList.map((store) {
+            if (store.latitude != null && store.longitude != null) {
+              final distance = DistanceHelper.calculateDistance(
+                _currentLatitude.value,
+                _currentLongitude.value,
+                store.latitude!,
+                store.longitude!,
+              );
+              return store.copyWith(distance: distance);
+            }
+            return store.copyWith(distance: 9999.0);
+          }).toList();
+        }
+
+        _allStores.value = storesList;
+        _applyFiltersAndSort();
+      } else {
+        _hasError.value = true;
+        _errorMessage.value = result.message ?? 'Failed to load stores';
+      }
+    } catch (e) {
+      _hasError.value = true;
+      _errorMessage.value = 'Error loading stores: $e';
+    }
   }
 
-  void _applyCurrentFilters() {
+  void _applyFiltersAndSort() {
     List<StoreModel> filteredStores = List.from(_allStores);
 
     // Apply search filter
     if (_searchQuery.value.isNotEmpty) {
       filteredStores = filteredStores.where((store) {
-        final name = store.name.toLowerCase();
-        final address = store.address.toLowerCase();
         final query = _searchQuery.value.toLowerCase();
+        return store.name.toLowerCase().contains(query) ||
+            (store.description?.toLowerCase().contains(query) ?? false) ||
+            (store.address?.toLowerCase().contains(query) ?? false);
+      }).toList();
+    }
 
-        return name.contains(query) || address.contains(query);
+    // Apply rating filter
+    if (_minRatingFilter.value > 0) {
+      filteredStores = filteredStores.where((store) {
+        return (store.rating ?? 0) >= _minRatingFilter.value;
+      }).toList();
+    }
+
+    // Apply distance filter (only if location is available)
+    if (_hasLocation.value && _maxDistanceFilter.value < 50) {
+      filteredStores = filteredStores.where((store) {
+        return (store.distance ?? 9999.0) <= _maxDistanceFilter.value;
+      }).toList();
+    }
+
+    // Apply status filter
+    if (_statusFilter.value == 'open') {
+      filteredStores = filteredStores.where((store) {
+        return store.isOpen ?? false;
       }).toList();
     }
 
@@ -139,11 +258,13 @@ class StoreController extends GetxController {
   void _applySorting(List<StoreModel> stores) {
     switch (_currentSortBy.value) {
       case 'distance':
-        stores.sort((a, b) {
-          final distanceA = a.distance ?? double.infinity;
-          final distanceB = b.distance ?? double.infinity;
-          return distanceA.compareTo(distanceB);
-        });
+        if (_hasLocation.value) {
+          stores.sort((a, b) {
+            final distanceA = a.distance ?? 9999.0;
+            final distanceB = b.distance ?? 9999.0;
+            return distanceA.compareTo(distanceB);
+          });
+        }
         break;
       case 'rating':
         stores.sort((a, b) {
@@ -158,92 +279,161 @@ class StoreController extends GetxController {
     }
   }
 
-  void sortStoresByDistance() {
-    _currentSortBy.value = 'distance';
-    _applyCurrentFilters();
-
-    Get.snackbar(
-      'Sorted',
-      'Restaurants sorted by distance',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+  /// Refresh stores (pull to refresh)
+  Future<void> refreshStores() async {
+    await loadStores(isRefresh: true);
   }
 
+  /// Load more stores (pagination) - only works with API search
+  Future<void> loadMoreStores() async {
+    if (!_isLoadingMore.value && _hasMoreData.value && _hasSearchFilters()) {
+      _isLoadingMore.value = true;
+      await loadStores(isRefresh: false);
+      _isLoadingMore.value = false;
+    }
+  }
+
+  /// Search stores with debouncing
+  void searchStores(String query) {
+    _searchDebouncer?.cancel();
+    _searchQuery.value = query;
+    _isSearching.value = true;
+
+    _searchDebouncer = Timer(const Duration(milliseconds: 500), () {
+      _isSearching.value = false;
+      if (_hasSearchFilters()) {
+        loadStores(isRefresh: true); // Use API search
+      } else {
+        _applyFiltersAndSort(); // Use local filter
+      }
+    });
+  }
+
+  /// Clear search
+  void clearSearch() {
+    _searchQuery.value = '';
+    _applyFiltersAndSort();
+  }
+
+  /// Sort stores by distance
+  void sortStoresByDistance() {
+    if (!_hasLocation.value) {
+      Get.snackbar(
+        'Location Required',
+        'Please enable location to sort by distance',
+        snackPosition: SnackPosition.BOTTOM,
+      );
+      return;
+    }
+
+    _currentSortBy.value = 'distance';
+    _sortOrder.value = 'ASC';
+    _applyFiltersAndSort();
+  }
+
+  /// Sort stores by rating
   void sortStoresByRating() {
     _currentSortBy.value = 'rating';
-    _applyCurrentFilters();
-
-    Get.snackbar(
-      'Sorted',
-      'Restaurants sorted by rating',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+    _sortOrder.value = 'DESC';
+    _applyFiltersAndSort();
   }
 
+  /// Sort stores by name
   void sortStoresByName() {
     _currentSortBy.value = 'name';
-    _applyCurrentFilters();
-
-    Get.snackbar(
-      'Sorted',
-      'Restaurants sorted by name',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+    _sortOrder.value = 'ASC';
+    _applyFiltersAndSort();
   }
 
+  /// Filter stores that are currently open
   void filterOpenStores() {
-    List<StoreModel> openStores =
-        _allStores.where((store) => store.isOpenNow()).toList();
-    _stores.value = openStores;
-
-    Get.snackbar(
-      'Filtered',
-      'Showing only open restaurants',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+    _statusFilter.value = 'open';
+    _applyFiltersAndSort();
   }
 
+  /// Filter stores by minimum rating
   void filterByRating(double minRating) {
-    List<StoreModel> ratedStores = _allStores.where((store) {
-      return (store.rating ?? 0.0) >= minRating;
-    }).toList();
-    _stores.value = ratedStores;
-
-    Get.snackbar(
-      'Filtered',
-      'Showing restaurants with rating ≥ $minRating',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+    _minRatingFilter.value = minRating;
+    _applyFiltersAndSort();
   }
 
+  /// Filter stores by status
+  void filterByStatus(String status) {
+    _statusFilter.value = status;
+    _applyFiltersAndSort();
+  }
+
+  /// Filter stores by minimum rating
+  void filterByMinRating(double minRating) {
+    _minRatingFilter.value = minRating;
+    _applyFiltersAndSort();
+  }
+
+  /// Filter stores by maximum distance
+  void filterByMaxDistance(double maxDistance) {
+    _maxDistanceFilter.value = maxDistance;
+    _applyFiltersAndSort();
+  }
+
+  /// Reset all filters
   void resetFilters() {
     _searchQuery.value = '';
     _currentSortBy.value = 'distance';
-    _applyCurrentFilters();
-
-    Get.snackbar(
-      'Reset',
-      'All filters cleared',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 1),
-    );
+    _sortOrder.value = 'ASC';
+    _statusFilter.value = 'active';
+    _minRatingFilter.value = 0.0;
+    _maxDistanceFilter.value = 50.0;
+    _applyFiltersAndSort();
   }
 
-  // Get available categories for filtering
-  List<String> get availableCategories {
-    return _allStores
-        .map((store) => store.description ?? 'Other')
-        .toSet()
-        .toList();
+  /// Apply multiple filters at once
+  void applyFilters({
+    String? search,
+    String? sortBy,
+    String? sortOrder,
+    String? status,
+    double? minRating,
+    double? maxDistance,
+  }) {
+    if (search != null) _searchQuery.value = search;
+    if (sortBy != null) _currentSortBy.value = sortBy;
+    if (sortOrder != null) _sortOrder.value = sortOrder;
+    if (status != null) _statusFilter.value = status;
+    if (minRating != null) _minRatingFilter.value = minRating;
+    if (maxDistance != null) _maxDistanceFilter.value = maxDistance;
+
+    _applyFiltersAndSort();
   }
 
-  int get totalStoresCount => _allStores.length;
-  int get filteredStoresCount => _stores.length;
+  /// Get current filter summary for UI
+  String getFilterSummary() {
+    final filters = <String>[];
+
+    if (_searchQuery.value.isNotEmpty) {
+      filters.add('Search: "${_searchQuery.value}"');
+    }
+
+    if (_statusFilter.value != 'active') {
+      filters.add('Status: ${_statusFilter.value}');
+    }
+
+    if (_minRatingFilter.value > 0) {
+      filters.add('Min Rating: ${_minRatingFilter.value}');
+    }
+
+    if (_maxDistanceFilter.value < 50) {
+      filters.add('Max Distance: ${_maxDistanceFilter.value}km');
+    }
+
+    final sortLabel = _currentSortBy.value == 'distance'
+        ? 'Distance'
+        : _currentSortBy.value == 'rating'
+            ? 'Rating'
+            : 'Name';
+    filters.add('Sort: $sortLabel');
+
+    return filters.isEmpty ? 'All Stores' : filters.join(' • ');
+  }
 }
 // import 'package:geolocator/geolocator.dart';
 // import 'package:get/get.dart';

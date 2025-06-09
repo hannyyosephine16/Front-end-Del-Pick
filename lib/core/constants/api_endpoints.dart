@@ -1,4 +1,6 @@
 class ApiEndpoints {
+  // Base URLs
+  static const String baseUrl = 'https://delpick.horas-code.my.id/api/v1';
   // Base paths
   static const String auth = '/auth';
   static const String customers = '/customers';

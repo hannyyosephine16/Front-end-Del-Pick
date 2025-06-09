@@ -1,7 +1,10 @@
+// lib/features/customer/controllers/store_detail_controller.dart - Compatible with existing StoreRepository
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/menu/menu_item_model.dart';
+import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/menu_repository.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
@@ -54,16 +57,32 @@ class StoreDetailController extends GetxController {
     _errorMessage.value = '';
 
     try {
-      // Since we don't have getStoreById in repository, we'll get from the store list
+      // Try getStoreById first if it exists
+      try {
+        final directResult = await _storeRepository.getStoreById(storeId);
+        if (directResult.isSuccess && directResult.data != null) {
+          _store.value = directResult.data!;
+          print('Loaded store directly by ID');
+          return;
+        }
+      } catch (e) {
+        print('getStoreById not available or failed, trying getAllStores: $e');
+      }
+
+      // Fallback: Get all stores and find the one we need
       final result = await _storeRepository.getAllStores();
 
       if (result.isSuccess && result.data != null) {
-        final stores = result.data!;
+        List<StoreModel> stores =
+            result.data!.data; // Access data from PaginatedResponse
+
+        // Find the store with matching ID
         final foundStore =
             stores.firstWhereOrNull((store) => store.id == storeId);
 
         if (foundStore != null) {
           _store.value = foundStore;
+          print('Found store in getAllStores result');
         } else {
           _hasError.value = true;
           _errorMessage.value = 'Store not found';
@@ -74,12 +93,8 @@ class StoreDetailController extends GetxController {
       }
     } catch (e) {
       _hasError.value = true;
-      if (e is Exception) {
-        final failure = ErrorHandler.handleException(e);
-        _errorMessage.value = ErrorHandler.getErrorMessage(failure);
-      } else {
-        _errorMessage.value = 'An unexpected error occurred';
-      }
+      _errorMessage.value = 'An unexpected error occurred: $e';
+      print('Error in fetchStoreDetail: $e');
     } finally {
       _isLoading.value = false;
     }
@@ -92,14 +107,25 @@ class StoreDetailController extends GetxController {
       final result = await _menuRepository.getMenuItemsByStoreId(storeId);
 
       if (result.isSuccess && result.data != null) {
-        _menuItems.value = result.data!;
+        // Handle different response types from menu repository
+        if (result.data is PaginatedResponse<MenuItemModel>) {
+          _menuItems.value =
+              (result.data as PaginatedResponse<MenuItemModel>).data;
+        } else if (result.data is List<MenuItemModel>) {
+          _menuItems.value = result.data as List<MenuItemModel>;
+        } else {
+          _menuItems.clear();
+        }
+        print('Loaded ${_menuItems.length} menu items');
       } else {
         // Don't show error for menu items, just empty list
         _menuItems.clear();
+        print('No menu items found or failed to load: ${result.message}');
       }
     } catch (e) {
       // Silent error for menu items
       _menuItems.clear();
+      print('Error loading menu items: $e');
     } finally {
       _isLoadingMenu.value = false;
     }

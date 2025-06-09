@@ -28,7 +28,7 @@ class AppColors {
   static const Color textHint = Color(0xFFBDBDBD);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
   static const Color textOnSecondary = Color(0xFFFFFFFF);
-
+  static const Color disabled = Color(0xFFBDBDBD);
   // Status colors
   static const Color success = Color(0xFF4CAF50);
   static const Color warning = Color(0xFFFF9800);
@@ -99,6 +99,11 @@ class AppColors {
       textPrimary.withOpacity(opacity);
   static Color textSecondaryWithOpacity(double opacity) =>
       textSecondary.withOpacity(opacity);
+
+  /// Get background color for order status
+  static Color getOrderStatusBackgroundColor(String status) {
+    return getOrderStatusColor(status).withOpacity(0.1);
+  }
 
   // Utility method to get order status color
   static Color getOrderStatusColor(String status) {

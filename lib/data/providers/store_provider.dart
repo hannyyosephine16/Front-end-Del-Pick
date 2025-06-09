@@ -81,10 +81,125 @@ class StoreProvider {
     return await _apiService.get(ApiEndpoints.getStoreById(storeId));
   }
 
+  /// Get store by ID
   Future<Response> getStoreById(int storeId) async {
     return await _apiService.get(ApiEndpoints.getStoreById(storeId));
   }
 
+  /// Search stores with pagination and filters
+  Future<Response> searchStores({
+    String? search,
+    String? sortBy,
+    String? sortOrder,
+    int? page,
+    int? limit,
+    String? status,
+    double? minRating,
+    double? maxDistance,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final params = <String, dynamic>{};
+
+    // Search parameter
+    if (search != null && search.isNotEmpty) {
+      params['search'] = search;
+    }
+
+    // Sorting parameters
+    if (sortBy != null) {
+      params['sortBy'] = sortBy;
+    }
+    if (sortOrder != null) {
+      params['sortOrder'] = sortOrder;
+    }
+
+    // Pagination parameters
+    if (page != null) {
+      params['page'] = page.toString();
+    }
+    if (limit != null) {
+      params['limit'] = limit.toString();
+    }
+
+    // Filter parameters
+    if (status != null) {
+      params['status'] = status;
+    }
+    if (minRating != null) {
+      params['minRating'] = minRating.toString();
+    }
+    if (maxDistance != null) {
+      params['maxDistance'] = maxDistance.toString();
+    }
+
+    // Location parameters for distance calculation
+    if (latitude != null) {
+      params['latitude'] = latitude.toString();
+    }
+    if (longitude != null) {
+      params['longitude'] = longitude.toString();
+    }
+
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: params,
+    );
+  }
+
+  /// Get stores by status (active/inactive)
+  Future<Response> getStoresByStatus({
+    required String status,
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'status': status,
+      ...?params,
+    };
+
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: queryParams,
+    );
+  }
+
+  /// Get stores sorted by rating
+  Future<Response> getStoresSortedByRating({
+    String sortOrder = 'DESC',
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'sortBy': 'rating',
+      'sortOrder': sortOrder,
+      ...?params,
+    };
+
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: queryParams,
+    );
+  }
+
+  /// Get stores sorted by distance (requires location)
+  Future<Response> getStoresSortedByDistance({
+    required double latitude,
+    required double longitude,
+    String sortOrder = 'ASC',
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'latitude': latitude.toString(),
+      'longitude': longitude.toString(),
+      'sortBy': 'distance',
+      'sortOrder': sortOrder,
+      ...?params,
+    };
+
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: queryParams,
+    );
+  }
   // Future<Response> updateStoreStatus(
   //     int storeId,
   //     Map<String, dynamic> data,

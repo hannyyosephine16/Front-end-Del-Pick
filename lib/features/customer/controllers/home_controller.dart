@@ -1,4 +1,4 @@
-// lib/features/customer/controllers/home_controller.dart
+// lib/features/customer/controllers/home_controller.dart - Compatible with existing StoreRepository
 
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
@@ -6,6 +6,7 @@ import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
@@ -34,11 +35,7 @@ class HomeController extends GetxController {
   final RxString _greeting = ''.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool _hasError = false.obs;
-  // final RxBool _hasLocation =
-  //     true.obs; // Always true since we use default location
   final RxBool _hasLocation = false.obs;
-  // final RxString _currentAddress =
-  //     'Institut Teknologi Del'.obs; // Set default address
   final RxString _currentAddress = 'Getting location...'.obs;
   final Rx<Position?> _userLocation = Rx<Position?>(null);
 
@@ -55,14 +52,15 @@ class HomeController extends GetxController {
   bool get hasOrders => _recentOrders.isNotEmpty;
 
   // Customer location (default IT Del coordinates)
-  double get customerLatitude => AppConstants.defaultLatitude;
-  double get customerLongitude => AppConstants.defaultLongitude;
+  double get customerLatitude =>
+      _userLocation.value?.latitude ?? AppConstants.defaultLatitude;
+  double get customerLongitude =>
+      _userLocation.value?.longitude ?? AppConstants.defaultLongitude;
 
   @override
   void onInit() {
     super.onInit();
     _setGreeting();
-    // _setDefaultLocation();
     _getCurrentLocation();
     loadHomeData();
   }
@@ -76,14 +74,6 @@ class HomeController extends GetxController {
     } else {
       _greeting.value = 'Good Evening';
     }
-  }
-
-  void _setDefaultLocation() {
-    // Always use IT Del as customer location
-    _hasLocation.value = true;
-    _currentAddress.value = 'Institut Teknologi Del';
-    print('Customer location set to: ${_currentAddress.value}');
-    print('Coordinates: ${customerLatitude}, ${customerLongitude}');
   }
 
   Future<void> _getCurrentLocation() async {
@@ -146,40 +136,29 @@ class HomeController extends GetxController {
     }
   }
 
-  // Future<void> _loadNearbyStores() async {
-  //   try {
-  //     // Always use default IT Del coordinates for customer location
-  //     final result = await _storeRepository.getNearbyStores(
-  //       latitude: customerLatitude,
-  //       longitude: customerLongitude,
-  //     );
-  //
-  //     if (result.isSuccess && result.data != null) {
-  //       // Limit to 5 stores for home screen
-  //       _nearbyStores.value = result.data!.take(5).toList();
-  //       print('Loaded ${_nearbyStores.length} nearby stores');
-  //     } else {
-  //       print('Failed to load nearby stores: ${result.message}');
-  //       // Fallback to get all stores
-  //       final fallbackResult = await _storeRepository.getAllStores();
-  //       if (fallbackResult.isSuccess && fallbackResult.data != null) {
-  //         _nearbyStores.value = fallbackResult.data!.take(5).toList();
-  //         print('Loaded ${_nearbyStores.length} stores as fallback');
-  //       }
-  //     }
-  //   } catch (e) {
-  //     print('Error loading nearby stores: $e');
-  //     // Handle error silently for now
-  //   }
-  // }
-
   Future<void> _loadNearbyStores() async {
     try {
-      // Get all stores first
-      final result = await _storeRepository.getAllStores();
+      // Try getNearbyStores first if location is available
+      if (_userLocation.value != null) {
+        final nearbyResult = await _storeRepository.getNearbyStores(
+          latitude: _userLocation.value!.latitude,
+          longitude: _userLocation.value!.longitude,
+          limit: 5,
+        );
+
+        if (nearbyResult.isSuccess && nearbyResult.data != null) {
+          _nearbyStores.value = nearbyResult.data!.take(5).toList();
+          print('Loaded ${_nearbyStores.length} nearby stores');
+          return;
+        }
+      }
+
+      // Fallback: Get all stores and calculate distances locally
+      final result = await _storeRepository.getAllStores(limit: 20);
 
       if (result.isSuccess && result.data != null) {
-        final allStores = result.data!;
+        List<StoreModel> allStores =
+            result.data!.data; // Access data from PaginatedResponse
 
         // If we have user location, calculate distances and sort
         if (_userLocation.value != null) {
@@ -214,6 +193,10 @@ class HomeController extends GetxController {
           // If no location, just take first 5 stores
           _nearbyStores.value = allStores.take(5).toList();
         }
+
+        print('Loaded ${_nearbyStores.length} stores using getAllStores');
+      } else {
+        print('Failed to load stores: ${result.message}');
       }
     } catch (e) {
       // Handle error silently for now
@@ -228,7 +211,15 @@ class HomeController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        _recentOrders.value = result.data!.data;
+        // Handle different response types from order repository
+        if (result.data is PaginatedResponse<OrderModel>) {
+          _recentOrders.value =
+              (result.data as PaginatedResponse<OrderModel>).data;
+        } else if (result.data is List<OrderModel>) {
+          _recentOrders.value = result.data as List<OrderModel>;
+        } else {
+          _recentOrders.clear();
+        }
         print('Loaded ${_recentOrders.length} recent orders');
       } else {
         print('Failed to load recent orders: ${result.message}');
