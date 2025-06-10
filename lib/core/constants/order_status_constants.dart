@@ -26,12 +26,43 @@ class OrderStatusConstants {
     cancelled,
   ];
 
+  // static const List<String> allDeliveryStatuses = [
+  //   waiting,
+  //   pickingUp,
+  //   onTheWay,
+  //   deliveryDelivered,
+  // ];
+
   static const List<String> allDeliveryStatuses = [
     waiting,
     pickingUp,
-    onTheWay,
-    deliveryDelivered,
+    onDelivery,
+    delivered,
   ];
+  // Helper methods
+  static bool isActiveStatus(String status) {
+    return [pending, approved, preparing, onDelivery].contains(status);
+  }
+
+  static bool isCompletedStatus(String status) {
+    return status == delivered;
+  }
+
+  static bool isCancelledStatus(String status) {
+    return status == cancelled;
+  }
+
+  static bool canTrack(String status) {
+    return [preparing, onDelivery].contains(status);
+  }
+
+  static bool canCancel(String status) {
+    return [pending, approved, preparing].contains(status);
+  }
+
+  static bool canReview(String status) {
+    return status == delivered;
+  }
 
   static const List<String> activeOrderStatuses = [
     pending,
@@ -45,6 +76,45 @@ class OrderStatusConstants {
   static const List<String> cancellableStatuses = [pending, approved];
 
   // Status display names
+  // Status display names
+  static String getDisplayName(String status) {
+    switch (status) {
+      case pending:
+        return 'Pending';
+      case approved:
+        return 'Approved';
+      case preparing:
+        return 'Preparing';
+      case onDelivery:
+        return 'On Delivery';
+      case delivered:
+        return 'Delivered';
+      case cancelled:
+        return 'Cancelled';
+      default:
+        return 'Unknown';
+    }
+  }
+
+  // Status colors (for UI)
+  static String getStatusColor(String status) {
+    switch (status) {
+      case pending:
+      case approved:
+        return 'warning';
+      case preparing:
+        return 'info';
+      case onDelivery:
+        return 'secondary';
+      case delivered:
+        return 'success';
+      case cancelled:
+        return 'error';
+      default:
+        return 'default';
+    }
+  }
+
   static const Map<String, String> orderStatusNames = {
     pending: 'Menunggu Konfirmasi',
     approved: 'Dikonfirmasi',

@@ -25,10 +25,14 @@ class AppColors {
   // Text colors
   static const Color textPrimary = Color(0xFF212121);
   static const Color textSecondary = Color(0xFF757575);
+  static const Color onPrimary = Color(0xFFFFFFFF);
   static const Color textHint = Color(0xFFBDBDBD);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
   static const Color textOnSecondary = Color(0xFFFFFFFF);
+
   static const Color textOnWarning = Color(0xFFFF9800);
+  static const Color disabled = Color(0xFFBDBDBD);
+  static const Color textDisabled = Color(0xFFBDBDBD);
 
   // Status colors
   static const Color success = Color(0xFF4CAF50);
@@ -53,6 +57,9 @@ class AppColors {
   static const Color storeOpen = Color(0xFF4CAF50);
   static const Color storeClosed = Color(0xFFF44336);
   static const Color storeBusy = Color(0xFFFF9800);
+
+  // Other colors
+  static const Color divider = Color(0xFFE2E8F0);
 
   // Rating colors
   static const Color rating = Color(0xFFFFD700);
@@ -98,6 +105,11 @@ class AppColors {
   static Color textSecondaryWithOpacity(double opacity) =>
       textSecondary.withOpacity(opacity);
 
+  /// Get background color for order status
+  static Color getOrderStatusBackgroundColor(String status) {
+    return getOrderStatusColor(status).withOpacity(0.1);
+  }
+
   // Utility method to get order status color
   static Color getOrderStatusColor(String status) {
     switch (status.toLowerCase()) {
@@ -127,6 +139,21 @@ class AppColors {
         return driverInactive;
       case 'busy':
         return driverBusy;
+      default:
+        return textSecondary;
+    }
+  }
+
+  static Color getStoreStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'active':
+      case 'open':
+        return storeOpen;
+      case 'inactive':
+      case 'closed':
+        return storeClosed;
+      case 'busy':
+        return storeBusy;
       default:
         return textSecondary;
     }

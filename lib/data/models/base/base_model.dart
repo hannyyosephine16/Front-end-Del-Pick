@@ -1,3 +1,5 @@
+// lib/data/models/base/base_model.dart - Fixed ApiResponseModel
+
 abstract class BaseModel {
   Map<String, dynamic> toJson();
 
@@ -15,7 +17,7 @@ class ApiResponseModel<T> {
   final int statusCode;
   final String message;
   final T? data;
-  final String? errors;
+  final dynamic errors; // Changed from String? to dynamic to handle arrays
   final bool success;
 
   ApiResponseModel({
@@ -28,18 +30,33 @@ class ApiResponseModel<T> {
 
   factory ApiResponseModel.fromJson(
     Map<String, dynamic> json,
+    T Function(dynamic)? fromJsonT, {
+    int? httpStatusCode, // Add HTTP status code parameter
+  }) {
+    // ✅ Handle backend response format
+    final bool responseSuccess = json['success'] as bool? ?? true;
+    final int responseStatusCode = httpStatusCode ??
+        (responseSuccess ? 200 : 400); // Default based on success flag
+
+    return ApiResponseModel<T>(
+      statusCode: responseStatusCode, // Use HTTP status or derive from success
+      message: json['message'] as String,
+      data: json['data'] != null && fromJsonT != null
+          ? fromJsonT(json['data'])
+          : json['data'] as T?,
+      errors: json['errors'], // Can be String, List, or null
+      success: responseSuccess,
+    );
+  }
+
+  // Factory for HTTP responses with explicit status codes
+  factory ApiResponseModel.fromHttpResponse(
+    Map<String, dynamic> json,
+    int httpStatusCode,
     T Function(dynamic)? fromJsonT,
   ) {
-    return ApiResponseModel<T>(
-      statusCode: json['statusCode'] as int? ?? 200,
-      message: json['message'] as String,
-      data:
-          json['data'] != null && fromJsonT != null
-              ? fromJsonT(json['data'])
-              : json['data'] as T?,
-      errors: json['errors'] as String?,
-      success: json['success'] as bool?,
-    );
+    return ApiResponseModel.fromJson(json, fromJsonT,
+        httpStatusCode: httpStatusCode);
   }
 
   Map<String, dynamic> toJson() {
@@ -55,12 +72,36 @@ class ApiResponseModel<T> {
   bool get isSuccess => success && statusCode >= 200 && statusCode < 300;
   bool get isError => !isSuccess;
 
+  // ✅ Better error message handling
+  String get errorMessage {
+    if (errors == null) return message;
+
+    if (errors is List) {
+      final errorList = errors as List;
+      if (errorList.isNotEmpty) {
+        // Handle validation errors from backend
+        if (errorList.first is Map) {
+          final firstError = errorList.first as Map<String, dynamic>;
+          return firstError['msg'] as String? ?? message;
+        }
+        return errorList.join(', ');
+      }
+    }
+
+    if (errors is String) {
+      return errors as String;
+    }
+
+    return message;
+  }
+
   @override
   String toString() {
     return 'ApiResponseModel{statusCode: $statusCode, message: $message, success: $success}';
   }
 }
 
+// Keep PaginatedResponse unchanged as it looks correct
 class PaginatedResponse<T> {
   final List<T> data;
   final int totalItems;
@@ -81,8 +122,7 @@ class PaginatedResponse<T> {
     T Function(Map<String, dynamic>) fromJsonT,
   ) {
     return PaginatedResponse<T>(
-      data:
-          (json['data'] as List?)
+      data: (json['data'] as List?)
               ?.map((item) => fromJsonT(item as Map<String, dynamic>))
               .toList() ??
           [],

@@ -2,6 +2,9 @@ import 'package:get/get.dart';
 import 'package:del_pick/features/customer/controllers/store_controller.dart';
 import 'package:del_pick/features/customer/controllers/home_controller.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
+import 'package:del_pick/features/customer/controllers/store_detail_controller.dart';
+import 'package:del_pick/features/customer/controllers/checkout_controller.dart';
+import 'package:del_pick/features/customer/controllers/order_history_controller.dart';
 import 'package:del_pick/data/repositories/tracking_repository.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/menu_repository.dart';
@@ -27,6 +30,7 @@ class CustomerBinding extends Bindings {
     Get.lazyPut<TrackingRepository>(() => TrackingRepository(Get.find()));
 
     // Controllers
+    Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<HomeController>(
       () => HomeController(
         storeRepository: Get.find(),
@@ -34,11 +38,33 @@ class CustomerBinding extends Bindings {
         locationService: Get.find(),
       ),
     );
-    Get.lazyPut<CartController>(() => CartController());
     Get.lazyPut<StoreController>(
       () => StoreController(
         storeRepository: Get.find(),
         locationService: Get.find(),
+      ),
+    );
+
+    Get.lazyPut<StoreDetailController>(
+      () => StoreDetailController(
+        storeRepository: Get.find(),
+        menuRepository: Get.find(),
+        cartController: Get.find(),
+      ),
+    );
+
+    Get.lazyPut<CheckoutController>(() => CheckoutController());
+
+    // Get.lazyPut<CheckoutController>(
+    //   () => CheckoutController(
+    //     orderRepository: Get.find(),
+    //     cartController: Get.find(),
+    //   ),
+    // );
+
+    Get.lazyPut<OrderHistoryController>(
+      () => OrderHistoryController(
+        orderRepository: Get.find(),
       ),
     );
   }

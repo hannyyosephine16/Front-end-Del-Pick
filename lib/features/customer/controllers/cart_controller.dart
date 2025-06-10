@@ -1,3 +1,4 @@
+// lib/features/customer/controllers/cart_controller.dart
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -7,6 +8,7 @@ import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/core/services/local/storage_service.dart';
 import 'package:del_pick/core/constants/storage_constants.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
+import 'package:del_pick/app/routes/app_routes.dart';
 
 class CartController extends GetxController {
   final StorageService _storageService = Get.find<StorageService>();
@@ -245,8 +247,9 @@ class CartController extends GetxController {
       return;
     }
 
+    // Navigate to checkout screen using Routes constant
     Get.toNamed(
-      '/checkout',
+      Routes.CHECKOUT,
       arguments: {
         'cartItems': _cartItems,
         'storeId': _currentStoreId.value,

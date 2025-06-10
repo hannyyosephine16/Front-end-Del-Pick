@@ -14,19 +14,30 @@ class AuthInterceptor extends Interceptor {
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
     // Add authentication token to requests
-    final String? token = _storageService.readString(
-      StorageConstants.authToken,
-    );
-
+    // final String? token = _storageService.readString(
+    //   StorageConstants.authToken,
+    // );
+    //
+    // if (token != null && token.isNotEmpty) {
+    //   options.headers['Authorization'] = 'Bearer $token';
+    // }
+    //
+    // // Add common headers
+    // options.headers['User-Agent'] = 'DelPick Mobile App';
+    // options.headers['X-Requested-With'] = 'XMLHttpRequest';
+    //
+    // handler.next(options);
+    // Add auth token if available
+    final token = _storageService.readString(StorageConstants.authToken);
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
+      print('AuthInterceptor: Added token to request'); // Debug
+    } else {
+      print('AuthInterceptor: No token available'); // Debug
     }
 
-    // Add common headers
-    options.headers['User-Agent'] = 'DelPick Mobile App';
-    options.headers['X-Requested-With'] = 'XMLHttpRequest';
-
     handler.next(options);
+    // }
   }
 
   @override
@@ -56,7 +67,6 @@ class AuthInterceptor extends Interceptor {
     } else if (err.response?.statusCode == 403) {
       _handleForbidden(err);
     }
-
     handler.next(err);
   }
 
@@ -67,8 +77,7 @@ class AuthInterceptor extends Interceptor {
 
     if (data is Map<String, dynamic> && data.containsKey('message')) {
       final message = data['message'].toString().toLowerCase();
-      isTokenExpired =
-          message.contains('token') &&
+      isTokenExpired = message.contains('token') &&
           (message.contains('expired') || message.contains('invalid'));
     }
 

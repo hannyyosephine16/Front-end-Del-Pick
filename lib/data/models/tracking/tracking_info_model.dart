@@ -1,13 +1,16 @@
 import 'package:del_pick/data/models/tracking/location_model.dart';
+import 'package:del_pick/data/models/tracking/tracking_data_model.dart';
+
+import '../driver/driver_model.dart';
 
 class TrackingInfoModel {
   final int orderId;
   final String status;
-  final LocationModel? storeLocation;
-  final LocationModel? driverLocation;
+  final LocationData? storeLocation;
+  final LocationData? driverLocation;
   final String deliveryAddress;
   final DateTime? estimatedDeliveryTime;
-  final DriverTrackingInfo? driver;
+  final DriverModel? driver;
   final String? message;
 
   TrackingInfoModel({
@@ -25,29 +28,20 @@ class TrackingInfoModel {
     return TrackingInfoModel(
       orderId: json['orderId'] as int,
       status: json['status'] as String,
-      storeLocation:
-          json['storeLocation'] != null
-              ? LocationModel.fromJson(
-                json['storeLocation'] as Map<String, dynamic>,
-              )
-              : null,
-      driverLocation:
-          json['driverLocation'] != null
-              ? LocationModel.fromJson(
-                json['driverLocation'] as Map<String, dynamic>,
-              )
-              : null,
+      storeLocation: json['storeLocation'] != null
+          ? LocationData.fromJson(json['storeLocation'] as Map<String, dynamic>)
+          : null,
+      driverLocation: json['driverLocation'] != null
+          ? LocationData.fromJson(
+              json['driverLocation'] as Map<String, dynamic>)
+          : null,
       deliveryAddress: json['deliveryAddress'] as String,
-      estimatedDeliveryTime:
-          json['estimatedDeliveryTime'] != null
-              ? DateTime.parse(json['estimatedDeliveryTime'] as String)
-              : null,
-      driver:
-          json['driver'] != null
-              ? DriverTrackingInfo.fromJson(
-                json['driver'] as Map<String, dynamic>,
-              )
-              : null,
+      estimatedDeliveryTime: json['estimatedDeliveryTime'] != null
+          ? DateTime.parse(json['estimatedDeliveryTime'] as String)
+          : null,
+      driver: json['driver'] != null
+          ? DriverModel.fromJson(json['driver'] as Map<String, dynamic>)
+          : null,
       message: json['message'] as String?,
     );
   }
@@ -65,100 +59,25 @@ class TrackingInfoModel {
     };
   }
 
-  TrackingInfoModel copyWith({
-    int? orderId,
-    String? status,
-    LocationModel? storeLocation,
-    LocationModel? driverLocation,
-    String? deliveryAddress,
-    DateTime? estimatedDeliveryTime,
-    DriverTrackingInfo? driver,
-    String? message,
-  }) {
-    return TrackingInfoModel(
-      orderId: orderId ?? this.orderId,
-      status: status ?? this.status,
-      storeLocation: storeLocation ?? this.storeLocation,
-      driverLocation: driverLocation ?? this.driverLocation,
-      deliveryAddress: deliveryAddress ?? this.deliveryAddress,
-      estimatedDeliveryTime:
-          estimatedDeliveryTime ?? this.estimatedDeliveryTime,
-      driver: driver ?? this.driver,
-      message: message ?? this.message,
-    );
-  }
-
   bool get hasDriver => driver != null;
   bool get hasDriverLocation => driverLocation != null;
   bool get hasStoreLocation => storeLocation != null;
 
-  String get statusDisplayName {
-    switch (status) {
-      case 'preparing':
-        return 'Sedang Disiapkan';
-      case 'on_the_way':
-        return 'Dalam Perjalanan';
-      case 'delivered':
-        return 'Terkirim';
-      default:
-        return status;
-    }
-  }
-
   String get estimatedTimeString {
-    if (estimatedDeliveryTime == null) return '';
-    return '${estimatedDeliveryTime!.hour}:${estimatedDeliveryTime!.minute.toString().padLeft(2, '0')}';
-  }
+    if (estimatedDeliveryTime == null) return 'Calculating...';
 
-  @override
-  String toString() {
-    return 'TrackingInfoModel{orderId: $orderId, status: $status, hasDriver: $hasDriver}';
-  }
-}
+    final now = DateTime.now();
+    final difference = estimatedDeliveryTime!.difference(now);
 
-class DriverTrackingInfo {
-  final int id;
-  final String name;
-  final String? phone;
-  final String? vehicleType;
-  final String? vehicleNumber;
-  final double? rating;
+    if (difference.isNegative) return 'Delivered';
 
-  DriverTrackingInfo({
-    required this.id,
-    required this.name,
-    this.phone,
-    this.vehicleType,
-    this.vehicleNumber,
-    this.rating,
-  });
-
-  factory DriverTrackingInfo.fromJson(Map<String, dynamic> json) {
-    return DriverTrackingInfo(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      phone: json['phone'] as String?,
-      vehicleType: json['vehicleType'] as String?,
-      vehicleNumber: json['vehicleNumber'] as String?,
-      rating: (json['rating'] as num?)?.toDouble(),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'phone': phone,
-      'vehicleType': vehicleType,
-      'vehicleNumber': vehicleNumber,
-      'rating': rating,
-    };
-  }
-
-  String get displayRating => rating?.toStringAsFixed(1) ?? '0.0';
-
-  @override
-  String toString() {
-    return 'DriverTrackingInfo{id: $id, name: $name, vehicle: $vehicleNumber}';
+    final minutes = difference.inMinutes;
+    if (minutes < 60) {
+      return '${minutes} mins';
+    } else {
+      final hours = (minutes / 60).floor();
+      final remainingMins = minutes % 60;
+      return '${hours}h ${remainingMins}m';
+    }
   }
 }

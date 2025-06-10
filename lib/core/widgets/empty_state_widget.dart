@@ -14,6 +14,7 @@ class EmptyStateWidget extends StatelessWidget {
     this.icon = Icons.inbox_outlined,
     this.onRetry,
     this.retryText,
+    // this.actionText,
   });
 
   @override

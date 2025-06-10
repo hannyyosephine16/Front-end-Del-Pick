@@ -363,7 +363,7 @@ class AuthController extends GetxController {
         Get.offAllNamed(Routes.CUSTOMER_HOME);
         break;
       case AppConstants.roleDriver:
-        Get.offAllNamed(Routes.DRIVER_HOME);
+        Get.offAllNamed(Routes.DRIVER_MAIN);
         break;
       case AppConstants.roleStore:
         Get.offAllNamed(Routes.STORE_DASHBOARD);
@@ -373,6 +373,26 @@ class AuthController extends GetxController {
         break;
       default:
         Get.offAllNamed(Routes.LOGIN);
+    }
+  }
+
+  void updateCurrentUser(UserModel user) {
+    _currentUser.value = user;
+    _userRole.value = user.role;
+
+    // Update local storage with new user data
+    final storageService = Get.find<StorageService>();
+    storageService.writeJson(StorageConstants.userId, user.toJson());
+    storageService.writeString(StorageConstants.userRole, user.role);
+    storageService.writeString(StorageConstants.userEmail, user.email);
+    storageService.writeString(StorageConstants.userName, user.name);
+
+    if (user.phone != null) {
+      storageService.writeString(StorageConstants.userPhone, user.phone!);
+    }
+
+    if (user.avatar != null) {
+      storageService.writeString(StorageConstants.userAvatar, user.avatar!);
     }
   }
 

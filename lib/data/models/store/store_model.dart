@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/user_model.dart';
+import '../menu/menu_item_model.dart';
 
 class StoreModel {
   final int id;
@@ -20,6 +21,7 @@ class StoreModel {
   final double? distance;
   final String status;
   final UserModel? user;
+  final List<MenuItemModel>? menuItems;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -39,8 +41,10 @@ class StoreModel {
     this.latitude,
     this.longitude,
     this.distance,
-    required this.status,
+    // required this.status,
+    this.status = 'active',
     this.user,
+    this.menuItems,
     this.createdAt,
     this.updatedAt,
   });
@@ -63,18 +67,21 @@ class StoreModel {
       longitude: (json['longitude'] as num?)?.toDouble(),
       distance: (json['distance'] as num?)?.toDouble(),
       status: json['status'] as String? ?? 'active',
-      user:
-          json['user'] != null
-              ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
-              : null,
-      createdAt:
-          json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'] as String)
-              : null,
-      updatedAt:
-          json['updatedAt'] != null
-              ? DateTime.parse(json['updatedAt'] as String)
-              : null,
+      user: json['user'] != null
+          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
+          : null,
+      menuItems: json['menuItems'] != null
+          ? (json['menuItems'] as List)
+              .map((item) =>
+                  MenuItemModel.fromJson(item as Map<String, dynamic>))
+              .toList()
+          : null,
+      createdAt: json['createdAt'] != null
+          ? DateTime.parse(json['createdAt'] as String)
+          : null,
+      updatedAt: json['updatedAt'] != null
+          ? DateTime.parse(json['updatedAt'] as String)
+          : null,
     );
   }
 
@@ -97,6 +104,7 @@ class StoreModel {
       'distance': distance,
       'status': status,
       'user': user?.toJson(),
+      'menuItems': menuItems?.map((item) => item.toJson()).toList(),
       'createdAt': createdAt?.toIso8601String(),
       'updatedAt': updatedAt?.toIso8601String(),
     };
@@ -120,6 +128,7 @@ class StoreModel {
     double? distance,
     String? status,
     UserModel? user,
+    List<MenuItemModel>? menuItems,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -141,6 +150,7 @@ class StoreModel {
       distance: distance ?? this.distance,
       status: status ?? this.status,
       user: user ?? this.user,
+      menuItems: menuItems ?? this.menuItems,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -149,6 +159,24 @@ class StoreModel {
   bool get isActive => status == 'active';
   bool get isOpen => status == 'active';
   bool get isClosed => status == 'inactive';
+
+  // Add the missing statusDisplayName getter
+  String get statusDisplayName {
+    switch (status) {
+      case 'active':
+        return 'Active';
+      case 'inactive':
+        return 'Inactive';
+      case 'closed':
+        return 'Closed';
+      case 'maintenance':
+        return 'Under Maintenance';
+      case 'suspended':
+        return 'Suspended';
+      default:
+        return status;
+    }
+  }
 
   bool isOpenNow() {
     if (openTime == null || closeTime == null) return false;
@@ -180,9 +208,45 @@ class StoreModel {
     }
   }
 
+  String get operationalHours {
+    if (openTime != null && closeTime != null) {
+      return '$openTime - $closeTime';
+    }
+    return 'Tidak tersedia';
+  }
+
   String get displayRating => rating?.toStringAsFixed(1) ?? '0.0';
-  String get displayDistance =>
-      distance != null ? '${distance!.toStringAsFixed(1)} km' : '';
+  String get displayDistance {
+    if (distance == null) return '';
+    if (distance! < 1) {
+      return '${(distance! * 1000).toInt()}m';
+    }
+    return '${distance!.toStringAsFixed(1)}km';
+  }
+
+  // bool isOpenNow() {
+  //   if (openTime == null || closeTime == null) return true;
+  //
+  //   try {
+  //     final now = DateTime.now();
+  //     final currentTime =
+  //         '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  //
+  //     // Simple time comparison (assumes same day open/close)
+  //     return currentTime.compareTo(openTime!) >= 0 &&
+  //         currentTime.compareTo(closeTime!) <= 0;
+  //   } catch (e) {
+  //     return true; // Default to open if can't parse times
+  //   }
+  // }
+
+  String get operatingHours {
+    if (openTime == null || closeTime == null)
+      return 'Operating hours not available';
+    return '$openTime - $closeTime';
+  }
+
+  int get totalMenuItems => menuItems?.length ?? totalProducts ?? 0;
 
   @override
   bool operator ==(Object other) =>

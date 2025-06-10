@@ -183,48 +183,6 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 }
 
-// Placeholder auth screens
-class RegisterScreen extends StatelessWidget {
-  const RegisterScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Register Screen')));
-  }
-}
 
-class ForgotPasswordScreen extends StatelessWidget {
-  const ForgotPasswordScreen({super.key});
 
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Forgot Password Screen')));
-  }
-}
-
-class ResetPasswordScreen extends StatelessWidget {
-  const ResetPasswordScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Reset Password Screen')));
-  }
-}
-
-class ProfileScreen extends StatelessWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Profile Screen')));
-  }
-}
-
-class EditProfileScreen extends StatelessWidget {
-  const EditProfileScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Edit Profile Screen')));
-  }
-}

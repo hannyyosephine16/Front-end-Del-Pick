@@ -27,13 +27,16 @@ class AuthBinding extends Bindings {
     // Repository
     Get.lazyPut<AuthRepository>(() => AuthRepository(Get.find()));
 
-    // Controllers
-    Get.lazyPut<AuthController>(() => AuthController(Get.find()));
-    Get.lazyPut<LoginController>(() => LoginController(Get.find()));
-    Get.lazyPut<RegisterController>(() => RegisterController(Get.find()));
+    // Controllers - Fix the constructor parameter name
+    Get.lazyPut<AuthController>(
+        () => AuthController(Get.find<AuthRepository>()));
+    Get.lazyPut<LoginController>(
+        () => LoginController(Get.find<AuthRepository>()));
+    Get.lazyPut<RegisterController>(
+        () => RegisterController(Get.find<AuthRepository>()));
     Get.lazyPut<ForgetPasswordController>(
-      () => ForgetPasswordController(Get.find()),
+      () => ForgetPasswordController(Get.find<AuthRepository>()),
     );
-    Get.lazyPut<ProfileController>(() => ProfileController(Get.find()));
+    Get.lazyPut<ProfileController>(() => ProfileController());
   }
 }

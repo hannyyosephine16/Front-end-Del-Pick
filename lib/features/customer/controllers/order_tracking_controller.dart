@@ -1,3 +1,6 @@
+
+// lib/features/customer/controllers/order_tracking_controller.dart
+
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -41,9 +44,21 @@ class OrderTrackingController extends GetxController {
   bool get isTrackingActive => _isTrackingActive.value;
   int get refreshCounter => _refreshCounter.value;
 
-  // Computed properties
-  bool get canTrack => order?.canTrack ?? false;
+
+  // // Computed properties
+  // bool get canTrack => order?.canTrack ?? false;
+  // bool get hasDriver => trackingInfo?.hasDriver ?? false;
+
+  bool get canTrack {
+    if (order == null) return false;
+    // Order can be tracked when it's preparing or on delivery
+    return order!.orderStatus == OrderStatusConstants.preparing ||
+        order!.orderStatus == OrderStatusConstants.onDelivery;
+  }
+
   bool get hasDriver => trackingInfo?.hasDriver ?? false;
+  DriverModel? get driverInfo => trackingInfo?.driver;
+
   bool get hasDriverLocation => trackingInfo?.hasDriverLocation ?? false;
   String get currentStatus => order?.statusDisplayName ?? '';
 
@@ -162,11 +177,17 @@ class OrderTrackingController extends GetxController {
   }
 
   Future<void> contactDriver() async {
-    if (trackingInfo?.driver?.phone != null) {
+    // if (trackingInfo?.driver?.phone != null) {
+    //   // Implement call functionality
+    //   Get.snackbar(
+    //     'Contact Driver',
+    //     'Calling ${trackingInfo!.driver!.phone}...',
+
+    if (driverInfo?.phone != null) {
       // Implement call functionality
       Get.snackbar(
         'Contact Driver',
-        'Calling ${trackingInfo!.driver!.phone}...',
+        'Calling ${driverInfo!.phone}...',
         snackPosition: SnackPosition.BOTTOM,
       );
     }
@@ -193,7 +214,8 @@ class OrderTrackingController extends GetxController {
 
   String getDriverInfo() {
     if (hasDriver) {
-      return trackingInfo!.driver!.name;
+      // return trackingInfo!.driver!.name;
+      return driverInfo!.name;
     }
     return 'Searching for driver...';
   }
@@ -204,7 +226,11 @@ class OrderTrackingController extends GetxController {
         return 'Your order is being prepared by the restaurant';
       case OrderStatusConstants.onDelivery:
         return hasDriver
-            ? 'Your order is on the way with ${trackingInfo!.driver!.name}'
+
+      //  ? 'Your order is on the way with ${trackingInfo!.driver!.name}'
+
+            ? 'Your order is on the way with ${driverInfo!.name}'
+
             : 'Your order is being delivered';
       case OrderStatusConstants.delivered:
         return 'Your order has been delivered successfully';
@@ -227,9 +253,13 @@ class OrderTrackingController extends GetxController {
       ),
       TrackingStep(
         title: 'Driver Assigned',
-        subtitle: hasDriver
-            ? 'Driver: ${trackingInfo!.driver!.name}'
-            : 'Finding driver...',
+// <<<<<<< HEAD
+//         subtitle: hasDriver
+//             ? 'Driver: ${trackingInfo!.driver!.name}'
+//             : 'Finding driver...',
+// =======
+        subtitle:
+            hasDriver ? 'Driver: ${driverInfo!.name}' : 'Finding driver...',
         isCompleted: hasDriver && (order!.isOnDelivery || order!.isDelivered),
         isActive: hasDriver && order!.isPreparing,
         icon: Icons.person,

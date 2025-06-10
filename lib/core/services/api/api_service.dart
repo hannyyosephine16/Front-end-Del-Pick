@@ -44,15 +44,18 @@ class ApiService extends getx.GetxService {
   void _setupInterceptors() {
     // Clear existing interceptors
     _dio.interceptors.clear();
-
     // Add interceptors in order
     if (EnvironmentConfig.enableLogging) {
       _dio.interceptors.add(LoggingInterceptor());
     }
-
-    _dio.interceptors.add(ConnectivityInterceptor());
+    try {
+      _dio.interceptors.add(ConnectivityInterceptor());
+    } catch (e) {
+      print('Warning: ConnectivityInterceptor not added: $e');
+    }
     _dio.interceptors.add(AuthInterceptor(_storageService));
     _dio.interceptors.add(ErrorInterceptor());
+    print('ApiService: Interceptors setup completed'); // Debug
   }
 
   // GET request
