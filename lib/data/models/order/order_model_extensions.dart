@@ -1,20 +1,16 @@
-// lib/data/models/order/order_model_extensions.dart
+// lib/data/models/order/order_model_extensions.dart - FIXED
 import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/models/order/order_item_model.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
 import 'package:intl/intl.dart';
 
 extension OrderModelExtensions on OrderModel {
-  // Formatted total amount
-  String get formattedTotal {
-    return 'Rp ${NumberFormat('#,###').format(total)}';
-  }
-
-  // Formatted date
+  // Formatted date - Fixed to use existing property
   String get formattedDate {
     return DateFormat('dd MMM yyyy, HH:mm').format(orderDate);
   }
 
-  // Total items count
+  // Total items count - Fixed to use OrderItemModel
   int get totalItems {
     return items?.fold(0, (sum, item) => sum! + item.quantity) ?? 0;
   }
@@ -65,15 +61,10 @@ extension OrderModelExtensions on OrderModel {
   bool get isOnDelivery => orderStatus == OrderStatusConstants.onDelivery;
   bool get isDelivered => orderStatus == OrderStatusConstants.delivered;
   bool get isCancelled => orderStatus == OrderStatusConstants.cancelled;
-
-  // Delivery address
-  String get deliveryAddress {
-    return deliveryAddress ?? 'Institut Teknologi Del';
-  }
 }
 
-// Extension for order items
-extension OrderItemExtensions on OrderItem {
+// Extension for order items - Fixed to use OrderItemModel
+extension OrderItemModelExtensions on OrderItemModel {
   String get formattedPrice {
     return 'Rp ${NumberFormat('#,###').format(price)}';
   }
