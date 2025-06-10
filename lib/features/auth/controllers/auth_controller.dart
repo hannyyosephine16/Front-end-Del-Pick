@@ -17,6 +17,8 @@ class AuthController extends GetxController {
   final RxBool _isLoggedIn = false.obs;
   final Rx<UserModel?> _currentUser = Rx<UserModel?>(null);
   final RxString _userRole = ''.obs;
+  final Rx<Map<String, dynamic>?> _rawUserData =
+      Rx<Map<String, dynamic>?>(null);
 
   // Getters
   bool get isLoading => _isLoading.value;
@@ -24,10 +26,25 @@ class AuthController extends GetxController {
   UserModel? get currentUser => _currentUser.value;
   String get userRole => _userRole.value;
 
+  Map<String, dynamic>? get rawUserData => _rawUserData.value;
   bool get isCustomer => userRole == AppConstants.roleCustomer;
   bool get isDriver => userRole == AppConstants.roleDriver;
   bool get isStore => userRole == AppConstants.roleStore;
   bool get isAdmin => userRole == AppConstants.roleAdmin;
+
+  Map<String, dynamic>? get driverData {
+    if (rawUserData != null && rawUserData!.containsKey('driver')) {
+      return rawUserData!['driver'] as Map<String, dynamic>?;
+    }
+    return null;
+  }
+
+  Map<String, dynamic>? get storeData {
+    if (rawUserData != null && rawUserData!.containsKey('store')) {
+      return rawUserData!['store'] as Map<String, dynamic>?;
+    }
+    return null;
+  }
 
   @override
   void onInit() {
@@ -70,24 +87,64 @@ class AuthController extends GetxController {
       final result = await _authRepository.getProfile();
 
       if (result.isSuccess && result.data != null) {
+        // Store the user model
         _currentUser.value = result.data;
         _userRole.value = result.data!.role;
+
+        //  Try to get raw data from storage if needed
+        if (_rawUserData.value == null) {
+          final rawData =
+              _storageService.readJson(StorageConstants.userRole + '_raw');
+          if (rawData != null) {
+            _rawUserData.value = rawData;
+            print('Raw user data loaded from storage');
+          }
+        }
       } else {
-        // If profile fetch fails, clear auth data
         await _clearAuthData();
       }
     } catch (e) {
-      // If error occurs, try to use cached user data
+      // Try to use cached data
       final userData = _storageService.readJson(StorageConstants.userId);
+      final rawData =
+          _storageService.readJson(StorageConstants.userRole + '_raw');
+
       if (userData != null) {
         try {
           _currentUser.value = UserModel.fromJson(userData);
+          if (rawData != null) {
+            _rawUserData.value = rawData;
+          }
         } catch (e) {
           await _clearAuthData();
         }
       }
     }
   }
+
+  // Future<void> _loadUserProfile() async {
+  //   try {
+  //     final result = await _authRepository.getProfile();
+  //
+  //     if (result.isSuccess && result.data != null) {
+  //       _currentUser.value = result.data;
+  //       _userRole.value = result.data!.role;
+  //     } else {
+  //       // If profile fetch fails, clear auth data
+  //       await _clearAuthData();
+  //     }
+  //   } catch (e) {
+  //     // If error occurs, try to use cached user data
+  //     final userData = _storageService.readJson(StorageConstants.userId);
+  //     if (userData != null) {
+  //       try {
+  //         _currentUser.value = UserModel.fromJson(userData);
+  //       } catch (e) {
+  //         await _clearAuthData();
+  //       }
+  //     }
+  //   }
+  // }
 
   Future<bool> login({required String email, required String password}) async {
     try {
@@ -100,11 +157,38 @@ class AuthController extends GetxController {
 
       if (result.isSuccess && result.data != null) {
         final data = result.data!;
-        final user = UserModel.fromJson(data['user']);
+
+        //  Handle user data with embedded driver/store data
+        Map<String, dynamic> userData = Map<String, dynamic>.from(data['user']);
+
+        // Merge separate driver/store data into user data
+        if (data.containsKey('driver') && data['driver'] != null) {
+          userData['driver'] = data['driver'];
+          print('Driver data merged: ${data['driver']}');
+        }
+
+        if (data.containsKey('store') && data['store'] != null) {
+          userData['store'] = data['store'];
+          print('Store data merged: ${data['store']}');
+        }
+
+        // Store raw user data
+        _rawUserData.value = userData;
+
+        // Create UserModel from basic user data (without driver/store)
+        final basicUserData = Map<String, dynamic>.from(userData);
+        basicUserData.remove('driver');
+        basicUserData.remove('store');
+
+        final user = UserModel.fromJson(basicUserData);
 
         _currentUser.value = user;
         _userRole.value = user.role;
         _isLoggedIn.value = true;
+
+        // Save raw data to storage for persistence
+        await _storageService.writeJson(
+            StorageConstants.userRole + '_raw', userData);
 
         // Navigate based on user role
         _navigateBasedOnRole(user.role);
@@ -125,6 +209,7 @@ class AuthController extends GetxController {
         return false;
       }
     } catch (e) {
+      print('Login error: $e');
       Get.snackbar(
         'Error',
         'An error occurred during login',
@@ -135,6 +220,53 @@ class AuthController extends GetxController {
       _isLoading.value = false;
     }
   }
+
+  // Future<bool> login({required String email, required String password}) async {
+  //   try {
+  //     _isLoading.value = true;
+  //
+  //     final result = await _authRepository.login(
+  //       email: email,
+  //       password: password,
+  //     );
+  //
+  //     if (result.isSuccess && result.data != null) {
+  //       final data = result.data!;
+  //       final user = UserModel.fromJson(data['user']);
+  //
+  //       _currentUser.value = user;
+  //       _userRole.value = user.role;
+  //       _isLoggedIn.value = true;
+  //
+  //       // Navigate based on user role
+  //       _navigateBasedOnRole(user.role);
+  //
+  //       Get.snackbar(
+  //         'Success',
+  //         'Login successful',
+  //         snackPosition: SnackPosition.TOP,
+  //       );
+  //
+  //       return true;
+  //     } else {
+  //       Get.snackbar(
+  //         'Error',
+  //         result.message ?? 'Login failed',
+  //         snackPosition: SnackPosition.TOP,
+  //       );
+  //       return false;
+  //     }
+  //   } catch (e) {
+  //     Get.snackbar(
+  //       'Error',
+  //       'An error occurred during login',
+  //       snackPosition: SnackPosition.TOP,
+  //     );
+  //     return false;
+  //   } finally {
+  //     _isLoading.value = false;
+  //   }
+  // }
 
   Future<bool> register({
     required String name,
@@ -354,6 +486,7 @@ class AuthController extends GetxController {
     await _storageService.remove(StorageConstants.userName);
     await _storageService.remove(StorageConstants.userPhone);
     await _storageService.remove(StorageConstants.userAvatar);
+    await _storageService.remove(StorageConstants.userRole + '_raw');
     await _storageService.writeBool(StorageConstants.isLoggedIn, false);
   }
 

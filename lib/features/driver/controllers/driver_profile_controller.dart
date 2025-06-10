@@ -49,16 +49,17 @@ class DriverProfileController extends GetxController {
     try {
       _isLoading.value = true;
 
-      // Get current user info
+      // ✅ FIXED: Get current user info from AuthController
       final authController = Get.find<AuthController>();
       _userProfile.value = authController.currentUser;
 
-      // Load driver profile if user ID is available
+      // ✅ FIXED: Try to extract driver data from current user first
       if (_userProfile.value != null) {
-        await _loadDriverData(_userProfile.value!.id);
+        await _extractDriverDataFromUser(_userProfile.value!);
         await _loadDriverStats();
       }
     } catch (e) {
+      print('Error in loadDriverProfile: $e');
       Get.snackbar(
         'Error',
         'Failed to load profile: ${e.toString()}',
@@ -69,14 +70,58 @@ class DriverProfileController extends GetxController {
     }
   }
 
-  Future<void> _loadDriverData(int userId) async {
+  // ✅ NEW: Extract driver data from AuthController raw data
+  Future<void> _extractDriverDataFromUser(UserModel user) async {
     try {
-      // This would typically get driver by user ID
-      // For now, we'll simulate it
+      print('Extracting driver data for user: ${user.name}');
+
+      // ✅ SOLUTION: Get raw data from AuthController
+      final authController = Get.find<AuthController>();
+      final driverData = authController.driverData;
+
+      if (driverData != null) {
+        print('Found driver data in AuthController: $driverData');
+
+        // Create DriverModel from raw data
+        _driverProfile.value = DriverModel.fromJson(driverData);
+        print(
+            'Driver profile set successfully: ${_driverProfile.value?.vehicleNumber}');
+        return;
+      }
+
+      // ✅ FALLBACK: If no raw driver data, try to get from API
+      print('No raw driver data found, trying API...');
+      await _loadDriverDataFromAPI(user.id);
+    } catch (e) {
+      print('Error extracting driver data: $e');
+      // Final fallback: try API
+      await _loadDriverDataFromAPI(user.id);
+    }
+  }
+
+  // ✅ MODIFIED: Fallback method to load from API
+  Future<void> _loadDriverDataFromAPI(int userId) async {
+    try {
+      print('Loading driver data from API for userId: $userId');
+
+      // Try to get driver profile directly first
+      final profileResult = await _authRepository.getProfile();
+
+      if (profileResult.isSuccess && profileResult.data != null) {
+        final userData = profileResult.data!.toJson();
+
+        if (userData.containsKey('driver') && userData['driver'] != null) {
+          final driverData = userData['driver'] as Map<String, dynamic>;
+          _driverProfile.value = DriverModel.fromJson(driverData);
+          print('Driver profile loaded from getProfile API');
+          return;
+        }
+      }
+
+      // Fallback: Try getAllDrivers
       final result = await _driverRepository.getAllDrivers();
 
       if (result.isSuccess && result.data != null) {
-        // Find driver with matching user ID
         final drivers = result.data!.data;
         final driver = drivers.firstWhereOrNull(
           (driver) => driver.userId == userId,
@@ -84,10 +129,15 @@ class DriverProfileController extends GetxController {
 
         if (driver != null) {
           _driverProfile.value = driver;
+          print('Driver profile loaded from getAllDrivers');
+        } else {
+          print('Driver not found in getAllDrivers for userId: $userId');
         }
+      } else {
+        print('Failed to load from getAllDrivers: ${result.message}');
       }
     } catch (e) {
-      print('Error loading driver data: $e');
+      print('Error loading driver data from API: $e');
     }
   }
 
@@ -109,6 +159,7 @@ class DriverProfileController extends GetxController {
     }
   }
 
+  // ✅ FIXED: updateDriverStatus method
   Future<void> updateDriverStatus(String newStatus) async {
     try {
       _isLoading.value = true;
@@ -118,7 +169,30 @@ class DriverProfileController extends GetxController {
       });
 
       if (result.isSuccess && result.data != null) {
-        _driverProfile.value = result.data;
+        final responseData = result.data!;
+
+        if (responseData is Map<String, dynamic>) {
+          if (responseData.containsKey('driver')) {
+            try {
+              _driverProfile.value =
+                  DriverModel.fromJson(responseData['driver']);
+            } catch (e) {
+              print('Error parsing driver from response: $e');
+              _updateDriverStatusLocally(newStatus);
+            }
+          } else if (responseData.containsKey('id') &&
+              responseData.containsKey('status')) {
+            try {
+              _driverProfile.value = DriverModel.fromJson(responseData);
+            } catch (e) {
+              print('Error parsing driver response: $e');
+              _updateDriverStatusLocally(newStatus);
+            }
+          } else {
+            _updateDriverStatusLocally(newStatus);
+          }
+        }
+
         Get.snackbar(
           'Success',
           'Status updated successfully',
@@ -139,6 +213,12 @@ class DriverProfileController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  void _updateDriverStatusLocally(String newStatus) {
+    if (_driverProfile.value != null) {
+      _driverProfile.value = _driverProfile.value!.copyWith(status: newStatus);
     }
   }
 
@@ -212,6 +292,13 @@ class DriverProfileController extends GetxController {
       );
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  // ✅ NEW: Method to refresh driver data
+  Future<void> refreshDriverData() async {
+    if (_userProfile.value != null) {
+      await _extractDriverDataFromUser(_userProfile.value!);
     }
   }
 
