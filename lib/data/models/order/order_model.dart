@@ -1,7 +1,8 @@
-// lib/data/models/order/order_model.dart - Fixed field mapping
+// lib/data/models/order/order_model.dart - FIXED with formattedDate
 import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'order_item_model.dart';
+import 'package:intl/intl.dart';
 
 class OrderModel {
   final int id;
@@ -182,6 +183,11 @@ class OrderModel {
   bool get canCancel => isPending || isApproved;
   bool get canTrack => isPreparing || isOnDelivery;
   bool get canReview => isDelivered;
+
+  // ✅ FIXED: Added formattedDate directly to OrderModel
+  String get formattedDate {
+    return DateFormat('dd MMM yyyy, HH:mm').format(orderDate);
+  }
 
   // Formatted values
   String get formattedSubtotal =>

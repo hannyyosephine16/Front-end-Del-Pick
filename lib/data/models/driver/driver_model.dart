@@ -1,3 +1,4 @@
+// lib/data/models/driver/driver_model.dart - FIXED with avatar
 import 'package:del_pick/data/models/auth/user_model.dart';
 
 class DriverModel {
@@ -154,6 +155,9 @@ class DriverModel {
   String get name => user?.name ?? 'Unknown';
   String get phone => user?.phone ?? '';
   String get email => user?.email ?? '';
+
+  // ✅ FIXED: Added avatar property
+  String? get avatar => user?.avatar;
 
   @override
   bool operator ==(Object other) =>

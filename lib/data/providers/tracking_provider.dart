@@ -11,6 +11,10 @@ class TrackingProvider {
     return await _apiService.get(ApiEndpoints.getTrackingData(orderId));
   }
 
+  Future<Response> getTrackingData(int orderId) async {
+    return await _apiService.get(ApiEndpoints.getTrackingData(orderId));
+  }
+
   Future<Response> startDelivery(int orderId) async {
     return await _apiService.put(ApiEndpoints.startDelivery(orderId));
   }

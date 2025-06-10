@@ -1,203 +1,299 @@
+// lib/features/customer/controllers/order_history_controller.dart - FIXED with missing methods
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
+import 'package:del_pick/core/constants/order_status_constants.dart';
 
 class OrderHistoryController extends GetxController {
   final OrderRepository _orderRepository;
 
-  OrderHistoryController({
-    required OrderRepository orderRepository,
-  }) : _orderRepository = orderRepository;
+  OrderHistoryController({required OrderRepository orderRepository})
+      : _orderRepository = orderRepository;
 
   // Observable state
-  final RxBool _isLoading = false.obs;
   final RxList<OrderModel> _orders = <OrderModel>[].obs;
-  final RxString _errorMessage = ''.obs;
+  final RxBool _isLoading = false.obs;
+  final RxBool _isLoadingMore = false.obs;
   final RxBool _hasError = false.obs;
-  final RxInt _currentPage = 1.obs;
-  final RxBool _hasMoreData = true.obs;
-  final RxString _selectedStatus = 'all'.obs;
+  final RxString _errorMessage = ''.obs;
+  final RxString _selectedFilter = 'all'.obs;
+  final RxBool _canLoadMore = true.obs;
+
+  // Pagination
+  int _currentPage = 1;
+  final int _itemsPerPage = 10;
+
+  // Filter options
+  static const List<Map<String, dynamic>> filterOptions = [
+    {'key': 'all', 'label': 'All', 'icon': Icons.list_alt},
+    {'key': 'active', 'label': 'Active', 'icon': Icons.schedule},
+    {'key': 'completed', 'label': 'Completed', 'icon': Icons.check_circle},
+    {'key': 'cancelled', 'label': 'Cancelled', 'icon': Icons.cancel},
+  ];
 
   // Getters
-  bool get isLoading => _isLoading.value;
   List<OrderModel> get orders => _orders;
-  String get errorMessage => _errorMessage.value;
+  bool get isLoading => _isLoading.value;
+  bool get isLoadingMore => _isLoadingMore.value;
   bool get hasError => _hasError.value;
+  String get errorMessage => _errorMessage.value;
+  String get selectedFilter => _selectedFilter.value;
+  bool get canLoadMore => _canLoadMore.value;
   bool get hasOrders => _orders.isNotEmpty;
-  bool get hasMoreData => _hasMoreData.value;
-  String get selectedStatus => _selectedStatus.value;
-
-  // Order status filters
-  final List<String> statusFilters = [
-    'all',
-    'pending',
-    'preparing',
-    'on_delivery',
-    'delivered',
-    'cancelled'
-  ];
 
   @override
   void onInit() {
     super.onInit();
-    fetchOrders();
+    loadOrders();
   }
 
-  Future<void> fetchOrders({bool refresh = false}) async {
+  // Load orders based on current filter
+  Future<void> loadOrders({bool refresh = false}) async {
     if (refresh) {
-      _currentPage.value = 1;
-      _hasMoreData.value = true;
+      _currentPage = 1;
+      _canLoadMore.value = true;
       _orders.clear();
     }
-
-    if (_isLoading.value || !_hasMoreData.value) return;
 
     _isLoading.value = true;
     _hasError.value = false;
     _errorMessage.value = '';
 
     try {
-      final params = <String, dynamic>{
-        'page': _currentPage.value,
-        'limit': 10,
-      };
-
-      // Add status filter if not 'all'
-      if (_selectedStatus.value != 'all') {
-        params['status'] = _selectedStatus.value;
-      }
-
-      final result = await _orderRepository.getOrdersByUser(params: params);
+      final result = await _orderRepository.getOrdersByUser(
+        params: {
+          'page': _currentPage,
+          'limit': _itemsPerPage,
+          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
+        },
+      );
 
       if (result.isSuccess && result.data != null) {
-        final paginatedResponse = result.data!;
-        final newOrders = paginatedResponse.data;
+        final newOrders = result.data!.data;
 
         if (refresh) {
-          _orders.value = newOrders;
+          _orders.assignAll(newOrders);
         } else {
           _orders.addAll(newOrders);
         }
 
-        // Check if there's more data
-        _hasMoreData.value = _currentPage.value < paginatedResponse.totalPages;
+        // Check if we can load more
+        _canLoadMore.value = newOrders.length >= _itemsPerPage;
 
-        if (_hasMoreData.value) {
-          _currentPage.value++;
+        if (newOrders.isNotEmpty) {
+          _currentPage++;
         }
       } else {
         _hasError.value = true;
-        _errorMessage.value = result.message ?? 'Failed to fetch orders';
+        _errorMessage.value = result.message ?? 'Failed to load orders';
       }
     } catch (e) {
       _hasError.value = true;
-      if (e is Exception) {
-        final failure = ErrorHandler.handleException(e);
-        _errorMessage.value = ErrorHandler.getErrorMessage(failure);
-      } else {
-        _errorMessage.value = 'An unexpected error occurred';
-      }
+      _errorMessage.value = ErrorHandler.getErrorMessage(
+          ErrorHandler.handleException(e as Exception));
     } finally {
       _isLoading.value = false;
     }
   }
 
-  Future<void> refreshOrders() async {
-    await fetchOrders(refresh: true);
-  }
+  // Load more orders (pagination)
+  Future<void> loadMoreOrders() async {
+    if (_isLoadingMore.value || !_canLoadMore.value) return;
 
-  void filterByStatus(String status) {
-    if (_selectedStatus.value != status) {
-      _selectedStatus.value = status;
-      refreshOrders();
-    }
-  }
+    _isLoadingMore.value = true;
 
-  Future<void> cancelOrder(int orderId) async {
     try {
-      final result = await _orderRepository.cancelOrder(orderId);
+      final result = await _orderRepository.getOrdersByUser(
+        params: {
+          'page': _currentPage,
+          'limit': _itemsPerPage,
+          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
+        },
+      );
 
-      if (result.isSuccess) {
-        // Update the order in the list
-        final index = _orders.indexWhere((order) => order.id == orderId);
-        if (index != -1) {
-          _orders[index] = _orders[index].copyWith(orderStatus: 'cancelled');
+      if (result.isSuccess && result.data != null) {
+        final newOrders = result.data!.data;
+        _orders.addAll(newOrders);
+
+        // Check if we can load more
+        _canLoadMore.value = newOrders.length >= _itemsPerPage;
+
+        if (newOrders.isNotEmpty) {
+          _currentPage++;
         }
-
-        Get.snackbar(
-          'Order Cancelled',
-          'Your order has been cancelled successfully',
-          snackPosition: SnackPosition.TOP,
-        );
-      } else {
-        Get.snackbar(
-          'Cancel Failed',
-          result.message ?? 'Failed to cancel order',
-          snackPosition: SnackPosition.TOP,
-        );
       }
     } catch (e) {
-      String errorMessage = 'An unexpected error occurred';
-
-      if (e is Exception) {
-        final failure = ErrorHandler.handleException(e);
-        errorMessage = ErrorHandler.getErrorMessage(failure);
-      }
-
       Get.snackbar(
-        'Cancel Failed',
-        errorMessage,
-        snackPosition: SnackPosition.TOP,
+        'Error',
+        'Failed to load more orders',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
+    } finally {
+      _isLoadingMore.value = false;
     }
   }
 
-  void showCancelOrderDialog(OrderModel order) {
-    Get.dialog(
+  // Refresh orders
+  Future<void> refreshOrders() async {
+    await loadOrders(refresh: true);
+  }
+
+  // Change filter
+  void changeFilter(String filter) {
+    if (_selectedFilter.value != filter) {
+      _selectedFilter.value = filter;
+      loadOrders(refresh: true);
+    }
+  }
+
+  // ✅ FIXED: Added missing method
+  int getOrderCountByStatus(String status) {
+    switch (status) {
+      case 'active':
+        return _orders
+            .where((order) =>
+                order.orderStatus == OrderStatusConstants.pending ||
+                order.orderStatus == OrderStatusConstants.preparing ||
+                order.orderStatus == OrderStatusConstants.onDelivery)
+            .length;
+      case 'completed':
+        return _orders
+            .where(
+                (order) => order.orderStatus == OrderStatusConstants.delivered)
+            .length;
+      case 'cancelled':
+        return _orders
+            .where(
+                (order) => order.orderStatus == OrderStatusConstants.cancelled)
+            .length;
+      default:
+        return _orders.length;
+    }
+  }
+
+  // ✅ FIXED: Added missing method
+  Map<String, dynamic> getOrderStatistics() {
+    final totalOrders = _orders.length;
+    final activeOrders = getOrderCountByStatus('active');
+    final completedOrders = getOrderCountByStatus('completed');
+    final cancelledOrders = getOrderCountByStatus('cancelled');
+
+    final totalSpent = _orders
+        .where((order) => order.orderStatus == OrderStatusConstants.delivered)
+        .fold(0.0, (sum, order) => sum + order.total);
+
+    return {
+      'totalOrders': totalOrders,
+      'activeOrders': activeOrders,
+      'completedOrders': completedOrders,
+      'cancelledOrders': cancelledOrders,
+      'totalSpent': totalSpent,
+    };
+  }
+
+  // ✅ FIXED: Added missing method
+  void navigateToOrderDetail(int orderId) {
+    Get.toNamed('/order_detail', arguments: {'orderId': orderId});
+  }
+
+  // ✅ FIXED: Added missing method
+  void navigateToOrderTracking(int orderId) {
+    Get.toNamed('/order_tracking', arguments: {'orderId': orderId});
+  }
+
+  // ✅ FIXED: Added missing method
+  void navigateToReview(int orderId) {
+    Get.toNamed('/order_review', arguments: {'orderId': orderId});
+  }
+
+  // ✅ FIXED: Added missing method - Cancel order
+  Future<void> cancelOrder(OrderModel order) async {
+    final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Cancel Order'),
         content: Text('Are you sure you want to cancel order ${order.code}?'),
         actions: [
           TextButton(
-            onPressed: () => Get.back(),
+            onPressed: () => Get.back(result: false),
             child: const Text('No'),
           ),
-          ElevatedButton(
-            onPressed: () {
-              Get.back();
-              cancelOrder(order.id);
-            },
-            child: const Text('Yes, Cancel'),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Yes'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
           ),
         ],
       ),
     );
-  }
 
-  String getStatusDisplayName(String status) {
-    switch (status) {
-      case 'all':
-        return 'All Orders';
-      case 'pending':
-        return 'Waiting';
-      case 'preparing':
-        return 'Preparing';
-      case 'on_delivery':
-        return 'On Delivery';
-      case 'delivered':
-        return 'Delivered';
-      case 'cancelled':
-        return 'Cancelled';
-      default:
-        return status;
+    if (confirmed == true) {
+      try {
+        final result = await _orderRepository.cancelOrder(order.id);
+
+        if (result.isSuccess) {
+          Get.snackbar(
+            'Success',
+            'Order cancelled successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+
+          // Refresh orders
+          await refreshOrders();
+        } else {
+          Get.snackbar(
+            'Error',
+            result.message ?? 'Failed to cancel order',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+      } catch (e) {
+        Get.snackbar(
+          'Error',
+          'Failed to cancel order',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     }
   }
 
-  List<OrderModel> get activeOrders =>
-      _orders.where((order) => order.isActive).toList();
+  Future<void> reorderItems(OrderModel order) async {
+    try {
+      // Navigate to store with order items
+      Get.toNamed('/store_detail', arguments: {
+        'storeId': order.storeId,
+        'reorderItems': order.items
+            ?.map((item) => {
+                  'itemId': item.id,
+                  'quantity': item.quantity,
+                })
+            .toList(),
+      });
 
-  List<OrderModel> get completedOrders =>
-      _orders.where((order) => order.isCompleted).toList();
+      Get.snackbar(
+        'Reorder',
+        'Items added to cart from ${order.storeName}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.green,
+        colorText: Colors.white,
+      );
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to reorder items',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
 }
