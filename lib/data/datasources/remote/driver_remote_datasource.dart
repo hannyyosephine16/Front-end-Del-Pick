@@ -1,3 +1,4 @@
+// lib/data/datasources/remote/driver_remote_datasource.dart - Updated dengan status endpoints
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
@@ -7,6 +8,7 @@ class DriverRemoteDataSource {
 
   DriverRemoteDataSource(this._apiService);
 
+  // Existing methods
   Future<Response> getAllDrivers({Map<String, dynamic>? params}) async {
     return await _apiService.get(
       ApiEndpoints.getAllDrivers,
@@ -56,7 +58,40 @@ class DriverRemoteDataSource {
     return await _apiService.delete(ApiEndpoints.deleteDriver(driverId));
   }
 
-  // Driver Requests
+  // ========================================================================
+  // NEW: Status-related endpoints
+  // ========================================================================
+
+  /// Get driver status info dengan valid transitions
+  Future<Response> getDriverStatusInfo() async {
+    return await _apiService.get('/drivers/status-info');
+  }
+
+  /// Get active drivers count untuk monitoring
+  Future<Response> getActiveDriversCount() async {
+    return await _apiService.get('/drivers/active/count');
+  }
+
+  /// Get driver status summary untuk admin dashboard
+  Future<Response> getDriverStatusSummary() async {
+    return await _apiService.get('/drivers/status/summary');
+  }
+
+  /// Force update driver status (admin only)
+  Future<Response> forceUpdateDriverStatus(
+    int driverId,
+    Map<String, dynamic> data,
+  ) async {
+    return await _apiService.put(
+      '/drivers/$driverId/force-status',
+      data: data,
+    );
+  }
+
+  // ========================================================================
+  // Driver Requests (existing)
+  // ========================================================================
+
   Future<Response> getDriverRequests({Map<String, dynamic>? params}) async {
     return await _apiService.get(
       ApiEndpoints.getDriverRequests,

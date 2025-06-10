@@ -28,6 +28,7 @@ class AppColors {
   static const Color textHint = Color(0xFFBDBDBD);
   static const Color textOnPrimary = Color(0xFFFFFFFF);
   static const Color textOnSecondary = Color(0xFFFFFFFF);
+  static const Color textOnWarning = Color(0xFFFF9800);
 
   // Status colors
   static const Color success = Color(0xFF4CAF50);

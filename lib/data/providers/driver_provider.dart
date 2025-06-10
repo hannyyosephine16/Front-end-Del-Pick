@@ -1,3 +1,4 @@
+// lib/data/providers/driver_provider.dart - Updated dengan status methods
 import 'package:del_pick/data/datasources/remote/driver_remote_datasource.dart';
 import 'package:del_pick/core/utils/result.dart';
 
@@ -6,6 +7,7 @@ class DriverProvider {
 
   DriverProvider({required this.remoteDataSource});
 
+  // Existing methods
   Future<Result<Map<String, dynamic>>> getAllDrivers({
     Map<String, dynamic>? params,
   }) async {
@@ -129,6 +131,28 @@ class DriverProvider {
     }
   }
 
+  // ========================================================================
+  // NEW: Status-related methods
+  // ========================================================================
+
+  /// Get driver status info dengan valid transitions
+  Future<Result<Map<String, dynamic>>> getDriverStatusInfo() async {
+    try {
+      final response = await remoteDataSource.getDriverStatusInfo();
+
+      if (response.statusCode == 200) {
+        return Result.success(response.data);
+      } else {
+        return Result.failure(
+          response.data['message'] ?? 'Failed to get driver status info',
+        );
+      }
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  /// Update driver status dengan comprehensive validation
   Future<Result<Map<String, dynamic>>> updateDriverStatus(
     Map<String, dynamic> data,
   ) async {
@@ -138,6 +162,14 @@ class DriverProvider {
       if (response.statusCode == 200) {
         return Result.success(response.data);
       } else {
+        // Handle business rule errors
+        final errorData = response.data;
+        if (errorData != null && errorData.containsKey('businessRule')) {
+          return Result.failure(
+            errorData['message'] ?? 'Business rule violation',
+          );
+        }
+
         return Result.failure(
           response.data['message'] ?? 'Failed to update driver status',
         );
@@ -147,23 +179,43 @@ class DriverProvider {
     }
   }
 
-  Future<Result<Map<String, dynamic>>> getDriverOrders({
-    Map<String, dynamic>? params,
-  }) async {
+  /// Get active drivers count untuk monitoring
+  Future<Result<Map<String, dynamic>>> getActiveDriversCount() async {
     try {
-      final response = await remoteDataSource.getDriverOrders(params: params);
+      final response = await remoteDataSource.getActiveDriversCount();
 
       if (response.statusCode == 200) {
         return Result.success(response.data);
       } else {
         return Result.failure(
-          response.data['message'] ?? 'Failed to fetch driver orders',
+          response.data['message'] ?? 'Failed to get active drivers count',
         );
       }
     } catch (e) {
       return Result.failure(e.toString());
     }
   }
+
+  /// Get driver status summary untuk admin dashboard
+  Future<Result<Map<String, dynamic>>> getDriverStatusSummary() async {
+    try {
+      final response = await remoteDataSource.getDriverStatusSummary();
+
+      if (response.statusCode == 200) {
+        return Result.success(response.data);
+      } else {
+        return Result.failure(
+          response.data['message'] ?? 'Failed to get driver status summary',
+        );
+      }
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  // ========================================================================
+  // Existing methods (unchanged)
+  // ========================================================================
 
   Future<Result<void>> deleteDriver(int driverId) async {
     try {
