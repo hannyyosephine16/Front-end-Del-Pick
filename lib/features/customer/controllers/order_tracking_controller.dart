@@ -1,6 +1,3 @@
-<<<<<<< Updated upstream
-=======
-// lib/features/customer/controllers/order_tracking_controller.dart
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -271,4 +268,3 @@ class TrackingStep {
     required this.icon,
   });
 }
->>>>>>> Stashed changes
