@@ -199,6 +199,14 @@ class OrderStatusConstants {
     deliveryDelivered: 3,
   };
 
+  static String getStatusName(String status) {
+    return orderStatusNames[status] ?? status;
+  }
+
+  static String getStatusDescription(String status) {
+    return orderStatusDescriptions[status] ?? '';
+  }
+
   // Utility methods
   static String getOrderStatusName(String status) {
     return orderStatusNames[status] ?? status;

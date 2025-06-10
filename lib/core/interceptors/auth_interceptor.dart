@@ -64,6 +64,9 @@ class AuthInterceptor extends Interceptor {
     // Handle authentication errors
     if (err.response?.statusCode == 401) {
       _handleUnauthorized(err);
+      _storageService.remove(StorageConstants.authToken);
+      _storageService.remove(StorageConstants.userId);
+      _storageService.writeBool(StorageConstants.isLoggedIn, false);
     } else if (err.response?.statusCode == 403) {
       _handleForbidden(err);
     }

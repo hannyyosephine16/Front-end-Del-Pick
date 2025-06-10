@@ -1,4 +1,4 @@
-// lib/features/driver/widgets/driver_status_toggle.dart
+// lib/features/driver/widgets/driver_status_toggle.dart - FIXED VERSION
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/features/driver/controllers/driver_home_controller.dart';
@@ -10,12 +10,14 @@ class DriverStatusToggle extends StatelessWidget {
   final bool showLabel;
   final bool showDescription;
   final EdgeInsetsGeometry? padding;
+  final bool isCompact;
 
   const DriverStatusToggle({
     super.key,
     this.showLabel = true,
     this.showDescription = true,
     this.padding,
+    this.isCompact = false,
   });
 
   @override
@@ -25,7 +27,10 @@ class DriverStatusToggle extends StatelessWidget {
         final statusInfo = controller.statusDisplayInfo;
 
         return Container(
-          padding: padding ?? const EdgeInsets.all(AppDimensions.paddingLG),
+          padding: padding ??
+              (isCompact
+                  ? const EdgeInsets.all(AppDimensions.paddingMD)
+                  : const EdgeInsets.all(AppDimensions.paddingLG)),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -63,11 +68,15 @@ class DriverStatusToggle extends StatelessWidget {
                               children: [
                                 Text(
                                   'Status: ${statusInfo['text']}',
-                                  style: AppTextStyles.bodyLarge.copyWith(
-                                    fontWeight: FontWeight.w600,
-                                  ),
+                                  style: isCompact
+                                      ? AppTextStyles.bodyMedium.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        )
+                                      : AppTextStyles.bodyLarge.copyWith(
+                                          fontWeight: FontWeight.w600,
+                                        ),
                                 ),
-                                if (showDescription)
+                                if (showDescription && !isCompact)
                                   Text(
                                     statusInfo['description'],
                                     style: AppTextStyles.bodySmall.copyWith(
@@ -90,6 +99,13 @@ class DriverStatusToggle extends StatelessWidget {
               if (controller.isUpdatingStatus) ...[
                 const SizedBox(height: AppDimensions.spacingMD),
                 _buildLoadingIndicator(),
+              ],
+
+              // Warning message if cannot toggle
+              if (!controller.canToggleStatus &&
+                  !controller.isUpdatingStatus) ...[
+                const SizedBox(height: AppDimensions.spacingMD),
+                _buildWarningMessage(controller),
               ],
             ],
           ),
@@ -146,9 +162,58 @@ class DriverStatusToggle extends StatelessWidget {
       ),
     );
   }
+
+  Widget _buildWarningMessage(DriverHomeController controller) {
+    String message = '';
+    IconData icon = Icons.info;
+
+    if (controller.hasActiveOrders) {
+      message = 'Complete ${controller.activeOrderCount} active orders first';
+      icon = Icons.shopping_bag;
+    } else if (controller.currentStatus == 'busy') {
+      message = 'Complete current delivery first';
+      icon = Icons.delivery_dining;
+    }
+
+    if (message.isNotEmpty) {
+      return Container(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppDimensions.paddingMD,
+          vertical: AppDimensions.paddingSM,
+        ),
+        decoration: BoxDecoration(
+          color: AppColors.warning.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              icon,
+              size: 16,
+              color: AppColors.warning,
+            ),
+            const SizedBox(width: AppDimensions.spacingSM),
+            Expanded(
+              child: Text(
+                message,
+                style: AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.warning,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    return const SizedBox.shrink();
+  }
 }
 
-/// Extended toggle widget with additional features
+// ========================================================================
+// Enhanced Status Card Widget
+// ========================================================================
+
 class DriverStatusCard extends StatelessWidget {
   final VoidCallback? onTap;
   final bool showEarnings;
@@ -195,7 +260,7 @@ class DriverStatusCard extends StatelessWidget {
           child: Material(
             color: Colors.transparent,
             child: InkWell(
-              onTap: onTap,
+              onTap: onTap ?? () => controller.refreshStatus(),
               borderRadius: BorderRadius.circular(AppDimensions.radiusXL),
               child: Padding(
                 padding: const EdgeInsets.all(AppDimensions.paddingXL),
