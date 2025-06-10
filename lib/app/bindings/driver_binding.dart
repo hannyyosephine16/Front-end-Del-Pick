@@ -52,7 +52,11 @@ class DriverBinding extends Bindings {
 
     // Controllers - UNCOMMENT DAN PERBAIKI INI
     Get.lazyPut<DriverHomeController>(
-      () => DriverHomeController(),
+      () => DriverHomeController(
+        driverRepository: Get.find<DriverRepository>(),
+        orderRepository: Get.find<OrderRepository>(),
+        locationService: Get.find(),
+      ),
     );
 
     // Uncomment controller lain sesuai kebutuhan
