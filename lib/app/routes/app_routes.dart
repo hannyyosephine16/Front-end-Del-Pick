@@ -23,7 +23,7 @@ abstract class Routes {
   static const CART = '/customer/cart';
   static const CHECKOUT = '/customer/checkout';
   static const ORDER_HISTORY = '/customer/order_history';
-  static const ORDER_DETAIL = '/customer/order_detail';
+  static const CUSTOMER_ORDER_DETAIL = '/customer/order_detail';
   static const ORDER_TRACKING = '/customer/order_tracking';
   static const REVIEW = '/customer/review';
   static const CUSTOMER_PROFILE = '/customer/profile';
@@ -32,10 +32,11 @@ abstract class Routes {
   static const DRIVER_HOME = '/driver/home';
   static const DRIVER_MAIN = '/driver/main';
   static const DRIVER_REQUESTS = '/driver/requests';
+  static const DRIVER_MAP = 'driver/map';
   static const REQUEST_DETAIL = '/driver/request_detail';
   static const DELIVERY = '/driver/delivery';
   static const NAVIGATION = '/driver/navigation';
-  static const DRIVER_ORDERS = '/driver/orders';
+  static const DRIVER_ORDERS = '/drivers/orders';
   static const DRIVER_EARNINGS = '/driver/earnings';
   static const DRIVER_PROFILE = '/driver/profile';
   static const DRIVER_SETTINGS = '/driver/settings';

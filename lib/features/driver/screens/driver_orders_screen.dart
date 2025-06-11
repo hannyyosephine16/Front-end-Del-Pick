@@ -8,13 +8,16 @@ import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
 
+import '../../../data/repositories/order_repository.dart';
+
 class DriverOrdersScreen extends StatelessWidget {
   const DriverOrdersScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.find<DriverOrdersController>();
-
+    // final controller = Get.find<DriverOrdersController>();
+    final controller =
+        Get.put(DriverOrdersController(Get.find<OrderRepository>()));
     return Scaffold(
       backgroundColor: Colors.grey[50],
       appBar: _buildAppBar(controller),

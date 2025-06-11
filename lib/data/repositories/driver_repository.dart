@@ -1,173 +1,17 @@
-// lib/data/repositories/driver_repository.dart - Updated dengan status methods
+// lib/data/repositories/driver_repository.dart - SESUAI SWAGGER
 import 'package:del_pick/data/providers/driver_provider.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
 import 'package:del_pick/data/models/driver/driver_request_model.dart';
-import 'package:del_pick/data/models/driver/driver_status_model.dart'; // New import
 import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/core/utils/result.dart';
-
-import '../models/driver/driver_status_change_response.dart';
-import '../models/driver/driver_status_error_model.dart';
-import '../models/driver/driver_status_summary_model.dart';
+import '../datasources/local/auth_local_datasource.dart';
 
 class DriverRepository {
   final DriverProvider _driverProvider;
 
   DriverRepository(this._driverProvider);
 
-  // Existing methods
-  Future<Result<PaginatedResponse<DriverModel>>> getAllDrivers({
-    Map<String, dynamic>? params,
-  }) async {
-    try {
-      final result = await _driverProvider.getAllDrivers(params: params);
-
-      if (result.isSuccess && result.data != null) {
-        final data = result.data!['data'] as Map<String, dynamic>;
-        final drivers = (data['drivers'] as List)
-            .map((json) => DriverModel.fromJson(json))
-            .toList();
-
-        final paginatedResponse = PaginatedResponse<DriverModel>(
-          data: drivers,
-          totalItems: data['totalItems'] ?? 0,
-          totalPages: data['totalPages'] ?? 0,
-          currentPage: data['currentPage'] ?? 1,
-          limit: params?['limit'] ?? 10,
-        );
-
-        return Result.success(paginatedResponse);
-      } else {
-        return Result.failure(result.message ?? 'Failed to fetch drivers');
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  Future<Result<DriverModel>> getDriverById(int driverId) async {
-    try {
-      final result = await _driverProvider.getDriverById(driverId);
-
-      if (result.isSuccess && result.data != null) {
-        final driver = DriverModel.fromJson(result.data!['data']);
-        return Result.success(driver);
-      } else {
-        return Result.failure(result.message ?? 'Driver not found');
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  Future<Result<DriverModel>> createDriver(Map<String, dynamic> data) async {
-    try {
-      final result = await _driverProvider.createDriver(data);
-
-      if (result.isSuccess && result.data != null) {
-        final driver = DriverModel.fromJson(result.data!['data']);
-        return Result.success(driver);
-      } else {
-        return Result.failure(result.message ?? 'Failed to create driver');
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  Future<Result<DriverModel>> updateDriver(
-    int driverId,
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final result = await _driverProvider.updateDriver(driverId, data);
-
-      if (result.isSuccess && result.data != null) {
-        final driver = DriverModel.fromJson(result.data!['data']);
-        return Result.success(driver);
-      } else {
-        return Result.failure(result.message ?? 'Failed to update driver');
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  Future<Result<DriverModel>> updateDriverProfile(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final result = await _driverProvider.updateDriverProfile(data);
-
-      if (result.isSuccess && result.data != null) {
-        final driver = DriverModel.fromJson(result.data!['data']);
-        return Result.success(driver);
-      } else {
-        return Result.failure(
-          result.message ?? 'Failed to update driver profile',
-        );
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  Future<Result<Map<String, dynamic>>> updateDriverLocation(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final result = await _driverProvider.updateDriverLocation(data);
-
-      if (result.isSuccess && result.data != null) {
-        return Result.success(result.data!['data']);
-      } else {
-        return Result.failure(
-          result.message ?? 'Failed to update driver location',
-        );
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  Future<Result<Map<String, dynamic>>> getDriverLocation(int driverId) async {
-    try {
-      final result = await _driverProvider.getDriverLocation(driverId);
-
-      if (result.isSuccess && result.data != null) {
-        return Result.success(result.data!['data']);
-      } else {
-        return Result.failure(
-          result.message ?? 'Failed to get driver location',
-        );
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  // ========================================================================
-  // NEW: Enhanced Status Methods dengan Models
-  // ========================================================================
-
-  /// Get driver status info dengan valid transitions
-  Future<Result<Map<String, dynamic>>> getDriverStatusInfo() async {
-    try {
-      final result = await _driverProvider.getDriverStatusInfo();
-
-      if (result.isSuccess && result.data != null) {
-        return Result.success(result.data!);
-      } else {
-        return Result.failure(
-          result.message ?? 'Failed to get driver status info',
-        );
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  /// Update driver status dengan comprehensive validation
+  /// Update driver status - ENDPOINT: PUT /drivers/status
   Future<Result<Map<String, dynamic>>> updateDriverStatus(
     Map<String, dynamic> data,
   ) async {
@@ -186,58 +30,68 @@ class DriverRepository {
     }
   }
 
-  /// Parse status change response dengan proper error handling
-  DriverStatusChangeResponse? parseStatusChangeResponse(
-      Map<String, dynamic>? data) {
-    if (data == null) return null;
-
+  /// Get driver profile info - ENDPOINT: GET /auth/profile
+  /// NOTE: Swagger tidak punya /drivers/status-info, jadi gunakan /auth/profile
+  Future<Result<Map<String, dynamic>>> getDriverStatusInfo() async {
     try {
-      return DriverStatusChangeResponse.fromJson(data);
+      final result = await _driverProvider.getDriverProfile();
+
+      if (result.isSuccess && result.data != null) {
+        final profileData = result.data!;
+
+        // Extract driver status from profile response
+        final driverData = profileData['driver'] as Map<String, dynamic>?;
+        if (driverData != null) {
+          // Transform profile response to status info format
+          final statusInfo = {
+            'current': driverData['status'] ?? 'inactive',
+            'canTransitionTo':
+                _getValidTransitions(driverData['status'] ?? 'inactive'),
+            'hasActiveOrders': false, // Will be checked separately
+            'activeOrderCount': 0, // Will be checked separately
+          };
+          return Result.success(statusInfo);
+        } else {
+          return Result.failure('Driver profile not found');
+        }
+      } else {
+        return Result.failure(
+          result.message ?? 'Failed to get driver profile',
+        );
+      }
     } catch (e) {
-      print('Error parsing status change response: $e');
-      return null;
+      return Result.failure(e.toString());
     }
   }
 
-  /// Parse status error dengan business rules
-  DriverStatusErrorModel? parseStatusError(Map<String, dynamic>? errorData) {
-    if (errorData == null || !errorData.containsKey('businessRule')) {
-      return null;
-    }
-
-    try {
-      return DriverStatusErrorModel.fromJson(errorData);
-    } catch (e) {
-      print('Error parsing status error: $e');
-      return null;
+  /// Helper method to get valid status transitions
+  List<String> _getValidTransitions(String currentStatus) {
+    switch (currentStatus) {
+      case 'inactive':
+        return ['active'];
+      case 'active':
+        return ['inactive'];
+      default:
+        return ['active', 'inactive'];
     }
   }
 
   /// Check if status transition is valid (client-side validation)
   bool isValidStatusTransition(String currentStatus, String newStatus) {
-    const validTransitions = {
-      'inactive': ['active'],
-      'active': ['inactive', 'busy'],
-      'busy': ['active'],
-    };
-
-    return validTransitions[currentStatus]?.contains(newStatus) ?? false;
+    final validTransitions = _getValidTransitions(currentStatus);
+    return validTransitions.contains(newStatus);
   }
 
-  // ========================================================================
-  // Monitoring & Analytics Methods
-  // ========================================================================
-
-  /// Get active drivers count untuk monitoring
-  Future<Result<Map<String, dynamic>>> getActiveDriversCount() async {
+  /// Get driver profile - ENDPOINT: GET /auth/profile
+  Future<Result<Map<String, dynamic>>> getDriverProfile() async {
     try {
-      final result = await _driverProvider.getActiveDriversCount();
+      final result = await _driverProvider.getDriverProfile();
 
       if (result.isSuccess && result.data != null) {
-        return Result.success(result.data!['data']);
+        return Result.success(result.data!);
       } else {
         return Result.failure(
-          result.message ?? 'Failed to get active drivers count',
+          result.message ?? 'Failed to get driver profile',
         );
       }
     } catch (e) {
@@ -245,17 +99,21 @@ class DriverRepository {
     }
   }
 
-  /// Get driver status summary untuk admin dashboard
-  Future<Result<DriverStatusSummaryModel>> getDriverStatusSummary() async {
+  /// Update driver profile - ENDPOINT: PUT /drivers/update
+  Future<Result<DriverModel>> updateDriverProfile(
+    Map<String, dynamic> data,
+  ) async {
     try {
-      final result = await _driverProvider.getDriverStatusSummary();
+      final result = await _driverProvider.updateDriverProfile(data);
 
       if (result.isSuccess && result.data != null) {
-        final summary = DriverStatusSummaryModel.fromJson(result.data!['data']);
-        return Result.success(summary);
+        final driverData =
+            result.data!['data'] as Map<String, dynamic>? ?? result.data!;
+        final driver = DriverModel.fromJson(driverData);
+        return Result.success(driver);
       } else {
         return Result.failure(
-          result.message ?? 'Failed to get driver status summary',
+          result.message ?? 'Failed to update driver profile',
         );
       }
     } catch (e) {
@@ -263,21 +121,43 @@ class DriverRepository {
     }
   }
 
-  Future<Result<void>> deleteDriver(int driverId) async {
+  /// Update driver location - ENDPOINT: PUT /drivers/location
+  Future<Result<Map<String, dynamic>>> updateDriverLocation(
+    Map<String, dynamic> data,
+  ) async {
     try {
-      final result = await _driverProvider.deleteDriver(driverId);
+      final result = await _driverProvider.updateDriverLocation(data);
 
-      if (result.isSuccess) {
-        return Result.success(null);
+      if (result.isSuccess && result.data != null) {
+        return Result.success(result.data!);
       } else {
-        return Result.failure(result.message ?? 'Failed to delete driver');
+        return Result.failure(
+          result.message ?? 'Failed to update driver location',
+        );
       }
     } catch (e) {
       return Result.failure(e.toString());
     }
   }
 
-  // Driver Requests
+  /// Get driver location - ENDPOINT: GET /drivers/{driverId}/location
+  Future<Result<Map<String, dynamic>>> getDriverLocation(int driverId) async {
+    try {
+      final result = await _driverProvider.getDriverLocation(driverId);
+
+      if (result.isSuccess && result.data != null) {
+        return Result.success(result.data!);
+      } else {
+        return Result.failure(
+          result.message ?? 'Failed to get driver location',
+        );
+      }
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  /// Get driver requests - ENDPOINT: GET /driver-requests
   Future<Result<List<DriverRequestModel>>> getDriverRequests({
     Map<String, dynamic>? params,
   }) async {
@@ -285,7 +165,9 @@ class DriverRepository {
       final result = await _driverProvider.getDriverRequests(params: params);
 
       if (result.isSuccess && result.data != null) {
-        final data = result.data!['data'] as List;
+        final data = result.data!['data'] as List? ??
+            result.data!['requests'] as List? ??
+            [];
         final requests =
             data.map((json) => DriverRequestModel.fromJson(json)).toList();
         return Result.success(requests);
@@ -299,6 +181,7 @@ class DriverRepository {
     }
   }
 
+  /// Get driver request by ID - ENDPOINT: GET /driver-requests/{requestId}
   Future<Result<DriverRequestModel>> getDriverRequestById(
     int requestId,
   ) async {
@@ -306,7 +189,9 @@ class DriverRepository {
       final result = await _driverProvider.getDriverRequestById(requestId);
 
       if (result.isSuccess && result.data != null) {
-        final request = DriverRequestModel.fromJson(result.data!['data']);
+        final requestData =
+            result.data!['data'] as Map<String, dynamic>? ?? result.data!;
+        final request = DriverRequestModel.fromJson(requestData);
         return Result.success(request);
       } else {
         return Result.failure(result.message ?? 'Driver request not found');
@@ -316,6 +201,7 @@ class DriverRepository {
     }
   }
 
+  /// Respond to driver request - ENDPOINT: PUT /driver-requests/{requestId}
   Future<Result<DriverRequestModel>> respondToDriverRequest(
     int requestId,
     Map<String, dynamic> data,
@@ -327,7 +213,9 @@ class DriverRepository {
       );
 
       if (result.isSuccess && result.data != null) {
-        final request = DriverRequestModel.fromJson(result.data!['data']);
+        final requestData =
+            result.data!['data'] as Map<String, dynamic>? ?? result.data!;
+        final request = DriverRequestModel.fromJson(requestData);
         return Result.success(request);
       } else {
         return Result.failure(
@@ -336,6 +224,34 @@ class DriverRepository {
       }
     } catch (e) {
       return Result.failure(e.toString());
+    }
+  }
+
+  // ========================================================================
+  // HELPER METHODS
+  // ========================================================================
+
+  /// Parse status change response dengan proper error handling
+  Map<String, dynamic>? parseStatusChangeResponse(Map<String, dynamic>? data) {
+    if (data == null) return null;
+
+    try {
+      return data;
+    } catch (e) {
+      print('Error parsing status change response: $e');
+      return null;
+    }
+  }
+
+  /// Parse status error dengan business rules
+  Map<String, dynamic>? parseStatusError(Map<String, dynamic>? errorData) {
+    if (errorData == null) return null;
+
+    try {
+      return errorData;
+    } catch (e) {
+      print('Error parsing status error: $e');
+      return null;
     }
   }
 }

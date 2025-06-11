@@ -20,11 +20,13 @@ class CustomerHomeScreen extends StatelessWidget {
         orderRepository: Get.find(),
         locationService: Get.find(),
       ),
-      builder:
-          (controller) => Scaffold(
-            backgroundColor: AppColors.background,
-            body: SafeArea(
-              child: RefreshIndicator(
+      builder: (controller) => Scaffold(
+        backgroundColor: AppColors.background,
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Main Content
+              RefreshIndicator(
                 onRefresh: controller.refreshData,
                 child: SingleChildScrollView(
                   physics: const AlwaysScrollableScrollPhysics(),
@@ -51,21 +53,22 @@ class CustomerHomeScreen extends StatelessWidget {
 
                       const SizedBox(height: AppDimensions.spacingXL),
 
-                      // Nearby Stores Section
-                      _buildNearbyStoresSection(controller),
-
-                      const SizedBox(height: AppDimensions.spacingXL),
-
-                      // Recent Orders Section
+                      // Recent Orders Section (moved up since stores are now in draggable sheet)
                       _buildRecentOrdersSection(controller),
 
-                      const SizedBox(height: AppDimensions.spacingXL),
+                      // Spacer for draggable sheet
+                      const SizedBox(height: 300),
                     ],
                   ),
                 ),
               ),
-            ),
+
+              // Draggable "Nearby Stores" Section
+              _buildDraggableNearYouSection(controller),
+            ],
           ),
+        ),
+      ),
     );
   }
 
@@ -239,70 +242,6 @@ class CustomerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildNearbyStoresSection(HomeController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Nearby Restaurants', style: AppTextStyles.h5),
-            TextButton(
-              onPressed: controller.navigateToStores,
-              child: Text(
-                'See All',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppDimensions.spacingMD),
-        Obx(() {
-          if (controller.isLoading) {
-            return const SizedBox(
-              height: 150,
-              child: Center(child: LoadingWidget()),
-            );
-          }
-
-          if (!controller.hasStores) {
-            return const EmptyStateWidget(
-              message: 'No restaurants found nearby',
-              icon: Icons.store_mall_directory_outlined,
-            );
-          }
-
-          return SizedBox(
-            height: 220,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: controller.nearbyStores.length,
-              itemBuilder: (context, index) {
-                final store = controller.nearbyStores[index];
-                return Container(
-                  width: 280,
-                  margin: EdgeInsets.only(
-                    right:
-                        index < controller.nearbyStores.length - 1
-                            ? AppDimensions.spacingMD
-                            : 0,
-                  ),
-                  child: StoreCard(
-                    store: store,
-                    onTap: () => controller.navigateToStoreDetail(store.id),
-                  ),
-                );
-              },
-            ),
-          );
-        }),
-      ],
-    );
-  }
-
   Widget _buildRecentOrdersSection(HomeController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -347,10 +286,9 @@ class CustomerHomeScreen extends StatelessWidget {
               final order = controller.recentOrders[index];
               return Container(
                 margin: EdgeInsets.only(
-                  bottom:
-                      index < controller.recentOrders.length - 1
-                          ? AppDimensions.spacingMD
-                          : 0,
+                  bottom: index < controller.recentOrders.length - 1
+                      ? AppDimensions.spacingMD
+                      : 0,
                 ),
                 child: OrderCard(
                   order: order,
@@ -361,6 +299,169 @@ class CustomerHomeScreen extends StatelessWidget {
           );
         }),
       ],
+    );
+  }
+
+  Widget _buildDraggableNearYouSection(HomeController controller) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.4, // 40% of screen height initially
+      minChildSize: 0.15, // Minimum 15% when collapsed
+      maxChildSize: 0.85, // Maximum 85% when expanded
+      builder: (context, scrollController) {
+        return Container(
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: const BorderRadius.vertical(
+              top: Radius.circular(AppDimensions.radiusXL),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.shadow,
+                blurRadius: 10,
+                offset: const Offset(0, -2),
+              ),
+            ],
+          ),
+          child: CustomScrollView(
+            controller: scrollController,
+            slivers: [
+              // Handle and Header
+              SliverToBoxAdapter(
+                child: Column(
+                  children: [
+                    // Drag Handle
+                    Container(
+                      margin: const EdgeInsets.only(top: 12, bottom: 8),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: AppColors.textSecondary.withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+
+                    // Section Header
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.paddingLG, vertical: 8),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            'Nearby Restaurants',
+                            style: AppTextStyles.h5,
+                          ),
+                          TextButton(
+                            onPressed: controller.navigateToStores,
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              minimumSize: const Size(50, 30),
+                            ),
+                            child: Text(
+                              'See All',
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.primary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Nearby Stores Horizontal List
+              SliverToBoxAdapter(
+                child: SizedBox(
+                  height: 220,
+                  child: Obx(() {
+                    if (controller.isLoading) {
+                      return const Center(child: LoadingWidget());
+                    }
+
+                    if (!controller.hasStores) {
+                      return const EmptyStateWidget(
+                        message: 'No restaurants found nearby',
+                        icon: Icons.store_mall_directory_outlined,
+                      );
+                    }
+
+                    return ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: AppDimensions.paddingLG),
+                      itemCount: controller.nearbyStores.length,
+                      itemBuilder: (context, index) {
+                        final store = controller.nearbyStores[index];
+                        return Container(
+                          width: 280,
+                          margin: EdgeInsets.only(
+                            right: index < controller.nearbyStores.length - 1
+                                ? AppDimensions.spacingMD
+                                : 0,
+                          ),
+                          child: StoreCard(
+                            store: store,
+                            onTap: () =>
+                                controller.navigateToStoreDetail(store.id),
+                          ),
+                        );
+                      },
+                    );
+                  }),
+                ),
+              ),
+
+              // Additional Quick Actions in Draggable Sheet
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(AppDimensions.paddingLG),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Quick Actions',
+                        style: AppTextStyles.h6,
+                      ),
+                      const SizedBox(height: AppDimensions.spacingMD),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildQuickActionCard(
+                              icon: Icons.search,
+                              title: 'Search Food',
+                              subtitle: 'Find specific dishes',
+                              color: AppColors.accent,
+                              onTap: () => Get.toNamed('/search'),
+                            ),
+                          ),
+                          const SizedBox(width: AppDimensions.spacingMD),
+                          Expanded(
+                            child: _buildQuickActionCard(
+                              icon: Icons.favorite,
+                              title: 'Favorites',
+                              subtitle: 'Your liked items',
+                              color: AppColors.error,
+                              onTap: () => Get.toNamed('/favorites'),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Bottom Padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: AppDimensions.spacingXXL),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }

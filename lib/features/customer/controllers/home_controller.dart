@@ -1,5 +1,4 @@
-// lib/features/customer/controllers/home_controller.dart - Compatible with existing StoreRepository
-
+// lib/features/customer/controllers/home_controller.dart - OPTIMIZED VERSION
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
@@ -28,19 +27,27 @@ class HomeController extends GetxController {
         _orderRepository = orderRepository,
         _locationService = locationService;
 
-  // Observable state
-  final RxBool _isLoading = false.obs;
+  // ✅ Separate loading states for better UX
+  final RxBool _isLoadingStores = false.obs;
+  final RxBool _isLoadingOrders = false.obs;
   final RxList<StoreModel> _nearbyStores = <StoreModel>[].obs;
   final RxList<OrderModel> _recentOrders = <OrderModel>[].obs;
   final RxString _greeting = ''.obs;
   final RxString _errorMessage = ''.obs;
   final RxBool _hasError = false.obs;
   final RxBool _hasLocation = false.obs;
-  final RxString _currentAddress = 'Getting location...'.obs;
+  final RxString _currentAddress = 'Institut Teknologi Del'.obs;
   final Rx<Position?> _userLocation = Rx<Position?>(null);
 
+  // ✅ Cache timers untuk prevent multiple calls
+  DateTime? _lastStoresFetch;
+  DateTime? _lastOrdersFetch;
+  static const Duration _cacheTimeout = Duration(minutes: 5);
+
   // Getters
-  bool get isLoading => _isLoading.value;
+  bool get isLoading => _isLoadingStores.value || _isLoadingOrders.value;
+  bool get isLoadingStores => _isLoadingStores.value;
+  bool get isLoadingOrders => _isLoadingOrders.value;
   List<StoreModel> get nearbyStores => _nearbyStores;
   List<OrderModel> get recentOrders => _recentOrders;
   String get greeting => _greeting.value;
@@ -51,18 +58,23 @@ class HomeController extends GetxController {
   bool get hasStores => _nearbyStores.isNotEmpty;
   bool get hasOrders => _recentOrders.isNotEmpty;
 
-  // Customer location (default IT Del coordinates)
   double get customerLatitude =>
-      _userLocation.value?.latitude ?? AppConstants.defaultLatitude;
+      _userLocation.value?.latitude ?? AppConfig.defaultLatitude;
   double get customerLongitude =>
-      _userLocation.value?.longitude ?? AppConstants.defaultLongitude;
+      _userLocation.value?.longitude ?? AppConfig.defaultLongitude;
 
   @override
   void onInit() {
     super.onInit();
+
+    // ✅ IMMEDIATE: Set greeting tanpa delay
     _setGreeting();
-    _getCurrentLocation();
-    loadHomeData();
+
+    // ✅ IMMEDIATE: Set default location
+    _setDefaultLocation();
+
+    // ✅ BACKGROUND: Load data secara asynchronous
+    _loadDataInBackground();
   }
 
   void _setGreeting() {
@@ -76,189 +88,171 @@ class HomeController extends GetxController {
     }
   }
 
-  Future<void> _getCurrentLocation() async {
+  void _setDefaultLocation() {
+    _currentAddress.value = 'Institut Teknologi Del';
+    _userLocation.value = Position(
+      latitude: AppConfig.defaultLatitude,
+      longitude: AppConfig.defaultLongitude,
+      timestamp: DateTime.now(),
+      accuracy: 0,
+      altitude: 0,
+      altitudeAccuracy: 0,
+      heading: 0,
+      speed: 0,
+      headingAccuracy: 0,
+      speedAccuracy: 0,
+    );
+    _hasLocation.value = true;
+  }
+
+  // ✅ Load data di background tanpa block UI
+  void _loadDataInBackground() async {
+    // Start loading location in background
+    _getCurrentLocationInBackground();
+
+    // Load essential data with staggered loading
+    Future.delayed(const Duration(milliseconds: 100), () {
+      _loadStoresInBackground();
+    });
+
+    Future.delayed(const Duration(milliseconds: 300), () {
+      _loadOrdersInBackground();
+    });
+  }
+
+  void _getCurrentLocationInBackground() async {
     try {
       final position = await _locationService.getCurrentLocation();
       if (position != null) {
         _userLocation.value = position;
         _hasLocation.value = true;
-        // You might want to implement reverse geocoding here
-        _currentAddress.value = 'Institut Teknologi Del';
-      } else {
-        _hasLocation.value = false;
-        _currentAddress.value = 'Location not available';
-        // Use default location as fallback
-        _userLocation.value = Position(
-          latitude: AppConfig.defaultLatitude,
-          longitude: AppConfig.defaultLongitude,
-          timestamp: DateTime.now(),
-          accuracy: 0,
-          altitude: 0,
-          altitudeAccuracy: 0,
-          heading: 0,
-          speed: 0,
-          headingAccuracy: 0,
-          speedAccuracy: 0,
-        );
-      }
-    } catch (e) {
-      _hasLocation.value = false;
-      _currentAddress.value = 'Location error';
-      // Use default location as fallback
-      _userLocation.value = Position(
-        latitude: AppConfig.defaultLatitude,
-        longitude: AppConfig.defaultLongitude,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        speed: 0,
-        headingAccuracy: 0,
-        speedAccuracy: 0,
-      );
-    }
-  }
 
-  Future<void> loadHomeData() async {
-    _isLoading.value = true;
-    _hasError.value = false;
-    _errorMessage.value = '';
-
-    try {
-      await Future.wait([_loadNearbyStores(), _loadRecentOrders()]);
-    } catch (e) {
-      _hasError.value = true;
-      _errorMessage.value = 'Failed to load data';
-      print('Error loading home data: $e');
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<void> _loadNearbyStores() async {
-    try {
-      // Try getNearbyStores first if location is available
-      if (_userLocation.value != null) {
-        final nearbyResult = await _storeRepository.getNearbyStores(
-          latitude: _userLocation.value!.latitude,
-          longitude: _userLocation.value!.longitude,
-          limit: 5,
-        );
-
-        if (nearbyResult.isSuccess && nearbyResult.data != null) {
-          _nearbyStores.value = nearbyResult.data!.take(5).toList();
-          print('Loaded ${_nearbyStores.length} nearby stores');
-          return;
+        // Refresh stores with real location if needed
+        if (_nearbyStores.isEmpty) {
+          _loadStoresInBackground();
         }
       }
+    } catch (e) {
+      // Keep default location if error
+      print('Location error (using default): $e');
+    }
+  }
 
-      // Fallback: Get all stores and calculate distances locally
-      final result = await _storeRepository.getAllStores(limit: 20);
+  // ✅ OPTIMIZED: Load stores with cache check
+  void _loadStoresInBackground() async {
+    // Check cache
+    if (_shouldUseCachedStores()) {
+      return;
+    }
+
+    _isLoadingStores.value = true;
+
+    try {
+      // Try nearby stores first (limit 5 for home screen)
+      final result = await _storeRepository.getAllStores(
+        page: 1,
+        limit: 5,
+      );
 
       if (result.isSuccess && result.data != null) {
-        List<StoreModel> allStores =
-            result.data!.data; // Access data from PaginatedResponse
+        var stores = result.data!.data;
 
-        // If we have user location, calculate distances and sort
+        // Calculate distances if location available
         if (_userLocation.value != null) {
-          final userLat = _userLocation.value!.latitude;
-          final userLon = _userLocation.value!.longitude;
-
-          // Calculate distance for each store
-          final storesWithDistance = allStores.map((store) {
+          stores = stores.map((store) {
             if (store.latitude != null && store.longitude != null) {
               final distance = DistanceHelper.calculateDistance(
-                userLat,
-                userLon,
+                _userLocation.value!.latitude,
+                _userLocation.value!.longitude,
                 store.latitude!,
                 store.longitude!,
               );
               return store.copyWith(distance: distance);
-            } else {
-              // If store doesn't have coordinates, put it at the end
-              return store.copyWith(distance: 9999.0);
             }
+            return store.copyWith(distance: 9999.0);
           }).toList();
 
-          // Sort by distance (closest first) and take only 5 stores for home screen
-          storesWithDistance.sort((a, b) {
+          // Sort by distance
+          stores.sort((a, b) {
             final distanceA = a.distance ?? 9999.0;
             final distanceB = b.distance ?? 9999.0;
             return distanceA.compareTo(distanceB);
           });
-
-          _nearbyStores.value = storesWithDistance.take(5).toList();
-        } else {
-          // If no location, just take first 5 stores
-          _nearbyStores.value = allStores.take(5).toList();
         }
 
-        print('Loaded ${_nearbyStores.length} stores using getAllStores');
-      } else {
-        print('Failed to load stores: ${result.message}');
+        _nearbyStores.value = stores.take(5).toList();
+        _lastStoresFetch = DateTime.now();
       }
     } catch (e) {
-      // Handle error silently for now
-      print('Error loading nearby stores: $e');
+      print('Error loading stores: $e');
+    } finally {
+      _isLoadingStores.value = false;
     }
   }
 
-  Future<void> _loadRecentOrders() async {
+  // ✅ OPTIMIZED: Load orders with cache check
+  void _loadOrdersInBackground() async {
+    // Check cache
+    if (_shouldUseCachedOrders()) {
+      return;
+    }
+
+    _isLoadingOrders.value = true;
+
     try {
       final result = await _orderRepository.getOrdersByUser(
         params: {'limit': 3, 'page': 1},
       );
 
       if (result.isSuccess && result.data != null) {
-        // Handle different response types from order repository
         if (result.data is PaginatedResponse<OrderModel>) {
-          _recentOrders.value =
-              (result.data as PaginatedResponse<OrderModel>).data;
-        } else if (result.data is List<OrderModel>) {
-          _recentOrders.value = result.data as List<OrderModel>;
-        } else {
-          _recentOrders.clear();
+          _recentOrders.value = (result.data as PaginatedResponse<OrderModel>)
+              .data
+              .take(3)
+              .toList();
         }
-        print('Loaded ${_recentOrders.length} recent orders');
-      } else {
-        print('Failed to load recent orders: ${result.message}');
+        _lastOrdersFetch = DateTime.now();
       }
     } catch (e) {
-      print('Error loading recent orders: $e');
-      // Handle error silently for now
+      print('Error loading orders: $e');
+    } finally {
+      _isLoadingOrders.value = false;
     }
   }
 
+  // ✅ Cache check helpers
+  bool _shouldUseCachedStores() {
+    return _lastStoresFetch != null &&
+        _nearbyStores.isNotEmpty &&
+        DateTime.now().difference(_lastStoresFetch!) < _cacheTimeout;
+  }
+
+  bool _shouldUseCachedOrders() {
+    return _lastOrdersFetch != null &&
+        _recentOrders.isNotEmpty &&
+        DateTime.now().difference(_lastOrdersFetch!) < _cacheTimeout;
+  }
+
+  // ✅ OPTIMIZED: Refresh with cache invalidation
   Future<void> refreshData() async {
-    await loadHomeData();
+    _lastStoresFetch = null;
+    _lastOrdersFetch = null;
+
+    _loadStoresInBackground();
+    _loadOrdersInBackground();
   }
 
-  void navigateToStores() {
-    Get.toNamed(Routes.STORE_LIST);
-  }
+  // Navigation methods (unchanged)
+  void navigateToStores() => Get.toNamed(Routes.STORE_LIST);
+  void navigateToOrders() => Get.toNamed(Routes.ORDER_HISTORY);
+  void navigateToStoreDetail(int storeId) =>
+      Get.toNamed(Routes.STORE_DETAIL, arguments: {'storeId': storeId});
+  void navigateToOrderDetail(int orderId) =>
+      Get.toNamed(Routes.CUSTOMER_ORDER_DETAIL,
+          arguments: {'orderId': orderId});
+  void navigateToCart() => Get.toNamed(Routes.CART);
+  void navigateToProfile() => Get.toNamed(Routes.PROFILE);
 
-  void navigateToOrders() {
-    Get.toNamed(Routes.ORDER_HISTORY);
-  }
-
-  void navigateToStoreDetail(int storeId) {
-    Get.toNamed(Routes.STORE_DETAIL, arguments: {'storeId': storeId});
-  }
-
-  void navigateToOrderDetail(int orderId) {
-    Get.toNamed(Routes.ORDER_DETAIL, arguments: {'orderId': orderId});
-  }
-
-  void navigateToCart() {
-    Get.toNamed(Routes.CART);
-  }
-
-  void navigateToProfile() {
-    Get.toNamed(Routes.PROFILE);
-  }
-
-  // Method to get customer location for other controllers
   Map<String, dynamic> getCustomerLocation() {
     return {
       'latitude': customerLatitude,

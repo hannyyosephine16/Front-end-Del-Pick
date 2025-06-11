@@ -5,6 +5,8 @@ import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/core/utils/custom_snackbar.dart';
 
+import '../../../app/routes/app_routes.dart';
+
 class DriverOrdersController extends GetxController {
   final OrderRepository orderRepository;
 
@@ -250,6 +252,7 @@ class DriverOrdersController extends GetxController {
   // Navigation methods
   void goToOrderDetail(OrderModel order) {
     Get.toNamed('/driver/order-detail', arguments: {'order': order});
+    // Get.toNamed(Routes.DRIVER_ORDERS, arguments: {'order': order});
   }
 
   void goToOrderTracking(OrderModel order) {

@@ -1,115 +1,74 @@
-// lib/data/datasources/remote/driver_remote_datasource.dart - Updated dengan status endpoints
-import 'package:dio/dio.dart';
+// lib/data/datasources/remote/driver_remote_datasource.dart - SESUAI ApiService ANDA
 import 'package:del_pick/core/services/api/api_service.dart';
-import 'package:del_pick/core/constants/api_endpoints.dart';
+import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
+import 'package:dio/dio.dart';
 
 class DriverRemoteDataSource {
   final ApiService _apiService;
+  final AuthLocalDataSource _authLocalDataSource;
 
-  DriverRemoteDataSource(this._apiService);
+  DriverRemoteDataSource({
+    required ApiService apiService,
+    required AuthLocalDataSource authLocalDataSource,
+  })  : _apiService = apiService,
+        _authLocalDataSource = authLocalDataSource;
 
-  // Existing methods
-  Future<Response> getAllDrivers({Map<String, dynamic>? params}) async {
-    return await _apiService.get(
-      ApiEndpoints.getAllDrivers,
-      queryParameters: params,
-    );
-  }
-
-  Future<Response> getDriverById(int driverId) async {
-    return await _apiService.get(ApiEndpoints.getDriverById(driverId));
-  }
-
-  Future<Response> createDriver(Map<String, dynamic> data) async {
-    return await _apiService.post(ApiEndpoints.createDriver, data: data);
-  }
-
-  Future<Response> updateDriver(int driverId, Map<String, dynamic> data) async {
-    return await _apiService.put(
-      ApiEndpoints.updateDriver(driverId),
-      data: data,
-    );
-  }
-
-  Future<Response> updateDriverProfile(Map<String, dynamic> data) async {
-    return await _apiService.put(ApiEndpoints.updateDriverProfile, data: data);
-  }
-
-  Future<Response> updateDriverLocation(Map<String, dynamic> data) async {
-    return await _apiService.put(ApiEndpoints.updateDriverLocation, data: data);
-  }
-
-  Future<Response> getDriverLocation(int driverId) async {
-    return await _apiService.get(ApiEndpoints.getDriverLocation(driverId));
-  }
-
+  /// Update driver status - ENDPOINT: PUT /drivers/status
   Future<Response> updateDriverStatus(Map<String, dynamic> data) async {
-    return await _apiService.put(ApiEndpoints.updateDriverStatus, data: data);
-  }
-
-  Future<Response> getDriverOrders({Map<String, dynamic>? params}) async {
-    return await _apiService.get(
-      ApiEndpoints.driverOrders,
-      queryParameters: params,
+    return await _apiService.put(
+      '/drivers/status',
+      data: data, // {status: "active" atau "inactive"}
     );
   }
 
-  Future<Response> deleteDriver(int driverId) async {
-    return await _apiService.delete(ApiEndpoints.deleteDriver(driverId));
+  /// Get driver profile - ENDPOINT: GET /auth/profile
+  /// NOTE: Swagger tidak punya /drivers/status-info, gunakan /auth/profile
+  Future<Response> getDriverProfile() async {
+    return await _apiService.get('/auth/profile');
   }
 
-  // ========================================================================
-  // NEW: Status-related endpoints
-  // ========================================================================
-
-  /// Get driver status info dengan valid transitions
-  Future<Response> getDriverStatusInfo() async {
-    return await _apiService.get('/drivers/status-info');
-  }
-
-  /// Get active drivers count untuk monitoring
-  Future<Response> getActiveDriversCount() async {
-    return await _apiService.get('/drivers/active/count');
-  }
-
-  /// Get driver status summary untuk admin dashboard
-  Future<Response> getDriverStatusSummary() async {
-    return await _apiService.get('/drivers/status/summary');
-  }
-
-  /// Force update driver status (admin only)
-  Future<Response> forceUpdateDriverStatus(
-    int driverId,
-    Map<String, dynamic> data,
-  ) async {
+  /// Update driver profile - ENDPOINT: PUT /drivers/update
+  Future<Response> updateDriverProfile(Map<String, dynamic> data) async {
     return await _apiService.put(
-      '/drivers/$driverId/force-status',
+      '/drivers/update',
       data: data,
     );
   }
 
-  // ========================================================================
-  // Driver Requests (existing)
-  // ========================================================================
+  /// Update driver location - ENDPOINT: PUT /drivers/location
+  Future<Response> updateDriverLocation(Map<String, dynamic> data) async {
+    return await _apiService.put(
+      '/drivers/location',
+      data: data, // {latitude: double, longitude: double}
+    );
+  }
 
+  /// Get driver location - ENDPOINT: GET /drivers/{driverId}/location
+  Future<Response> getDriverLocation(int driverId) async {
+    return await _apiService.get('/drivers/$driverId/location');
+  }
+
+  /// Get driver requests - ENDPOINT: GET /driver-requests
   Future<Response> getDriverRequests({Map<String, dynamic>? params}) async {
     return await _apiService.get(
-      ApiEndpoints.getDriverRequests,
+      '/driver-requests',
       queryParameters: params,
     );
   }
 
+  /// Get driver request by ID - ENDPOINT: GET /driver-requests/{requestId}
   Future<Response> getDriverRequestById(int requestId) async {
-    return await _apiService.get(ApiEndpoints.getDriverRequestById(requestId));
+    return await _apiService.get('/driver-requests/$requestId');
   }
 
+  /// Respond to driver request - ENDPOINT: PUT /driver-requests/{requestId}
   Future<Response> respondToDriverRequest(
     int requestId,
     Map<String, dynamic> data,
   ) async {
     return await _apiService.put(
-      ApiEndpoints.respondToDriverRequest(requestId),
-      data: data,
+      '/driver-requests/$requestId',
+      data: data, // {action: "accept" atau "reject"}
     );
   }
 }

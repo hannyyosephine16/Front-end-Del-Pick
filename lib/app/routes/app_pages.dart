@@ -153,7 +153,7 @@ class AppPages {
       binding: CustomerBinding(),
     ),
     GetPage(
-      name: Routes.ORDER_DETAIL,
+      name: Routes.CUSTOMER_ORDER_DETAIL,
       page: () => const CustomerOrderDetailScreen(),
       binding: CustomerBinding(),
     ),
