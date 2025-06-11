@@ -538,15 +538,15 @@ class DriverProfileController extends GetxController {
   }
 
   void navigateToSettings() {
-    Get.toNamed('/driver/settings');
+    Get.toNamed(Routes.DRIVER_SETTINGS);
   }
 
   void navigateToEarnings() {
-    Get.toNamed('/driver/earnings');
+    Get.toNamed(Routes.DRIVER_EARNINGS);
   }
 
   void navigateToOrderHistory() {
-    Get.toNamed('/driver/orders');
+    Get.toNamed(Routes.DRIVER_ORDERS);
   }
 
   void navigateToVehicleSettings() {
