@@ -109,11 +109,12 @@ class OrderRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<OrderModel>(
-          data: orders,
+          // data: orders,
+          items: orders,
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: params?['limit'] ?? 10,
+          // limit: params?['limit'] ?? 10,
         );
 
         return Result.success(
@@ -149,11 +150,11 @@ class OrderRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<OrderModel>(
-          data: orders,
+          items: orders,
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: params?['limit'] ?? 10,
+          // limit: params?['limit'] ?? 10,
         );
 
         return Result.success(

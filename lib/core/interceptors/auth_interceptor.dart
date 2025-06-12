@@ -13,21 +13,6 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // Add authentication token to requests
-    // final String? token = _storageService.readString(
-    //   StorageConstants.authToken,
-    // );
-    //
-    // if (token != null && token.isNotEmpty) {
-    //   options.headers['Authorization'] = 'Bearer $token';
-    // }
-    //
-    // // Add common headers
-    // options.headers['User-Agent'] = 'DelPick Mobile App';
-    // options.headers['X-Requested-With'] = 'XMLHttpRequest';
-    //
-    // handler.next(options);
-    // Add auth token if available
     final token = _storageService.readString(StorageConstants.authToken);
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';

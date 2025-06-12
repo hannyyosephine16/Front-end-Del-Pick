@@ -1,4 +1,3 @@
-// lib/features/customer/controllers/order_history_controller.dart - FIXED with missing methods
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
@@ -71,7 +70,8 @@ class OrderHistoryController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        final newOrders = result.data!.data;
+        // ✅ FIXED: Use .items instead of .data
+        final newOrders = result.data!.items;
 
         if (refresh) {
           _orders.assignAll(newOrders);
@@ -114,7 +114,8 @@ class OrderHistoryController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        final newOrders = result.data!.data;
+        // ✅ FIXED: Use .items instead of .data
+        final newOrders = result.data!.items;
         _orders.addAll(newOrders);
 
         // Check if we can load more

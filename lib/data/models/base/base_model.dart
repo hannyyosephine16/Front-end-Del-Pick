@@ -103,53 +103,42 @@ class ApiResponseModel<T> {
 
 // Keep PaginatedResponse unchanged as it looks correct
 class PaginatedResponse<T> {
-  final List<T> data;
+  final List<T> items;
   final int totalItems;
   final int totalPages;
   final int currentPage;
-  final int limit;
 
   PaginatedResponse({
-    required this.data,
+    required this.items,
     required this.totalItems,
     required this.totalPages,
     required this.currentPage,
-    required this.limit,
   });
 
+  // Factory untuk parsing dari backend response
   factory PaginatedResponse.fromJson(
     Map<String, dynamic> json,
     T Function(Map<String, dynamic>) fromJsonT,
+    String itemsKey, // e.g., 'stores', 'menuItems', 'orders'
   ) {
     return PaginatedResponse<T>(
-      data: (json['data'] as List?)
+      items: (json[itemsKey] as List?)
               ?.map((item) => fromJsonT(item as Map<String, dynamic>))
               .toList() ??
           [],
       totalItems: json['totalItems'] as int? ?? 0,
       totalPages: json['totalPages'] as int? ?? 0,
       currentPage: json['currentPage'] as int? ?? 1,
-      limit: json['limit'] as int? ?? 10,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'data': data,
-      'totalItems': totalItems,
-      'totalPages': totalPages,
-      'currentPage': currentPage,
-      'limit': limit,
-    };
   }
 
   bool get hasNextPage => currentPage < totalPages;
   bool get hasPreviousPage => currentPage > 1;
-  bool get isEmpty => data.isEmpty;
-  bool get isNotEmpty => data.isNotEmpty;
+  bool get isEmpty => items.isEmpty;
+  bool get isNotEmpty => items.isNotEmpty;
 
   @override
   String toString() {
-    return 'PaginatedResponse{totalItems: $totalItems, currentPage: $currentPage, totalPages: $totalPages}';
+    return 'PaginatedResponse(items: ${items.length}, total: $totalItems, page: $currentPage/$totalPages)';
   }
 }

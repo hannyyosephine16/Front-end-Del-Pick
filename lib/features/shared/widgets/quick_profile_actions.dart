@@ -59,7 +59,6 @@ class QuickProfileActions extends StatelessWidget {
             if (authController.isCustomer) ..._buildCustomerActions(),
             if (authController.isDriver) ..._buildDriverActions(),
             if (authController.isStore) ..._buildStoreActions(),
-            if (authController.isAdmin) ..._buildAdminActions(),
           ],
         ),
       );
@@ -131,29 +130,6 @@ class QuickProfileActions extends StatelessWidget {
         title: 'Orders',
         subtitle: 'View incoming orders',
         onTap: () => Get.toNamed(Routes.STORE_ORDERS),
-      ),
-    ];
-  }
-
-  List<Widget> _buildAdminActions() {
-    return [
-      _buildActionTile(
-        icon: Icons.admin_panel_settings,
-        title: 'Admin Dashboard',
-        subtitle: 'Manage the platform',
-        onTap: () => Get.toNamed(Routes.ADMIN_DASHBOARD),
-      ),
-      _buildActionTile(
-        icon: Icons.people,
-        title: 'User Management',
-        subtitle: 'Manage users',
-        onTap: () => Get.toNamed(Routes.USER_MANAGEMENT),
-      ),
-      _buildActionTile(
-        icon: Icons.analytics,
-        title: 'Analytics',
-        subtitle: 'View platform analytics',
-        onTap: () => Get.toNamed(Routes.ANALYTICS),
       ),
     ];
   }

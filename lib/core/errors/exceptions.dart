@@ -70,13 +70,13 @@ class LocationException extends AppException {
 
 class LocationPermissionDeniedException extends LocationException {
   const LocationPermissionDeniedException()
-    : super('Location permission denied');
+      : super('Location permission denied');
 }
 
-class LocationServiceDisabledException extends LocationException {
-  const LocationServiceDisabledException()
-    : super('Location service is disabled');
-}
+// class LocationServiceDisabledException extends LocationException {
+//   const LocationServiceDisabledException()
+//     : super('Location service is disabled');
+// }
 
 class LocationTimeoutException extends LocationException {
   const LocationTimeoutException() : super('Location request timed out');
@@ -108,7 +108,7 @@ class FileSizeExceededException extends FileException {
   final int maxSizeMB;
 
   const FileSizeExceededException(this.maxSizeMB)
-    : super('File size exceeds the maximum limit of $maxSizeMB MB');
+      : super('File size exceeds the maximum limit of $maxSizeMB MB');
 }
 
 class UnsupportedFileTypeException extends FileException {
@@ -130,7 +130,7 @@ class StoragePermissionDeniedException extends PermissionException {
 
 class NotificationPermissionDeniedException extends PermissionException {
   const NotificationPermissionDeniedException()
-    : super('Notification permission denied');
+      : super('Notification permission denied');
 }
 
 // Business logic exceptions
@@ -165,5 +165,5 @@ class CartItemNotFoundException extends CartException {
 
 class StoreConflictException extends CartException {
   const StoreConflictException()
-    : super('Cannot add items from different stores to cart');
+      : super('Cannot add items from different stores to cart');
 }

@@ -1,265 +1,281 @@
-// lib/features/driver/controllers/driver_orders_controller.dart
+// lib/features/driver/controllers/driver_orders_controller.dart - FIXED
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/base/base_model.dart';
-import 'package:del_pick/core/utils/custom_snackbar.dart';
-
-import '../../../app/routes/app_routes.dart';
+import 'package:del_pick/core/errors/error_handler.dart';
+import 'package:del_pick/core/constants/order_status_constants.dart';
 
 class DriverOrdersController extends GetxController {
-  final OrderRepository orderRepository;
+  final OrderRepository _orderRepository;
 
-  DriverOrdersController(this.orderRepository);
+  DriverOrdersController({required OrderRepository orderRepository})
+      : _orderRepository = orderRepository;
 
-  // Observable variables
+  // Observable state
   final RxList<OrderModel> _orders = <OrderModel>[].obs;
+  final RxList<OrderModel> _activeOrders = <OrderModel>[].obs;
   final RxBool _isLoading = false.obs;
-  final RxBool _isRefreshing = false.obs;
+  final RxBool _isLoadingMore = false.obs;
+  final RxBool _hasError = false.obs;
+  final RxString _errorMessage = ''.obs;
   final RxString _selectedFilter = 'all'.obs;
-  final RxInt _currentPage = 1.obs;
-  final RxBool _hasMoreData = true.obs;
-  final RxInt _totalOrders = 0.obs;
+  final RxBool _canLoadMore = true.obs;
+
+  // Pagination
+  int _currentPage = 1;
+  final int _itemsPerPage = 10;
+
+  // Filter options specific to driver
+  static const List<Map<String, dynamic>> filterOptions = [
+    {'key': 'all', 'label': 'All Orders', 'icon': Icons.list_alt},
+    {'key': 'active', 'label': 'Active', 'icon': Icons.schedule},
+    {'key': 'preparing', 'label': 'Preparing', 'icon': Icons.restaurant},
+    {'key': 'on_delivery', 'label': 'Delivering', 'icon': Icons.local_shipping},
+    {'key': 'delivered', 'label': 'Completed', 'icon': Icons.check_circle},
+  ];
 
   // Getters
   List<OrderModel> get orders => _orders;
+  List<OrderModel> get activeOrders => _activeOrders;
   bool get isLoading => _isLoading.value;
-  bool get isRefreshing => _isRefreshing.value;
+  bool get isLoadingMore => _isLoadingMore.value;
+  bool get hasError => _hasError.value;
+  String get errorMessage => _errorMessage.value;
   String get selectedFilter => _selectedFilter.value;
-  int get currentPage => _currentPage.value;
-  bool get hasMoreData => _hasMoreData.value;
-  int get totalOrders => _totalOrders.value;
-
-  // Filter options
-  final List<Map<String, String>> filterOptions = [
-    {'key': 'all', 'label': 'Semua Pesanan'},
-    {'key': 'pending', 'label': 'Menunggu'},
-    {'key': 'preparing', 'label': 'Disiapkan'},
-    {'key': 'on_delivery', 'label': 'Dalam Pengiriman'},
-    {'key': 'delivered', 'label': 'Selesai'},
-    {'key': 'cancelled', 'label': 'Dibatalkan'},
-  ];
-
-  // Computed properties
-  List<OrderModel> get activeOrders => _orders
-      .where((order) =>
-          order.orderStatus == 'preparing' ||
-          order.orderStatus == 'on_delivery')
-      .toList();
-
-  List<OrderModel> get completedOrders =>
-      _orders.where((order) => order.orderStatus == 'delivered').toList();
-
-  List<OrderModel> get cancelledOrders =>
-      _orders.where((order) => order.orderStatus == 'cancelled').toList();
-
-  int get activeOrderCount => activeOrders.length;
-  int get completedOrderCount => completedOrders.length;
-  int get cancelledOrderCount => cancelledOrders.length;
+  bool get canLoadMore => _canLoadMore.value;
+  bool get hasOrders => _orders.isNotEmpty;
+  bool get hasActiveOrders => _activeOrders.isNotEmpty;
+  int get activeOrderCount => _activeOrders.length;
 
   @override
   void onInit() {
     super.onInit();
     loadOrders();
+    loadActiveOrders();
   }
 
-  // Load orders with pagination
-  Future<void> loadOrders({bool isRefresh = false}) async {
+  // Load driver orders
+  Future<void> loadOrders({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _canLoadMore.value = true;
+      _orders.clear();
+    }
+
+    _isLoading.value = true;
+    _hasError.value = false;
+    _errorMessage.value = '';
+
     try {
-      if (isRefresh) {
-        _isRefreshing.value = true;
-        _currentPage.value = 1;
-        _hasMoreData.value = true;
-      } else {
-        _isLoading.value = true;
-      }
-
-      final params = <String, dynamic>{
-        'page': _currentPage.value,
-        'limit': 10,
-      };
-
-      // Add status filter if not 'all'
-      if (_selectedFilter.value != 'all') {
-        params['status'] = _selectedFilter.value;
-      }
-
-      // Use driver-specific endpoint (assuming we have one)
-      final result = await orderRepository.getOrdersByUser(params: params);
+      // Use new getDriverOrders method that returns List<Map<String, dynamic>>
+      final result = await _orderRepository.getDriverOrders(
+        page: _currentPage,
+        limit: _itemsPerPage,
+        status: _selectedFilter.value != 'all' ? _selectedFilter.value : null,
+      );
 
       if (result.isSuccess && result.data != null) {
-        final paginatedResponse = result.data!;
+        // Convert Map to OrderModel
+        final newOrders = result.data!
+            .map((orderMap) => OrderModel.fromJson(orderMap))
+            .toList();
 
-        if (isRefresh) {
-          _orders.clear();
+        if (refresh) {
+          _orders.assignAll(newOrders);
+        } else {
+          _orders.addAll(newOrders);
         }
 
-        _orders.addAll(paginatedResponse.data);
-        _totalOrders.value = paginatedResponse.totalItems;
+        _canLoadMore.value = newOrders.length >= _itemsPerPage;
 
-        // Check if has more data
-        _hasMoreData.value = _currentPage.value < paginatedResponse.totalPages;
-
-        // Increment page for next load
-        if (_hasMoreData.value) {
-          _currentPage.value++;
+        if (newOrders.isNotEmpty) {
+          _currentPage++;
         }
       } else {
-        CustomSnackbar.showError(
-          title: 'Error',
-          message: result.message ?? 'Failed to load orders',
-        );
+        _hasError.value = true;
+        _errorMessage.value = result.message ?? 'Failed to load orders';
       }
     } catch (e) {
-      CustomSnackbar.showError(
-        title: 'Error',
-        message: 'Failed to load orders: ${e.toString()}',
-      );
+      _hasError.value = true;
+      _errorMessage.value = ErrorHandler.getErrorMessage(
+          ErrorHandler.handleException(e as Exception));
     } finally {
       _isLoading.value = false;
-      _isRefreshing.value = false;
+    }
+  }
+
+  // Load active orders for driver dashboard
+  Future<void> loadActiveOrders() async {
+    try {
+      final result = await _orderRepository.getDriverActiveOrders();
+
+      if (result.isSuccess && result.data != null) {
+        // Convert Map to OrderModel
+        final activeOrdersList = result.data!
+            .map((orderMap) => OrderModel.fromJson(orderMap))
+            .toList();
+
+        // Filter truly active orders
+        _activeOrders.value = activeOrdersList
+            .where((order) =>
+                order.orderStatus == OrderStatusConstants.preparing ||
+                order.orderStatus == OrderStatusConstants.onDelivery)
+            .toList();
+      }
+    } catch (e) {
+      print('Error loading active orders: $e');
     }
   }
 
   // Load more orders (pagination)
   Future<void> loadMoreOrders() async {
-    if (!_hasMoreData.value || _isLoading.value) return;
+    if (_isLoadingMore.value || !_canLoadMore.value) return;
 
-    await loadOrders();
-  }
+    _isLoadingMore.value = true;
 
-  // Refresh orders
-  Future<void> refreshOrders() async {
-    await loadOrders(isRefresh: true);
+    try {
+      final result = await _orderRepository.getDriverOrders(
+        page: _currentPage,
+        limit: _itemsPerPage,
+        status: _selectedFilter.value != 'all' ? _selectedFilter.value : null,
+      );
+
+      if (result.isSuccess && result.data != null) {
+        final newOrders = result.data!
+            .map((orderMap) => OrderModel.fromJson(orderMap))
+            .toList();
+
+        _orders.addAll(newOrders);
+        _canLoadMore.value = newOrders.length >= _itemsPerPage;
+
+        if (newOrders.isNotEmpty) {
+          _currentPage++;
+        }
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to load more orders',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      _isLoadingMore.value = false;
+    }
   }
 
   // Change filter
   void changeFilter(String filter) {
     if (_selectedFilter.value != filter) {
       _selectedFilter.value = filter;
-      refreshOrders();
+      loadOrders(refresh: true);
     }
   }
 
-  // Get order by ID
-  OrderModel? getOrderById(int orderId) {
-    try {
-      return _orders.firstWhere((order) => order.id == orderId);
-    } catch (e) {
-      return null;
-    }
-  }
-
-  // Update order status (for driver actions)
-  Future<void> updateOrderStatus(int orderId, String newStatus) async {
-    try {
-      _isLoading.value = true;
-
-      final result = await orderRepository.updateOrderStatus({
-        'id': orderId,
-        'status': newStatus,
-      });
-
-      if (result.isSuccess && result.data != null) {
-        // Update local order
-        final orderIndex = _orders.indexWhere((order) => order.id == orderId);
-        if (orderIndex != -1) {
-          _orders[orderIndex] = result.data!;
-        }
-
-        CustomSnackbar.showSuccess(
-          title: 'Success',
-          message: 'Order status updated successfully',
-        );
-
-        // Refresh to get updated data
-        await refreshOrders();
-      } else {
-        CustomSnackbar.showError(
-          title: 'Error',
-          message: result.message ?? 'Failed to update order status',
-        );
-      }
-    } catch (e) {
-      CustomSnackbar.showError(
-        title: 'Error',
-        message: 'Failed to update order: ${e.toString()}',
-      );
-    } finally {
-      _isLoading.value = false;
-    }
+  // Refresh all data
+  Future<void> refreshData() async {
+    await Future.wait([
+      loadOrders(refresh: true),
+      loadActiveOrders(),
+    ]);
   }
 
   // Start delivery
   Future<void> startDelivery(int orderId) async {
-    await updateOrderStatus(orderId, 'on_delivery');
+    try {
+      final result = await _orderRepository.startDelivery(orderId);
+
+      if (result.isSuccess) {
+        Get.snackbar(
+          'Delivery Started',
+          'You have started the delivery for this order',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+
+        // Refresh data
+        await refreshData();
+      } else {
+        Get.snackbar(
+          'Error',
+          result.message ?? 'Failed to start delivery',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to start delivery',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
   }
 
   // Complete delivery
   Future<void> completeDelivery(int orderId) async {
-    await updateOrderStatus(orderId, 'delivered');
-  }
+    try {
+      final result = await _orderRepository.completeDelivery(orderId);
 
-  // Get orders by status
-  List<OrderModel> getOrdersByStatus(String status) {
-    if (status == 'all') return _orders;
-    return _orders.where((order) => order.orderStatus == status).toList();
-  }
+      if (result.isSuccess) {
+        Get.snackbar(
+          'Delivery Completed',
+          'Order has been delivered successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
 
-  // Get order statistics
-  Map<String, dynamic> getOrderStatistics() {
-    return {
-      'total': _totalOrders.value,
-      'active': activeOrderCount,
-      'completed': completedOrderCount,
-      'cancelled': cancelledOrderCount,
-      'todayDeliveries': _orders
-          .where((order) =>
-              order.orderStatus == 'delivered' && _isToday(order.orderDate))
-          .length,
-      'todayEarnings': _calculateTodayEarnings(),
-    };
-  }
-
-  // Helper methods
-  bool _isToday(DateTime date) {
-    final now = DateTime.now();
-    return date.year == now.year &&
-        date.month == now.month &&
-        date.day == now.day;
-  }
-
-  double _calculateTodayEarnings() {
-    final todayOrders = _orders.where((order) =>
-        order.orderStatus == 'delivered' && _isToday(order.orderDate));
-
-    double earnings = 0.0;
-    for (final order in todayOrders) {
-      // Assume driver gets a percentage of the service charge
-      earnings += order.serviceCharge * 0.8; // 80% of service charge
+        // Refresh data
+        await refreshData();
+      } else {
+        Get.snackbar(
+          'Error',
+          result.message ?? 'Failed to complete delivery',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to complete delivery',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
-    return earnings;
-  }
-
-  // Format currency
-  String formatCurrency(double amount) {
-    return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(
-          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-          (Match m) => '${m[1]}.',
-        )}';
   }
 
   // Navigation methods
-  void goToOrderDetail(OrderModel order) {
-    Get.toNamed('/driver/order-detail', arguments: {'order': order});
-    // Get.toNamed(Routes.DRIVER_ORDERS, arguments: {'order': order});
+  void navigateToOrderDetail(int orderId) {
+    Get.toNamed('/driver/order_detail', arguments: {'orderId': orderId});
   }
 
-  void goToOrderTracking(OrderModel order) {
-    Get.toNamed('/order-tracking', arguments: {'orderId': order.id});
+  void navigateToOrderTracking(int orderId) {
+    Get.toNamed('/driver/order_tracking', arguments: {'orderId': orderId});
   }
 
-  void goToNavigation(OrderModel order) {
-    Get.toNamed('/driver/navigation', arguments: {'order': order});
+  // Get statistics
+  Map<String, dynamic> getOrderStatistics() {
+    final totalOrders = _orders.length;
+    final activeOrders = _activeOrders.length;
+    final completedOrders = _orders
+        .where((order) => order.orderStatus == OrderStatusConstants.delivered)
+        .length;
+
+    return {
+      'totalOrders': totalOrders,
+      'activeOrders': activeOrders,
+      'completedOrders': completedOrders,
+    };
   }
 }

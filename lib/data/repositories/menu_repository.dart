@@ -23,11 +23,11 @@ class MenuRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<MenuItemModel>(
-          data: menuItems,
+          items: menuItems,
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: params?['limit'] ?? 10,
+          // limit: params?['limit'] ?? 10,
         );
 
         return Result.success(paginatedResponse);

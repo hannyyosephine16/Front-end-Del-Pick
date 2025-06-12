@@ -72,9 +72,9 @@ class StoreBinding extends Bindings {
 
     Get.lazyPut<StoreDashboardController>(
       () => StoreDashboardController(
-        storeRepository: Get.find<StoreRepository>(),
+        // storeRepository: Get.find<StoreRepository>(),
         orderRepository: Get.find<OrderRepository>(),
-        menuRepository: Get.find<MenuRepository>(),
+        // menuRepository: Get.find<MenuRepository>(),
       ),
     );
 

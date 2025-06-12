@@ -1,4 +1,3 @@
-// lib/features/customer/controllers/store_controller.dart - OPTIMIZED VERSION
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -96,7 +95,8 @@ class StoreController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        var storesList = result.data!.data;
+        // ✅ FIXED: Use .items instead of .data
+        var storesList = result.data!.items;
 
         // Calculate distances and sort
         storesList = _calculateDistancesAndSort(storesList);

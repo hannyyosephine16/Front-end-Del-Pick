@@ -501,9 +501,6 @@ class AuthController extends GetxController {
       case AppConstants.roleStore:
         Get.offAllNamed(Routes.STORE_DASHBOARD);
         break;
-      case AppConstants.roleAdmin:
-        Get.offAllNamed(Routes.ADMIN_DASHBOARD);
-        break;
       default:
         Get.offAllNamed(Routes.LOGIN);
     }

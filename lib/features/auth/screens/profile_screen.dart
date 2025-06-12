@@ -656,21 +656,6 @@ class ProfileScreen extends StatelessWidget {
             onTap: () => Get.toNamed(Routes.DRIVER_EARNINGS),
           ),
         ];
-      case AppConstants.roleAdmin:
-        return [
-          _buildActionTile(
-            icon: Icons.settings_outlined,
-            title: 'System Settings',
-            subtitle: 'Manage system preferences',
-            onTap: () => Get.toNamed(Routes.SYSTEM_SETTINGS),
-          ),
-          _buildActionTile(
-            icon: Icons.people_outlined,
-            title: 'User Management',
-            subtitle: 'Manage users and roles',
-            onTap: () => Get.toNamed(Routes.USER_MANAGEMENT),
-          ),
-        ];
       default:
         return [
           _buildActionTile(

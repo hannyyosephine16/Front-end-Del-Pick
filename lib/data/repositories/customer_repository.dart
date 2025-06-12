@@ -22,11 +22,11 @@ class CustomerRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<CustomerModel>(
-          data: customers,
+          items: customers,
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: params?['limit'] ?? 10,
+          // limit: params?['limit'] ?? 10,
         );
 
         return Result.success(paginatedResponse);

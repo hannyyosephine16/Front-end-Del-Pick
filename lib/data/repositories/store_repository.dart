@@ -32,11 +32,12 @@ class StoreRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<StoreModel>(
-          data: stores,
+          // data: stores,
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: limit,
+          items: [],
+          // limit: limit,
         );
 
         return Result.success(paginatedResponse);
@@ -117,11 +118,12 @@ class StoreRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<StoreModel>(
-          data: stores,
+          items: [],
+          // data: stores,
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: limit,
+          // limit: limit,
         );
 
         return Result.success(paginatedResponse);
@@ -180,11 +182,12 @@ class StoreRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<StoreModel>(
-          data: stores,
+          // data: stores,
+          items: [],
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: limit,
+          // limit: limit,
         );
 
         return Result.success(paginatedResponse);
@@ -224,11 +227,12 @@ class StoreRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<StoreModel>(
-          data: stores,
+          // data: stores,
+          items: [],
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: limit,
+          // limit: limit,
         );
 
         return Result.success(paginatedResponse);
@@ -270,11 +274,12 @@ class StoreRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<StoreModel>(
-          data: stores,
+          // data: stores,
+          items: [],
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          limit: limit,
+          // limit: limit,
         );
 
         return Result.success(paginatedResponse);

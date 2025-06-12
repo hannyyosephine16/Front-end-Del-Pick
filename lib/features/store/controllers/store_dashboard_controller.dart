@@ -1,247 +1,322 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
-import 'package:del_pick/data/repositories/menu_repository.dart';
+import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/models/base/base_model.dart';
+import 'package:del_pick/core/errors/error_handler.dart';
+import 'package:del_pick/core/constants/order_status_constants.dart';
 
 class StoreDashboardController extends GetxController {
-  final StoreRepository storeRepository;
-  final OrderRepository orderRepository;
-  final MenuRepository menuRepository;
+  final OrderRepository _orderRepository;
 
-  StoreDashboardController({
-    required this.storeRepository,
-    required this.orderRepository,
-    required this.menuRepository,
-  });
+  StoreDashboardController({required OrderRepository orderRepository})
+      : _orderRepository = orderRepository;
 
+  // Observable state
+  final RxList<OrderModel> _orders = <OrderModel>[].obs;
+  final RxList<OrderModel> _pendingOrders = <OrderModel>[].obs;
+  final RxList<OrderModel> _preparingOrders = <OrderModel>[].obs;
   final RxBool _isLoading = false.obs;
-  final RxInt _todayOrders = 0.obs;
-  final RxDouble _todayRevenue = 0.0.obs;
-  final RxInt _totalMenuItems = 0.obs;
+  final RxBool _isLoadingMore = false.obs;
+  final RxBool _hasError = false.obs;
+  final RxString _errorMessage = ''.obs;
+  final RxString _selectedFilter = 'all'.obs;
+  final RxBool _canLoadMore = true.obs;
 
+  // Pagination
+  int _currentPage = 1;
+  final int _itemsPerPage = 10;
+
+  // Filter options for store
+  static const List<Map<String, dynamic>> filterOptions = [
+    {'key': 'all', 'label': 'All Orders', 'icon': Icons.list_alt},
+    {'key': 'pending', 'label': 'Pending', 'icon': Icons.schedule},
+    {'key': 'preparing', 'label': 'Preparing', 'icon': Icons.restaurant},
+    {
+      'key': 'on_delivery',
+      'label': 'On Delivery',
+      'icon': Icons.local_shipping
+    },
+    {'key': 'delivered', 'label': 'Completed', 'icon': Icons.check_circle},
+    {'key': 'cancelled', 'label': 'Cancelled', 'icon': Icons.cancel},
+  ];
+
+  // Getters
+  List<OrderModel> get orders => _orders;
+  List<OrderModel> get pendingOrders => _pendingOrders;
+  List<OrderModel> get preparingOrders => _preparingOrders;
   bool get isLoading => _isLoading.value;
-  int get todayOrders => _todayOrders.value;
-  double get todayRevenue => _todayRevenue.value;
-  int get totalMenuItems => _totalMenuItems.value;
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadDashboardData();
-  }
-
-  Future<void> loadDashboardData() async {
-    _isLoading.value = true;
-    try {
-      // Load dashboard statistics
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-      _todayOrders.value = 15;
-      _todayRevenue.value = 750000;
-      _totalMenuItems.value = 25;
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to load dashboard data');
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-}
-
-// lib/features/store/controllers/menu_management_controller.dart
-class MenuManagementController extends GetxController {
-  final MenuRepository menuRepository;
-
-  MenuManagementController(this.menuRepository);
-
-  final RxBool _isLoading = false.obs;
-  final RxList _menuItems = [].obs;
-
-  bool get isLoading => _isLoading.value;
-  List get menuItems => _menuItems;
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadMenuItems();
-  }
-
-  Future<void> loadMenuItems() async {
-    _isLoading.value = true;
-    try {
-      // Load menu items from repository
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to load menu items');
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-}
-
-// lib/features/store/controllers/add_menu_item_controller.dart
-class AddMenuItemController extends GetxController {
-  final MenuRepository menuRepository;
-
-  AddMenuItemController(this.menuRepository);
-
-  final RxBool _isLoading = false.obs;
-  bool get isLoading => _isLoading.value;
-
-  Future<bool> createMenuItem(Map<String, dynamic> data) async {
-    try {
-      _isLoading.value = true;
-
-      final result = await menuRepository.createMenuItem(data);
-
-      if (result.isSuccess) {
-        Get.snackbar('Success', 'Menu item created successfully');
-        return true;
-      } else {
-        Get.snackbar('Error', result.message ?? 'Failed to create menu item');
-        return false;
-      }
-    } catch (e) {
-      Get.snackbar('Error', 'An error occurred');
-      return false;
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-}
-
-// lib/features/store/controllers/store_orders_controller.dart
-class StoreOrdersController extends GetxController {
-  final OrderRepository orderRepository;
-
-  StoreOrdersController(this.orderRepository);
-
-  final RxBool _isLoading = false.obs;
-  final RxList _orders = [].obs;
-
-  bool get isLoading => _isLoading.value;
-  List get orders => _orders;
+  bool get isLoadingMore => _isLoadingMore.value;
+  bool get hasError => _hasError.value;
+  String get errorMessage => _errorMessage.value;
+  String get selectedFilter => _selectedFilter.value;
+  bool get canLoadMore => _canLoadMore.value;
+  bool get hasOrders => _orders.isNotEmpty;
+  int get pendingOrderCount => _pendingOrders.length;
+  int get preparingOrderCount => _preparingOrders.length;
 
   @override
   void onInit() {
     super.onInit();
     loadOrders();
+    loadOrdersByStatus();
   }
 
-  Future<void> loadOrders() async {
+  // Load store orders
+  Future<void> loadOrders({bool refresh = false}) async {
+    if (refresh) {
+      _currentPage = 1;
+      _canLoadMore.value = true;
+      _orders.clear();
+    }
+
     _isLoading.value = true;
+    _hasError.value = false;
+    _errorMessage.value = '';
+
     try {
-      final result = await orderRepository.getOrdersByStore();
+      final result = await _orderRepository.getOrdersByStore(
+        params: {
+          'page': _currentPage,
+          'limit': _itemsPerPage,
+          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
+        },
+      );
 
       if (result.isSuccess && result.data != null) {
-        _orders.value = result.data!.data;
+        // ✅ FIXED: Use .items instead of .data
+        final newOrders = result.data!.items;
+
+        if (refresh) {
+          _orders.assignAll(newOrders);
+        } else {
+          _orders.addAll(newOrders);
+        }
+
+        _canLoadMore.value = newOrders.length >= _itemsPerPage;
+
+        if (newOrders.isNotEmpty) {
+          _currentPage++;
+        }
+      } else {
+        _hasError.value = true;
+        _errorMessage.value = result.message ?? 'Failed to load orders';
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load orders');
+      _hasError.value = true;
+      _errorMessage.value = ErrorHandler.getErrorMessage(
+          ErrorHandler.handleException(e as Exception));
     } finally {
       _isLoading.value = false;
     }
   }
-}
 
-// lib/features/store/controllers/store_analytics_controller.dart
-class StoreAnalyticsController extends GetxController {
-  final StoreRepository storeRepository;
-  final OrderRepository orderRepository;
-
-  StoreAnalyticsController({
-    required this.storeRepository,
-    required this.orderRepository,
-  });
-
-  final RxBool _isLoading = false.obs;
-  final RxMap _analytics = {}.obs;
-
-  bool get isLoading => _isLoading.value;
-  Map get analytics => _analytics;
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadAnalytics();
-  }
-
-  Future<void> loadAnalytics() async {
-    _isLoading.value = true;
+  // Load orders by specific status for dashboard widgets
+  Future<void> loadOrdersByStatus() async {
     try {
-      // Load analytics data
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      // Load pending orders
+      final pendingResult = await _orderRepository.getOrdersByStore(
+        params: {'status': 'pending', 'limit': 20},
+      );
+
+      if (pendingResult.isSuccess && pendingResult.data != null) {
+        // ✅ FIXED: Use .items instead of .data
+        _pendingOrders.value = pendingResult.data!.items;
+      }
+
+      // Load preparing orders
+      final preparingResult = await _orderRepository.getOrdersByStore(
+        params: {'status': 'preparing', 'limit': 20},
+      );
+
+      if (preparingResult.isSuccess && preparingResult.data != null) {
+        // ✅ FIXED: Use .items instead of .data
+        _preparingOrders.value = preparingResult.data!.items;
+      }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load analytics');
-    } finally {
-      _isLoading.value = false;
+      print('Error loading orders by status: $e');
     }
   }
-}
 
-// lib/features/store/controllers/store_settings_controller.dart
-class StoreSettingsController extends GetxController {
-  final StoreRepository storeRepository;
+  // Load more orders (pagination)
+  Future<void> loadMoreOrders() async {
+    if (_isLoadingMore.value || !_canLoadMore.value) return;
 
-  StoreSettingsController(this.storeRepository);
+    _isLoadingMore.value = true;
 
-  final RxBool _isLoading = false.obs;
-  bool get isLoading => _isLoading.value;
-
-  Future<void> updateStoreSettings(Map<String, dynamic> settings) async {
     try {
-      _isLoading.value = true;
-      // Update store settings
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-      Get.snackbar('Success', 'Settings updated successfully');
+      final result = await _orderRepository.getOrdersByStore(
+        params: {
+          'page': _currentPage,
+          'limit': _itemsPerPage,
+          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
+        },
+      );
+
+      if (result.isSuccess && result.data != null) {
+        // ✅ FIXED: Use .items instead of .data
+        final newOrders = result.data!.items;
+        _orders.addAll(newOrders);
+
+        _canLoadMore.value = newOrders.length >= _itemsPerPage;
+
+        if (newOrders.isNotEmpty) {
+          _currentPage++;
+        }
+      }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update settings');
+      Get.snackbar(
+        'Error',
+        'Failed to load more orders',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     } finally {
-      _isLoading.value = false;
+      _isLoadingMore.value = false;
     }
   }
-}
 
-// lib/features/store/controllers/store_profile_controller.dart
-class StoreProfileController extends GetxController {
-  final StoreRepository storeRepository;
-
-  StoreProfileController(this.storeRepository);
-
-  final RxBool _isLoading = false.obs;
-  final RxMap _profile = {}.obs;
-
-  bool get isLoading => _isLoading.value;
-  Map get profile => _profile;
-
-  @override
-  void onInit() {
-    super.onInit();
-    loadProfile();
+  // Change filter
+  void changeFilter(String filter) {
+    if (_selectedFilter.value != filter) {
+      _selectedFilter.value = filter;
+      loadOrders(refresh: true);
+    }
   }
 
-  Future<void> loadProfile() async {
-    _isLoading.value = true;
+  // Refresh all data
+  Future<void> refreshData() async {
+    await Future.wait([
+      loadOrders(refresh: true),
+      loadOrdersByStatus(),
+    ]);
+  }
+
+  // Process order (approve/reject)
+  Future<void> processOrder(int orderId, String action) async {
     try {
-      // Load store profile
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
+      final result = await _orderRepository.processOrder(orderId, {
+        'action': action, // 'approve' or 'reject'
+      });
+
+      if (result.isSuccess) {
+        final actionText = action == 'approve' ? 'approved' : 'rejected';
+        Get.snackbar(
+          'Order ${actionText.capitalize!}',
+          'Order has been $actionText successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: action == 'approve' ? Colors.green : Colors.orange,
+          colorText: Colors.white,
+        );
+
+        // Refresh data
+        await refreshData();
+      } else {
+        Get.snackbar(
+          'Error',
+          result.message ?? 'Failed to process order',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to load profile');
-    } finally {
-      _isLoading.value = false;
+      Get.snackbar(
+        'Error',
+        'Failed to process order',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
     }
   }
 
-  Future<bool> updateProfile(Map<String, dynamic> data) async {
-    try {
-      _isLoading.value = true;
-      // Update store profile
-      await Future.delayed(const Duration(seconds: 1)); // Simulate API call
-      Get.snackbar('Success', 'Profile updated successfully');
-      return true;
-    } catch (e) {
-      Get.snackbar('Error', 'Failed to update profile');
-      return false;
-    } finally {
-      _isLoading.value = false;
+  // Approve order
+  Future<void> approveOrder(OrderModel order) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Approve Order'),
+        content: Text('Are you sure you want to approve order ${order.code}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Approve'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await processOrder(order.id, 'approve');
     }
+  }
+
+  // Reject order
+  Future<void> rejectOrder(OrderModel order) async {
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Reject Order'),
+        content: Text('Are you sure you want to reject order ${order.code}?'),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: const Text('Reject'),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await processOrder(order.id, 'reject');
+    }
+  }
+
+  // Navigation methods
+  void navigateToOrderDetail(int orderId) {
+    Get.toNamed('/store/order_detail', arguments: {'orderId': orderId});
+  }
+
+  void navigateToMenuManagement() {
+    Get.toNamed('/store/menu_management');
+  }
+
+  void navigateToStoreSettings() {
+    Get.toNamed('/store/settings');
+  }
+
+  // Get dashboard statistics
+  Map<String, dynamic> getDashboardStatistics() {
+    final totalOrders = _orders.length;
+    final pendingCount = _pendingOrders.length;
+    final preparingCount = _preparingOrders.length;
+    final completedOrders = _orders
+        .where((order) => order.orderStatus == OrderStatusConstants.delivered)
+        .length;
+    final cancelledOrders = _orders
+        .where((order) => order.orderStatus == OrderStatusConstants.cancelled)
+        .length;
+
+    final totalRevenue = _orders
+        .where((order) => order.orderStatus == OrderStatusConstants.delivered)
+        .fold(0.0, (sum, order) => sum + order.total);
+
+    return {
+      'totalOrders': totalOrders,
+      'pendingOrders': pendingCount,
+      'preparingOrders': preparingCount,
+      'completedOrders': completedOrders,
+      'cancelledOrders': cancelledOrders,
+      'totalRevenue': totalRevenue,
+    };
   }
 }

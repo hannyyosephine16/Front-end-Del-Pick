@@ -1,5 +1,3 @@
-// lib/features/customer/controllers/store_detail_controller.dart - Compatible with existing StoreRepository
-
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
@@ -73,8 +71,8 @@ class StoreDetailController extends GetxController {
       final result = await _storeRepository.getAllStores();
 
       if (result.isSuccess && result.data != null) {
-        List<StoreModel> stores =
-            result.data!.data; // Access data from PaginatedResponse
+        // ✅ FIXED: Use .items instead of .data
+        List<StoreModel> stores = result.data!.items;
 
         // Find the store with matching ID
         final foundStore =
@@ -109,8 +107,9 @@ class StoreDetailController extends GetxController {
       if (result.isSuccess && result.data != null) {
         // Handle different response types from menu repository
         if (result.data is PaginatedResponse<MenuItemModel>) {
+          // ✅ FIXED: Use .items instead of .data
           _menuItems.value =
-              (result.data as PaginatedResponse<MenuItemModel>).data;
+              (result.data as PaginatedResponse<MenuItemModel>).items;
         } else if (result.data is List<MenuItemModel>) {
           _menuItems.value = result.data as List<MenuItemModel>;
         } else {

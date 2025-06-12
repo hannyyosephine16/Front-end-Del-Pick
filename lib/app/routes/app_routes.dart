@@ -52,17 +52,6 @@ abstract class Routes {
   static const STORE_PROFILE = '/store/profile';
   static const STORE_SETTINGS = '/store/settings';
 
-  // Admin routes
-  static const ADMIN_DASHBOARD = '/admin/dashboard';
-  static const USER_MANAGEMENT = '/admin/user_management';
-  static const ADD_USER = '/admin/add_user';
-  static const EDIT_USER = '/admin/edit_user';
-  static const STORE_MANAGEMENT = '/admin/store_management';
-  static const DRIVER_MANAGEMENT = '/admin/driver_management';
-  static const ORDER_MANAGEMENT = '/admin/order_management';
-  static const ANALYTICS = '/admin/analytics';
-  static const SYSTEM_SETTINGS = '/admin/system_settings';
-
   // Shared routes
   static const NO_INTERNET = '/no_internet';
   static const MAINTENANCE = '/maintenance';
@@ -103,11 +92,6 @@ abstract class Routes {
   // Chat routes (if implementing chat feature)
   static const CHAT_LIST = '/chat/list';
   static const CHAT_DETAIL = '/chat/detail';
-
-  // Payment routes (if implementing payment gateway)
-  static const PAYMENT_METHODS = '/payment/methods';
-  static const ADD_PAYMENT_METHOD = '/payment/add_method';
-  static const PAYMENT_HISTORY = '/payment/history';
 
   // Favorites routes
   static const FAVORITES = '/favorites';

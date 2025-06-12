@@ -14,11 +14,14 @@ import 'package:del_pick/features/shared/controllers/language_controller.dart';
 import 'package:del_pick/features/shared/controllers/notification_controller.dart';
 import 'package:del_pick/features/shared/controllers/connectivity_controller.dart';
 
+import '../../core/services/api/auth_service.dart';
+
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<ApiService>(ApiService(), permanent: true);
+    Get.lazyPut(() => AuthApiService(Get.find()), fenix: true);
     Get.put<NavigationController>(NavigationController(), permanent: true);
 
     Get.lazyPut<CacheService>(() => CacheService(), fenix: true);

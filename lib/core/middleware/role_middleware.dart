@@ -1,18 +1,18 @@
-import 'package:flutter/cupertino.dart' as getx;
-import 'package:get/get.dart' as getx;
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
 import 'package:del_pick/core/services/local/storage_service.dart';
 import 'package:del_pick/core/constants/storage_constants.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
 
-class RoleMiddleware extends getx.GetMiddleware {
+class RoleMiddleware extends GetMiddleware {
   final List<String> allowedRoles;
   final String? redirectRoute;
 
   RoleMiddleware({required this.allowedRoles, this.redirectRoute});
 
   @override
-  getx.RouteSettings? redirect(String? route) {
-    final storageService = getx.Get.find<StorageService>();
+  RouteSettings? redirect(String? route) {
+    final storageService = Get.find<StorageService>();
     final userRole = storageService.readString(StorageConstants.userRole);
     final isLoggedIn = storageService.readBoolWithDefault(
       StorageConstants.isLoggedIn,
@@ -21,21 +21,21 @@ class RoleMiddleware extends getx.GetMiddleware {
 
     // If not logged in, redirect to login
     if (!isLoggedIn) {
-      return const getx.RouteSettings(name: Routes.LOGIN);
+      return const RouteSettings(name: Routes.LOGIN);
     }
 
     // If user role is not allowed, redirect
     if (userRole == null || !allowedRoles.contains(userRole)) {
       // Show access denied message
-      getx.Get.snackbar(
+      Get.snackbar(
         'Access Denied',
         'You don\'t have permission to access this page',
-        snackPosition: getx.SnackPosition.TOP,
+        snackPosition: SnackPosition.TOP,
       );
 
       // Redirect based on user role
       final redirectTo = redirectRoute ?? _getDefaultRouteForRole(userRole);
-      return getx.RouteSettings(name: redirectTo);
+      return RouteSettings(name: redirectTo);
     }
 
     return null; // Allow access
@@ -50,8 +50,6 @@ class RoleMiddleware extends getx.GetMiddleware {
         return Routes.DRIVER_HOME;
       case 'store':
         return Routes.STORE_DASHBOARD;
-      case 'admin':
-        return Routes.ADMIN_DASHBOARD;
       default:
         return Routes.LOGIN;
     }
@@ -73,23 +71,18 @@ class StoreOnlyMiddleware extends RoleMiddleware {
   StoreOnlyMiddleware() : super(allowedRoles: ['store']);
 }
 
-/// Middleware for admin-only routes
-class AdminOnlyMiddleware extends RoleMiddleware {
-  AdminOnlyMiddleware() : super(allowedRoles: ['admin']);
-}
-
 /// Middleware for authenticated users (any role)
-class AuthMiddleware extends getx.GetMiddleware {
+class AuthMiddleware extends GetMiddleware {
   @override
-  getx.RouteSettings? redirect(String? route) {
-    final storageService = getx.Get.find<StorageService>();
+  RouteSettings? redirect(String? route) {
+    final storageService = Get.find<StorageService>();
     final isLoggedIn = storageService.readBoolWithDefault(
       StorageConstants.isLoggedIn,
       false,
     );
 
     if (!isLoggedIn) {
-      return const getx.RouteSettings(name: Routes.LOGIN);
+      return const RouteSettings(name: Routes.LOGIN);
     }
 
     return null;
@@ -97,10 +90,10 @@ class AuthMiddleware extends getx.GetMiddleware {
 }
 
 /// Middleware for guest users (not logged in)
-class GuestMiddleware extends getx.GetMiddleware {
+class GuestMiddleware extends GetMiddleware {
   @override
-  getx.RouteSettings? redirect(String? route) {
-    final storageService = getx.Get.find<StorageService>();
+  RouteSettings? redirect(String? route) {
+    final storageService = Get.find<StorageService>();
     final isLoggedIn = storageService.readBoolWithDefault(
       StorageConstants.isLoggedIn,
       false,
@@ -111,15 +104,13 @@ class GuestMiddleware extends getx.GetMiddleware {
       // Redirect to appropriate dashboard based on role
       switch (userRole) {
         case 'customer':
-          return const getx.RouteSettings(name: Routes.CUSTOMER_HOME);
+          return const RouteSettings(name: Routes.CUSTOMER_HOME);
         case 'driver':
-          return const getx.RouteSettings(name: Routes.DRIVER_HOME);
+          return const RouteSettings(name: Routes.DRIVER_HOME);
         case 'store':
-          return const getx.RouteSettings(name: Routes.STORE_DASHBOARD);
-        case 'admin':
-          return const getx.RouteSettings(name: Routes.ADMIN_DASHBOARD);
+          return const RouteSettings(name: Routes.STORE_DASHBOARD);
         default:
-          return const getx.RouteSettings(name: Routes.LOGIN);
+          return const RouteSettings(name: Routes.LOGIN);
       }
     }
 
@@ -129,7 +120,7 @@ class GuestMiddleware extends getx.GetMiddleware {
 
 /// Helper class for role-based access control
 class RoleHelper {
-  static final StorageService _storageService = getx.Get.find<StorageService>();
+  static final StorageService _storageService = Get.find<StorageService>();
 
   /// Check if current user has any of the specified roles
   static bool hasAnyRole(List<String> roles) {
@@ -166,8 +157,6 @@ class RoleHelper {
         return Routes.DRIVER_HOME;
       case 'store':
         return Routes.STORE_DASHBOARD;
-      case 'admin':
-        return Routes.ADMIN_DASHBOARD;
       default:
         return Routes.LOGIN;
     }

@@ -172,11 +172,6 @@ class AppPages {
       page: () => const CustomerProfileScreen(),
       binding: CustomerBinding(),
     ),
-    GetPage(
-      name: Routes.STORE_LIST,
-      page: () => StoreListScreen(),
-      binding: CustomerBinding(),
-    ),
 
     // Store routes
     GetPage(

@@ -1,4 +1,4 @@
-// lib/features/customer/controllers/home_controller.dart - OPTIMIZED VERSION
+// lib/features/customer/controllers/home_controller.dart - FIXED PaginatedResponse
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
@@ -155,7 +155,8 @@ class HomeController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        var stores = result.data!.data;
+        // ✅ FIXED: Use .items instead of .data
+        var stores = result.data!.items;
 
         // Calculate distances if location available
         if (_userLocation.value != null) {
@@ -206,8 +207,9 @@ class HomeController extends GetxController {
 
       if (result.isSuccess && result.data != null) {
         if (result.data is PaginatedResponse<OrderModel>) {
+          // ✅ FIXED: Use .items instead of .data
           _recentOrders.value = (result.data as PaginatedResponse<OrderModel>)
-              .data
+              .items
               .take(3)
               .toList();
         }

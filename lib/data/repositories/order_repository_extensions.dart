@@ -1,6 +1,7 @@
 // lib/data/repositories/order_repository_extensions.dart - FIXED
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/utils/result.dart';
+import '../models/order/order_list_response.dart';
 import 'order_repository.dart';
 
 extension OrderRepositoryExtensions on OrderRepository {
@@ -27,7 +28,7 @@ extension OrderRepositoryExtensions on OrderRepository {
         final paginatedResponse = result.data!;
 
         final orderListResponse = OrderListResponse(
-          orders: paginatedResponse.data,
+          orders: paginatedResponse.items,
           totalItems: paginatedResponse.totalItems,
           totalPages: paginatedResponse.totalPages,
           currentPage: paginatedResponse.currentPage,
@@ -55,40 +56,5 @@ extension OrderRepositoryExtensions on OrderRepository {
     } catch (e) {
       return Result.failure('Failed to cancel order: ${e.toString()}');
     }
-  }
-}
-
-// lib/data/models/order/order_list_response.dart
-class OrderListResponse {
-  final List<OrderModel> orders;
-  final int totalItems;
-  final int totalPages;
-  final int currentPage;
-
-  OrderListResponse({
-    required this.orders,
-    required this.totalItems,
-    required this.totalPages,
-    required this.currentPage,
-  });
-
-  factory OrderListResponse.fromJson(Map<String, dynamic> json) {
-    return OrderListResponse(
-      orders: (json['orders'] as List)
-          .map((orderJson) => OrderModel.fromJson(orderJson))
-          .toList(),
-      totalItems: json['totalItems'] ?? 0,
-      totalPages: json['totalPages'] ?? 0,
-      currentPage: json['currentPage'] ?? 1,
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'orders': orders.map((order) => order.toJson()).toList(),
-      'totalItems': totalItems,
-      'totalPages': totalPages,
-      'currentPage': currentPage,
-    };
   }
 }
