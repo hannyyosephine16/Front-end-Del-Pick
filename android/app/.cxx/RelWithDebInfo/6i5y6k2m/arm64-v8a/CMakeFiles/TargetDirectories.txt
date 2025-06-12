@@ -1,0 +1,2 @@
+C:/Akhir Tugas Kuliah/implementasi/frontend_delivery_app/Front-end-Del-Pick/android/app/.cxx/RelWithDebInfo/6i5y6k2m/arm64-v8a/CMakeFiles/edit_cache.dir
+C:/Akhir Tugas Kuliah/implementasi/frontend_delivery_app/Front-end-Del-Pick/android/app/.cxx/RelWithDebInfo/6i5y6k2m/arm64-v8a/CMakeFiles/rebuild_cache.dir

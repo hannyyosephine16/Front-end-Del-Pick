@@ -12,19 +12,20 @@ class AuthInterceptor extends Interceptor {
   AuthInterceptor(this._storageService);
 
   @override
+  @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    final token = _storageService.readString(StorageConstants.authToken);
-    if (token != null && token.isNotEmpty) {
-      options.headers['Authorization'] = 'Bearer $token';
-      print('AuthInterceptor: Added token to request'); // Debug
-    } else {
-      print('AuthInterceptor: No token available'); // Debug
-    }
+    // Cache token untuk menghindari read storage berulang
+    final token =
+        _cachedToken ?? _storageService.readString(StorageConstants.authToken);
+    _cachedToken = token;
 
+    if (token?.isNotEmpty == true) {
+      options.headers['Authorization'] = 'Bearer $token';
+    }
     handler.next(options);
-    // }
   }
 
+  String? _cachedToken; //cache
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     // Handle successful responses

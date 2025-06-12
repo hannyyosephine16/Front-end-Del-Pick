@@ -46,13 +46,10 @@ class DriverBinding extends Bindings {
     //     authLocalDataSource: Get.find<AuthLocalDataSource>(),
     //   ),
     // );
+
     Get.lazyPut<TrackingRepository>(
       () => TrackingRepository(Get.find<TrackingProvider>()),
     );
-
-    // ========================================================================
-    // PROVIDERS - tanpa constructor parameters (menggunakan Get.find internally)
-    // ========================================================================
 
     Get.lazyPut<DriverProvider>(() => DriverProvider(
           remoteDataSource: Get.find<DriverRemoteDataSource>(),
@@ -60,10 +57,6 @@ class DriverBinding extends Bindings {
 
     Get.lazyPut<OrderProvider>(() => OrderProvider());
     Get.lazyPut<TrackingProvider>(() => TrackingProvider());
-
-    // ========================================================================
-    // REPOSITORIES - dengan provider dependency
-    // ========================================================================
 
     Get.lazyPut<DriverRepository>(
       () => DriverRepository(Get.find<DriverProvider>()),
@@ -74,10 +67,6 @@ class DriverBinding extends Bindings {
     Get.lazyPut<TrackingRepository>(
       () => TrackingRepository(Get.find<TrackingProvider>()),
     );
-
-    // ========================================================================
-    // CONTROLLERS - dengan dependency yang benar
-    // ========================================================================
 
     Get.lazyPut<DriverHomeController>(
       () => DriverHomeController(
@@ -100,10 +89,6 @@ class DriverBinding extends Bindings {
           // driverRepository: Get.find<DriverRepository>(), // uncomment when needed
           ),
     );
-
-    // ========================================================================
-    // CONTROLLER LAIN - uncomment sesuai kebutuhan
-    // ========================================================================
 
     /*
     Get.lazyPut<DriverRequestController>(

@@ -158,4 +158,22 @@ class AppColors {
         return textSecondary;
     }
   }
+
+  // static const Color orderCancelled = Color(0xFFF44336);
+
+// Method untuk delivery status:
+  static Color getDeliveryStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'waiting':
+        return orderPending;
+      case 'picking_up':
+        return orderApproved;
+      case 'on_delivery':
+        return orderOnDelivery;
+      case 'delivered':
+        return orderDelivered;
+      default:
+        return textSecondary;
+    }
+  }
 }

@@ -80,21 +80,19 @@ class AppPages {
       name: Routes.LOGIN,
       page: () => const LoginScreen(),
       binding: AuthBinding(),
-    ),
-    GetPage(
-      name: Routes.REGISTER,
-      page: () => const RegisterScreen(),
-      binding: AuthBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: Routes.FORGOT_PASSWORD,
       page: () => const ForgotPasswordScreen(),
       binding: AuthBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: Routes.RESET_PASSWORD,
       page: () => const ResetPasswordScreen(),
       binding: AuthBinding(),
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: Routes.PROFILE,
@@ -106,6 +104,7 @@ class AppPages {
       name: Routes.EDIT_PROFILE,
       page: () => const EditProfileScreen(),
       binding: AuthBinding(),
+      middlewares: [AuthMiddleware()],
     ),
 
     // Customer routes
@@ -113,6 +112,7 @@ class AppPages {
       name: Routes.CUSTOMER_HOME,
       page: () => const CustomerHomeScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.STORE_LIST,
@@ -136,21 +136,25 @@ class AppPages {
       name: Routes.MENU_ITEM_DETAIL,
       page: () => const MenuItemDetailScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.CART,
       page: () => const CartScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.CHECKOUT,
       page: () => const CheckoutScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.ORDER_HISTORY,
       page: () => const OrderHistoryScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.CUSTOMER_ORDER_DETAIL,
@@ -161,16 +165,19 @@ class AppPages {
       name: Routes.ORDER_TRACKING,
       page: () => const OrderTrackingScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.REVIEW,
       page: () => const ReviewScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.CUSTOMER_PROFILE,
       page: () => const CustomerProfileScreen(),
       binding: CustomerBinding(),
+      middlewares: [CustomerOnlyMiddleware()],
     ),
 
     // Store routes
@@ -184,41 +191,49 @@ class AppPages {
       name: Routes.STORE_ANALYTICS,
       page: () => const StoreAnalyticsScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.MENU_MANAGEMENT,
       page: () => const MenuManagementScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.ADD_MENU_ITEM,
       page: () => const AddMenuItemScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.EDIT_MENU_ITEM,
       page: () => const EditMenuItemScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.STORE_ORDERS,
       page: () => const StoreOrdersScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.STORE_ORDER_DETAIL,
       page: () => const StoreOrderDetailScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.STORE_PROFILE,
       page: () => const StoreProfileScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.STORE_SETTINGS,
       page: () => const StoreSettingsScreen(),
       binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()],
     ),
 
     // Driver routes
@@ -251,26 +266,31 @@ class AppPages {
       name: Routes.NAVIGATION,
       page: () => const NavigationScreen(),
       binding: DriverBinding(),
+      middlewares: [DriverOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.DRIVER_ORDERS,
       page: () => const DriverOrdersScreen(),
       binding: DriverBinding(),
+      middlewares: [DriverOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.DRIVER_EARNINGS,
       page: () => const DriverEarningsScreen(),
       binding: DriverBinding(),
+      middlewares: [DriverOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.DRIVER_PROFILE,
       page: () => const DriverProfileScreen(),
       binding: DriverBinding(),
+      middlewares: [DriverOnlyMiddleware()],
     ),
     GetPage(
       name: Routes.DRIVER_SETTINGS,
       page: () => const DriverSettingsScreen(),
       binding: DriverBinding(),
+      middlewares: [DriverOnlyMiddleware()],
     ),
   ];
 }

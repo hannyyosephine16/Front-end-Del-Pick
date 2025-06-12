@@ -8,7 +8,7 @@ class ApiEndpoints {
   static const String customers = '/customers';
   static const String drivers = '/drivers';
   static const String stores = '/stores';
-  static const String menuItems = '/menu-items';
+  static const String menuItems = '/menu';
   static const String orders = '/orders';
   static const String driverRequests = '/driver-requests';
   static const String tracking = '/tracking';

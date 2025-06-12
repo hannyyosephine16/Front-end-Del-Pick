@@ -13,7 +13,7 @@ class OrderStatusConstants {
   // Delivery status values
   static const String waiting = 'waiting';
   static const String pickingUp = 'picking_up';
-  static const String onTheWay = 'on_delivery';
+  // static const String onDelivery = 'on_delivery';
   static const String deliveryDelivered = 'delivered';
 
   // Status lists
@@ -25,13 +25,6 @@ class OrderStatusConstants {
     delivered,
     cancelled,
   ];
-
-  // static const List<String> allDeliveryStatuses = [
-  //   waiting,
-  //   pickingUp,
-  //   onTheWay,
-  //   deliveryDelivered,
-  // ];
 
   static const List<String> allDeliveryStatuses = [
     waiting,
@@ -127,8 +120,8 @@ class OrderStatusConstants {
   static const Map<String, String> deliveryStatusNames = {
     waiting: 'Menunggu Driver',
     pickingUp: 'Driver Menuju Toko',
-    onTheWay: 'Dalam Perjalanan',
-    deliveryDelivered: 'Terkirim',
+    onDelivery: 'Dalam Perjalanan',
+    delivered: 'Terkirim',
   };
 
   // Status descriptions
@@ -144,8 +137,8 @@ class OrderStatusConstants {
   static const Map<String, String> deliveryStatusDescriptions = {
     waiting: 'Sedang mencari driver untuk mengantarkan pesanan Anda',
     pickingUp: 'Driver sedang menuju ke toko untuk mengambil pesanan',
-    onTheWay: 'Driver sedang dalam perjalanan menuju alamat pengiriman',
-    deliveryDelivered: 'Pesanan telah sampai di tujuan',
+    onDelivery: 'Driver sedang dalam perjalanan menuju alamat pengiriman',
+    delivered: 'Pesanan telah sampai di tujuan',
   };
 
   // Status colors
@@ -161,8 +154,8 @@ class OrderStatusConstants {
   static const Map<String, Color> deliveryStatusColors = {
     waiting: AppColors.orderPending,
     pickingUp: AppColors.orderApproved,
-    onTheWay: AppColors.orderOnDelivery,
-    deliveryDelivered: AppColors.orderDelivered,
+    onDelivery: AppColors.orderOnDelivery,
+    delivered: AppColors.orderDelivered,
   };
 
   // Status icons
@@ -178,8 +171,8 @@ class OrderStatusConstants {
   static const Map<String, IconData> deliveryStatusIcons = {
     waiting: Icons.search,
     pickingUp: Icons.directions_car,
-    onTheWay: Icons.delivery_dining,
-    deliveryDelivered: Icons.check_circle,
+    onDelivery: Icons.delivery_dining,
+    delivered: Icons.check_circle,
   };
 
   // Status progression
@@ -195,8 +188,8 @@ class OrderStatusConstants {
   static const Map<String, int> deliveryStatusOrder = {
     waiting: 0,
     pickingUp: 1,
-    onTheWay: 2,
-    deliveryDelivered: 3,
+    onDelivery: 2,
+    delivered: 3,
   };
 
   static String getStatusName(String status) {
@@ -288,9 +281,9 @@ class OrderStatusConstants {
       case waiting:
         return pickingUp;
       case pickingUp:
-        return onTheWay;
-      case onTheWay:
-        return deliveryDelivered;
+        return onDelivery;
+      case onDelivery:
+        return delivered;
       default:
         return currentStatus;
     }
@@ -301,6 +294,6 @@ class OrderStatusConstants {
   }
 
   static List<String> getDeliveryStatusTimeline() {
-    return [waiting, pickingUp, onTheWay, deliveryDelivered];
+    return [waiting, pickingUp, onDelivery, delivered];
   }
 }

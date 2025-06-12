@@ -16,10 +16,6 @@ import 'package:del_pick/features/store/controllers/store_dashboard_controller.d
 class StoreBinding extends Bindings {
   @override
   void dependencies() {
-    // ========================================================================
-    // DATA SOURCES - dengan parameter yang benar
-    // ========================================================================
-
     // Store Remote DataSource
     Get.lazyPut<StoreRemoteDataSource>(
       () => StoreRemoteDataSource(
@@ -36,10 +32,6 @@ class StoreBinding extends Bindings {
       ),
     );
 
-    // ========================================================================
-    // PROVIDERS - tanpa constructor parameters (menggunakan Get.find internally)
-    // ========================================================================
-
     Get.lazyPut<StoreProvider>(() => StoreProvider());
     Get.lazyPut<MenuProvider>(() => MenuProvider());
 
@@ -47,10 +39,6 @@ class StoreBinding extends Bindings {
     if (!Get.isRegistered<OrderProvider>()) {
       Get.lazyPut<OrderProvider>(() => OrderProvider());
     }
-
-    // ========================================================================
-    // REPOSITORIES - dengan provider dependency
-    // ========================================================================
 
     Get.lazyPut<StoreRepository>(
       () => StoreRepository(Get.find<StoreProvider>()),
@@ -66,10 +54,6 @@ class StoreBinding extends Bindings {
       );
     }
 
-    // ========================================================================
-    // CONTROLLERS - dengan dependency yang benar
-    // ========================================================================
-
     Get.lazyPut<StoreDashboardController>(
       () => StoreDashboardController(
         // storeRepository: Get.find<StoreRepository>(),
@@ -77,10 +61,6 @@ class StoreBinding extends Bindings {
         // menuRepository: Get.find<MenuRepository>(),
       ),
     );
-
-    // ========================================================================
-    // CONTROLLER LAIN - uncomment sesuai kebutuhan
-    // ========================================================================
 
     /*
     Get.lazyPut<MenuManagementController>(
