@@ -10,22 +10,34 @@ class TrackingService extends GetxService {
   final ApiService _apiService = Get.find<ApiService>();
 
   /// Get tracking data for a specific order
-  Future<Result<TrackingData>> getTrackingData(int orderId) async {
+  // Future<Result<TrackingData>> getTrackingData(int orderId) async {
+  //   try {
+  //     final response =
+  //         await _apiService.get(ApiEndpoints.getTrackingData(orderId));
+  //
+  //     if (response.statusCode == 200) {
+  //       final trackingData = TrackingData.fromJson(response.data['data']);
+  //       return Result.success(trackingData);
+  //     } else {
+  //       return Result.failure(
+  //         response.data['message'] ?? 'Failed to get tracking data',
+  //       );
+  //     }
+  //   } catch (e) {
+  //     return Result.failure('An error occurred: $e');
+  //   }
+  // }
+  Future<Map<String, dynamic>?> getTrackingData(int orderId) async {
     try {
       final response =
           await _apiService.get(ApiEndpoints.getTrackingData(orderId));
-
       if (response.statusCode == 200) {
-        final trackingData = TrackingData.fromJson(response.data['data']);
-        return Result.success(trackingData);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Failed to get tracking data',
-        );
+        return response.data['data'];
       }
     } catch (e) {
-      return Result.failure('An error occurred: $e');
+      print('Error getting tracking data: $e');
     }
+    return null;
   }
 
   /// Start delivery (for driver)

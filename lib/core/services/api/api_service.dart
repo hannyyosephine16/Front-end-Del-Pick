@@ -42,9 +42,10 @@ class ApiService extends getx.GetxService {
   }
 
   void _setupInterceptors() {
-    // Clear existing interceptors
     _dio.interceptors.clear();
-    // Add interceptors in order
+    _dio.interceptors.add(AuthInterceptor(_storageService));
+    _dio.interceptors.add(ConnectivityInterceptor());
+
     if (EnvironmentConfig.enableLogging) {
       _dio.interceptors.add(LoggingInterceptor());
     }
