@@ -73,11 +73,6 @@ class LocationPermissionDeniedException extends LocationException {
       : super('Location permission denied');
 }
 
-// class LocationServiceDisabledException extends LocationException {
-//   const LocationServiceDisabledException()
-//     : super('Location service is disabled');
-// }
-
 class LocationTimeoutException extends LocationException {
   const LocationTimeoutException() : super('Location request timed out');
 }
@@ -167,3 +162,23 @@ class StoreConflictException extends CartException {
   const StoreConflictException()
       : super('Cannot add items from different stores to cart');
 }
+
+class InvalidCredentialsException extends AuthException {
+  const InvalidCredentialsException() : super('Invalid email or password');
+}
+
+class AccountNotVerifiedException extends AuthException {
+  const AccountNotVerifiedException() : super('Account not verified');
+}
+
+// Rate limiting exception
+class TooManyRequestsException extends NetworkException {
+  const TooManyRequestsException()
+      : super('Too many requests. Please try again later.');
+}
+
+// Location service disabled (uncomment dan fix)
+// class LocationServiceDisabledException extends LocationException {
+//   const LocationServiceDisabledException()
+//       : super('Location service is disabled');
+// }

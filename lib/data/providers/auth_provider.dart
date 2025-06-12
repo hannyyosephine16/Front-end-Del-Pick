@@ -31,34 +31,6 @@ class AuthProvider {
     }
   }
 
-  Future<Result<Map<String, dynamic>>> register({
-    required String name,
-    required String email,
-    required String password,
-    required String phone,
-    String role = 'customer',
-  }) async {
-    try {
-      final result = await remoteDataSource.register(
-        name: name,
-        email: email,
-        password: password,
-        phone: phone,
-        role: role,
-      );
-
-      // Save auth data locally
-      if (result['token'] != null) {
-        await localDataSource.saveAuthToken(result['token']);
-        await localDataSource.saveUser(UserModel.fromJson(result['user']));
-      }
-
-      return Result.success(result);
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
   Future<Result<UserModel>> getProfile() async {
     try {
       final result = await remoteDataSource.getProfile();

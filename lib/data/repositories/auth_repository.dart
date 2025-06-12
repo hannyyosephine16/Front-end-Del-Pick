@@ -22,27 +22,6 @@ class AuthRepository {
     }
   }
 
-  Future<Result<Map<String, dynamic>>> register({
-    required String name,
-    required String email,
-    required String password,
-    required String phone,
-    String role = 'customer',
-  }) async {
-    try {
-      final result = await _authProvider.register(
-        name: name,
-        email: email,
-        password: password,
-        phone: phone,
-        role: role,
-      );
-      return result;
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
   Future<Result<UserModel>> getProfile() async {
     try {
       final result = await _authProvider.getProfile();

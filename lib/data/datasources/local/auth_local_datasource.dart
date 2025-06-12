@@ -62,6 +62,25 @@ class AuthLocalDataSource {
     return _storageService.readString(StorageConstants.refreshToken);
   }
 
+  // Add token validation
+  Future<bool> hasValidToken() async {
+    final token = await getAuthToken();
+    final isLoggedIn = await this.isLoggedIn();
+
+    return token != null && token.isNotEmpty && isLoggedIn;
+  }
+
+// Add biometric auth
+  Future<void> enableBiometric(bool enabled) async {
+    await _storageService.writeBool(StorageConstants.biometricEnabled, enabled);
+  }
+
+// Add secure token storage
+  Future<void> saveAuthTokenSecure(String token) async {
+    // Use flutter_secure_storage for production
+    await _storageService.writeString(StorageConstants.authToken, token);
+  }
+
   Future<bool> isLoggedIn() async {
     return _storageService.readBoolWithDefault(
       StorageConstants.isLoggedIn,

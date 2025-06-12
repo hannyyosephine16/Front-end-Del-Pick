@@ -273,7 +273,7 @@ class RealTimeService extends GetxService {
     return null;
   }
 
-  // ✅ POWER MANAGEMENT - Reduce polling when app in background
+  // Reduce polling when app in background
   void pauseAllPolling() {
     print('Pausing all polling (app in background)');
     for (final timer in _activePolling.values) {

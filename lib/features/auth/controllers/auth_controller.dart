@@ -268,62 +268,6 @@ class AuthController extends GetxController {
   //   }
   // }
 
-  Future<bool> register({
-    required String name,
-    required String email,
-    required String password,
-    required String phone,
-    String role = AppConstants.roleCustomer,
-  }) async {
-    try {
-      _isLoading.value = true;
-
-      final result = await _authRepository.register(
-        name: name,
-        email: email,
-        password: password,
-        phone: phone,
-        role: role,
-      );
-
-      if (result.isSuccess && result.data != null) {
-        final data = result.data!;
-        final user = UserModel.fromJson(data['user']);
-
-        _currentUser.value = user;
-        _userRole.value = user.role;
-        _isLoggedIn.value = true;
-
-        // Navigate based on user role
-        _navigateBasedOnRole(user.role);
-
-        Get.snackbar(
-          'Success',
-          'Registration successful',
-          snackPosition: SnackPosition.TOP,
-        );
-
-        return true;
-      } else {
-        Get.snackbar(
-          'Error',
-          result.message ?? 'Registration failed',
-          snackPosition: SnackPosition.TOP,
-        );
-        return false;
-      }
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'An error occurred during registration',
-        snackPosition: SnackPosition.TOP,
-      );
-      return false;
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
   Future<bool> updateProfile({
     String? name,
     String? email,

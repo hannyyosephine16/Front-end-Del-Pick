@@ -1,4 +1,6 @@
 // lib/core/utils/validators.dart
+import '../errors/exceptions.dart';
+
 class Validators {
   // Email validation
   static String? validateEmail(String? value) {
@@ -157,30 +159,42 @@ class Validators {
     return null;
   }
 
-  // Credit card validation (if implementing payment)
-  static String? validateCreditCard(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Card number is required';
-    }
+  static void validateLoginData(String email, String password) {
+    final errors = <String>[];
 
-    final cardNumber = value.replaceAll(RegExp(r'[^\d]'), '');
-    if (cardNumber.length < 13 || cardNumber.length > 19) {
-      return 'Please enter a valid card number';
-    }
+    final emailError = validateEmail(email);
+    if (emailError != null) errors.add(emailError);
 
-    return null;
+    final passwordError = validatePassword(password);
+    if (passwordError != null) errors.add(passwordError);
+
+    if (errors.isNotEmpty) {
+      throw ValidationException(errors.join(', '));
+    }
   }
 
-  // CVV validation
-  static String? validateCVV(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'CVV is required';
-    }
+  static void validateRegisterData({
+    required String name,
+    required String email,
+    required String password,
+    required String phone,
+  }) {
+    final errors = <String>[];
 
-    if (value.length < 3 || value.length > 4) {
-      return 'Please enter a valid CVV';
-    }
+    final nameError = validateName(name);
+    if (nameError != null) errors.add(nameError);
 
-    return null;
+    final emailError = validateEmail(email);
+    if (emailError != null) errors.add(emailError);
+
+    final passwordError = validatePassword(password);
+    if (passwordError != null) errors.add(passwordError);
+
+    final phoneError = validatePhone(phone);
+    if (phoneError != null) errors.add(phoneError);
+
+    if (errors.isNotEmpty) {
+      throw ValidationException(errors.join(', '));
+    }
   }
 }
