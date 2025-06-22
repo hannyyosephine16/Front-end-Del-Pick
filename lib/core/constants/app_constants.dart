@@ -1,4 +1,6 @@
 // lib/core/constants/app_constants.dart - FIXED TO MATCH BACKEND
+import 'package:del_pick/core/constants/driver_status_constants.dart';
+
 class AppConstants {
   // App Information
   static const String appName = 'DelPick';
@@ -46,17 +48,6 @@ class AppConstants {
     deliveryDelivered,
   ];
 
-  // DRIVER STATUSES (sesuai backend models/driver.js)
-  static const String driverActive = 'active';
-  static const String driverInactive = 'inactive';
-  static const String driverBusy = 'busy';
-
-  static const List<String> allDriverStatuses = [
-    driverActive,
-    driverInactive,
-    driverBusy,
-  ];
-
   // STORE STATUSES (sesuai backend models/store.js)
   static const String storeActive = 'active';
   static const String storeInactive = 'inactive';
@@ -66,21 +57,6 @@ class AppConstants {
     storeActive,
     storeInactive,
     storeClosed,
-  ];
-
-  // DRIVER REQUEST STATUSES (sesuai backend models/driverRequest.js)
-  static const String requestPending = 'pending';
-  static const String requestAccepted = 'accepted';
-  static const String requestRejected = 'rejected';
-  static const String requestCompleted = 'completed';
-  static const String requestExpired = 'expired';
-
-  static const List<String> allDriverRequestStatuses = [
-    requestPending,
-    requestAccepted,
-    requestRejected,
-    requestCompleted,
-    requestExpired,
   ];
 
   // MENU ITEM STATUS
@@ -206,7 +182,8 @@ class AppConstants {
   }
 
   static bool isValidDriverStatus(String? status) {
-    return status != null && allDriverStatuses.contains(status);
+    return status != null &&
+        DriverStatusConstants.allDriverStatuses.contains(status);
   }
 
   static bool isValidStoreStatus(String? status) {
@@ -214,7 +191,8 @@ class AppConstants {
   }
 
   static bool isValidDriverRequestStatus(String? status) {
-    return status != null && allDriverRequestStatuses.contains(status);
+    return status != null &&
+        DriverStatusConstants.allDriverRequestStatuses.contains(status);
   }
 
   static bool canCancelOrder(String status) {
@@ -227,7 +205,7 @@ class AppConstants {
   }
 
   static bool canDriverAcceptRequests(String status) {
-    return status == driverActive;
+    return status == DriverStatusConstants.driverActive;
   }
 
   static bool isStoreOperational(String status) {

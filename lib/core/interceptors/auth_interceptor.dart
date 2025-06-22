@@ -11,33 +11,44 @@ class AuthInterceptor extends Interceptor {
 
   AuthInterceptor(this._storageService);
 
-  @override
+  // Cache token untuk menghindari storage reads berulang
+  String? _cachedToken;
+  DateTime? _lastTokenCheck;
+  static const Duration _tokenCacheTimeout = Duration(minutes: 1);
+
   @override
   void onRequest(RequestOptions options, RequestInterceptorHandler handler) {
-    // Cache token untuk menghindari read storage berulang
-    final token =
-        _cachedToken ?? _storageService.readString(StorageConstants.authToken);
-    _cachedToken = token;
+    // Get cached token or fetch from storage
+    final token = _getCachedToken();
 
     if (token?.isNotEmpty == true) {
       options.headers['Authorization'] = 'Bearer $token';
     }
+
+    // Set common headers
+    options.headers['Accept'] = 'application/json';
+    options.headers['Content-Type'] = 'application/json';
+
     handler.next(options);
   }
 
-  String? _cachedToken; //cache
   @override
   void onResponse(Response response, ResponseInterceptorHandler handler) {
     // Handle successful responses
     if (response.statusCode == 200 || response.statusCode == 201) {
-      // Check if response contains a new token
+      // Check if response contains a new token (from login/register)
       final dynamic data = response.data;
       if (data is Map<String, dynamic> && data.containsKey('data')) {
         final dynamic responseData = data['data'];
         if (responseData is Map<String, dynamic> &&
             responseData.containsKey('token')) {
           final String newToken = responseData['token'];
-          _storageService.writeString(StorageConstants.authToken, newToken);
+          _updateToken(newToken);
+
+          // Also update user data if present
+          if (responseData.containsKey('user')) {
+            _updateUserData(responseData['user']);
+          }
         }
       }
     }
@@ -47,16 +58,60 @@ class AuthInterceptor extends Interceptor {
 
   @override
   void onError(DioException err, ErrorInterceptorHandler handler) {
-    // Handle authentication errors
+    // Handle authentication errors sesuai dengan backend response
     if (err.response?.statusCode == 401) {
       _handleUnauthorized(err);
-      _storageService.remove(StorageConstants.authToken);
-      _storageService.remove(StorageConstants.userId);
-      _storageService.writeBool(StorageConstants.isLoggedIn, false);
     } else if (err.response?.statusCode == 403) {
       _handleForbidden(err);
     }
     handler.next(err);
+  }
+
+  // Get cached token with timeout
+  String? _getCachedToken() {
+    final now = DateTime.now();
+
+    // Refresh cache if expired
+    if (_lastTokenCheck == null ||
+        now.difference(_lastTokenCheck!).compareTo(_tokenCacheTimeout) > 0) {
+      _cachedToken = _storageService.readString(StorageConstants.authToken);
+      _lastTokenCheck = now;
+    }
+
+    return _cachedToken;
+  }
+
+  // Update token in storage and cache
+  void _updateToken(String token) {
+    _cachedToken = token;
+    _storageService.writeString(StorageConstants.authToken, token);
+    _storageService.writeBool(StorageConstants.isLoggedIn, true);
+  }
+
+  // Update user data from response
+  void _updateUserData(Map<String, dynamic> userData) {
+    if (userData.containsKey('id')) {
+      _storageService.writeString(
+          StorageConstants.userId, userData['id'].toString());
+    }
+    if (userData.containsKey('role')) {
+      _storageService.writeString(StorageConstants.userRole, userData['role']);
+    }
+    if (userData.containsKey('email')) {
+      _storageService.writeString(
+          StorageConstants.userEmail, userData['email']);
+    }
+    if (userData.containsKey('name')) {
+      _storageService.writeString(StorageConstants.userName, userData['name']);
+    }
+    if (userData.containsKey('phone')) {
+      _storageService.writeString(
+          StorageConstants.userPhone, userData['phone']);
+    }
+    if (userData.containsKey('avatar')) {
+      _storageService.writeString(
+          StorageConstants.userAvatar, userData['avatar']);
+    }
   }
 
   void _handleUnauthorized(DioException err) {
@@ -64,31 +119,36 @@ class AuthInterceptor extends Interceptor {
     final data = err.response?.data;
     bool isTokenExpired = false;
 
-    if (data is Map<String, dynamic> && data.containsKey('message')) {
-      final message = data['message'].toString().toLowerCase();
+    if (data is Map<String, dynamic>) {
+      final message = data['message']?.toString().toLowerCase() ?? '';
+      final code = data['code']?.toString().toLowerCase() ?? '';
+
+      // Check for common token expiration indicators from backend
       isTokenExpired = message.contains('token') &&
-          (message.contains('expired') || message.contains('invalid'));
+              (message.contains('expired') ||
+                  message.contains('invalid') ||
+                  message.contains('unauthorized')) ||
+          code == 'unauthorized' ||
+          code == 'token_expired';
     }
 
     if (isTokenExpired) {
       // Clear stored authentication data
       _clearAuthData();
 
-      // Check if we're not already on the login screen
+      // Check if we're not already on auth screens
       final String currentRoute = getx.Get.currentRoute;
-      if (currentRoute != Routes.LOGIN &&
-          currentRoute != Routes.REGISTER &&
-          currentRoute != Routes.SPLASH &&
-          currentRoute != Routes.ONBOARDING) {
-        // Navigate to login screen
+      if (!_isAuthRoute(currentRoute)) {
+        // Navigate to login screen with appropriate message
         getx.Get.offAllNamed(Routes.LOGIN);
 
-        // Show message
         getx.Get.snackbar(
-          'Session Expired',
-          'Please login again to continue',
+          'Sesi Berakhir',
+          'Silakan login kembali untuk melanjutkan',
           snackPosition: getx.SnackPosition.TOP,
           duration: const Duration(seconds: 3),
+          backgroundColor: getx.Get.theme.colorScheme.error,
+          colorText: getx.Get.theme.colorScheme.onError,
         );
       }
     }
@@ -96,24 +156,62 @@ class AuthInterceptor extends Interceptor {
 
   void _handleForbidden(DioException err) {
     // Handle forbidden access
+    final data = err.response?.data;
+    String message = 'Anda tidak memiliki izin untuk melakukan tindakan ini';
+
+    if (data is Map<String, dynamic> && data.containsKey('message')) {
+      message = data['message'];
+    }
+
     getx.Get.snackbar(
-      'Access Denied',
-      'You don\'t have permission to perform this action',
+      'Akses Ditolak',
+      message,
       snackPosition: getx.SnackPosition.TOP,
       duration: const Duration(seconds: 3),
+      backgroundColor: getx.Get.theme.colorScheme.error,
+      colorText: getx.Get.theme.colorScheme.onError,
     );
   }
 
   void _clearAuthData() {
+    // Clear cache
+    _cachedToken = null;
+    _lastTokenCheck = null;
+
     // Clear all authentication related data
-    _storageService.remove(StorageConstants.authToken);
-    _storageService.remove(StorageConstants.refreshToken);
-    _storageService.remove(StorageConstants.userId);
-    _storageService.remove(StorageConstants.userRole);
-    _storageService.remove(StorageConstants.userEmail);
-    _storageService.remove(StorageConstants.userName);
-    _storageService.remove(StorageConstants.userPhone);
-    _storageService.remove(StorageConstants.userAvatar);
+    final keysToRemove = [
+      StorageConstants.authToken,
+      StorageConstants.refreshToken,
+      StorageConstants.userId,
+      StorageConstants.userRole,
+      StorageConstants.userEmail,
+      StorageConstants.userName,
+      StorageConstants.userPhone,
+      StorageConstants.userAvatar,
+      StorageConstants.lastLoginTime,
+    ];
+
+    for (final key in keysToRemove) {
+      _storageService.remove(key);
+    }
+
     _storageService.writeBool(StorageConstants.isLoggedIn, false);
+  }
+
+  // Check if current route is an auth route
+  bool _isAuthRoute(String route) {
+    const authRoutes = [
+      Routes.LOGIN,
+      Routes.REGISTER,
+      Routes.SPLASH,
+      Routes.ONBOARDING,
+    ];
+    return authRoutes.contains(route);
+  }
+
+  // Clear cache (call this on manual logout)
+  void clearCache() {
+    _cachedToken = null;
+    _lastTokenCheck = null;
   }
 }

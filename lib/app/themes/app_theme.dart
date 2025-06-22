@@ -34,8 +34,8 @@ class AppTheme {
       // Scaffold Theme
       scaffoldBackgroundColor: AppColors.background,
 
-      // Card Theme
-      cardTheme: const CardTheme(
+      // Card Theme - FIXED: CardTheme -> CardThemeData
+      cardTheme: const CardThemeData(
         color: AppColors.surface,
         elevation: AppDimensions.cardElevation,
         margin: EdgeInsets.all(AppDimensions.cardMargin),
@@ -148,8 +148,8 @@ class AppTheme {
         elevation: 8,
       ),
 
-      // Tab Bar Theme
-      tabBarTheme: const TabBarTheme(
+      // Tab Bar Theme - FIXED: TabBarTheme -> TabBarThemeData
+      tabBarTheme: const TabBarThemeData(
         labelColor: AppColors.primary,
         unselectedLabelColor: AppColors.textSecondary,
         labelStyle: AppTextStyles.tabLabel,
@@ -183,12 +183,14 @@ class AppTheme {
         ),
       ),
 
-      // Dialog Theme
-      dialogTheme: DialogTheme(
+      // Dialog Theme - FIXED: DialogTheme -> DialogThemeData
+      dialogTheme: const DialogThemeData(
         backgroundColor: AppColors.surface,
         elevation: 8,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppDimensions.dialogRadius),
+          borderRadius: BorderRadius.all(
+            Radius.circular(AppDimensions.dialogRadius),
+          ),
         ),
         titleTextStyle: AppTextStyles.h5,
         contentTextStyle: AppTextStyles.bodyMedium,
@@ -205,7 +207,6 @@ class AppTheme {
         ),
         behavior: SnackBarBehavior.floating,
         insetPadding: const EdgeInsets.all(AppDimensions.snackbarMargin),
-        // margin: const EdgeInsets.all(AppDimensions.snackbarMargin),
       ),
 
       // Divider Theme
@@ -320,7 +321,7 @@ class AppTheme {
         onError: AppColors.textOnPrimary,
       ),
       scaffoldBackgroundColor: AppColors.backgroundDark,
-      cardTheme: lightTheme.cardTheme.copyWith(color: AppColors.surfaceDark),
+      cardTheme: lightTheme.cardTheme!.copyWith(color: AppColors.surfaceDark),
       appBarTheme: lightTheme.appBarTheme.copyWith(
         backgroundColor: AppColors.surfaceDark,
         systemOverlayStyle: SystemUiOverlayStyle.dark,

@@ -1,4 +1,5 @@
 import 'package:del_pick/core/constants/app_constants.dart';
+import 'package:del_pick/core/constants/driver_status_constants.dart';
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -138,11 +139,11 @@ class AppColors {
   /// Utility method to get driver status color
   static Color getDriverStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case AppConstants.driverActive:
+      case DriverStatusConstants.driverActive:
         return driverActive;
-      case AppConstants.driverInactive:
+      case DriverStatusConstants.driverInactive:
         return driverInactive;
-      case AppConstants.driverBusy:
+      case DriverStatusConstants.driverBusy:
         return driverBusy;
       default:
         return textSecondary;
@@ -164,15 +165,15 @@ class AppColors {
   /// Method untuk driver request status (sesuai backend)
   static Color getDriverRequestStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case AppConstants.requestPending:
+      case DriverStatusConstants.requestPending:
         return orderPending;
-      case AppConstants.requestAccepted:
+      case DriverStatusConstants.requestAccepted:
         return orderConfirmed;
-      case AppConstants.requestRejected:
+      case DriverStatusConstants.requestRejected:
         return orderCancelled;
-      case AppConstants.requestCompleted:
+      case DriverStatusConstants.requestCompleted:
         return orderDelivered;
-      case AppConstants.requestExpired:
+      case DriverStatusConstants.requestExpired:
         return textSecondary;
       default:
         return textSecondary;

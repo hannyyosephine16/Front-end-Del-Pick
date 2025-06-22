@@ -71,8 +71,7 @@ class AppConfig {
 
   // Regular expressions (sesuai backend validation)
   static const String emailRegex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$';
-  static const String phoneRegex =
-      r'^[0-9]{10,13}$'; // sesuai backend validation
+  static const String phoneRegex = r'^[0-9]{10,13}$';
   static const String passwordRegex = r'^.{6,}$';
 
   // Cache Duration (in seconds)
@@ -124,8 +123,8 @@ class AppConfig {
   static bool get enablePushNotifications => true;
   static bool get enableLocationTracking => true;
   static bool get enableOfflineMode => true;
-  static bool get enableAnalytics => false; // disable for privacy
-  static bool get enableCrashReporting => false; // disable for privacy
+  static bool get enableAnalytics => false;
+  static bool get enableCrashReporting => false;
 
   // Development Settings
   static bool get isDebugMode {

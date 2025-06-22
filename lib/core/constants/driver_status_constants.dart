@@ -1,39 +1,38 @@
+import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 
 class DriverStatusConstants {
   // Driver status values
-  static const String active = 'active';
-  static const String inactive = 'inactive';
-  static const String busy = 'busy';
-  static const String offline = 'offline';
+  static const String driverActive = 'active';
+  static const String driverInactive = 'inactive';
+  static const String driverBusy = 'busy';
 
-  // Driver request status values
+  // DRIVER REQUEST STATUSES (sesuai backend models/driverRequest.js)
   static const String requestPending = 'pending';
   static const String requestAccepted = 'accepted';
   static const String requestRejected = 'rejected';
-  static const String requestExpired = 'expired';
   static const String requestCompleted = 'completed';
+  static const String requestExpired = 'expired';
 
   // Status lists
   static const List<String> allDriverStatuses = [
-    active,
-    inactive,
-    busy,
-    offline,
+    DriverStatusConstants.driverActive,
+    DriverStatusConstants.driverInactive,
+    DriverStatusConstants.driverBusy
   ];
 
-  static const List<String> allRequestStatuses = [
+  static const List<String> allDriverRequestStatuses = [
     requestPending,
     requestAccepted,
     requestRejected,
-    requestExpired,
     requestCompleted,
+    requestExpired,
   ];
 
-  static const List<String> availableStatuses = [active];
+  static const List<String> availableStatuses = [driverActive];
 
-  static const List<String> unavailableStatuses = [inactive, busy, offline];
+  static const List<String> unavailableStatuses = [driverInactive, driverBusy];
 
   static const List<String> activeRequestStatuses = [
     requestPending,
@@ -48,10 +47,9 @@ class DriverStatusConstants {
 
   // Status display names
   static const Map<String, String> driverStatusNames = {
-    active: 'Aktif',
-    inactive: 'Tidak Aktif',
-    busy: 'Sibuk',
-    offline: 'Offline',
+    driverActive: 'Aktif',
+    driverInactive: 'Tidak Aktif',
+    driverBusy: 'Sibuk',
   };
 
   static const Map<String, String> requestStatusNames = {
@@ -64,10 +62,9 @@ class DriverStatusConstants {
 
   // Status descriptions
   static const Map<String, String> driverStatusDescriptions = {
-    active: 'Driver siap menerima pesanan',
-    inactive: 'Driver sedang tidak tersedia',
-    busy: 'Driver sedang mengantarkan pesanan',
-    offline: 'Driver sedang offline',
+    driverActive: 'Driver siap menerima pesanan',
+    driverInactive: 'Driver sedang tidak tersedia',
+    driverBusy: 'Driver sedang mengantarkan pesanan',
   };
 
   static const Map<String, String> requestStatusDescriptions = {
@@ -80,10 +77,9 @@ class DriverStatusConstants {
 
   // Status colors
   static const Map<String, Color> driverStatusColors = {
-    active: AppColors.driverActive,
-    inactive: AppColors.driverInactive,
-    busy: AppColors.driverBusy,
-    offline: AppColors.textSecondary,
+    driverActive: AppColors.driverActive,
+    driverInactive: AppColors.driverInactive,
+    driverBusy: AppColors.driverBusy,
   };
 
   static const Map<String, Color> requestStatusColors = {
@@ -96,10 +92,9 @@ class DriverStatusConstants {
 
   // Status icons
   static const Map<String, IconData> driverStatusIcons = {
-    active: Icons.check_circle,
-    inactive: Icons.cancel,
-    busy: Icons.delivery_dining,
-    offline: Icons.wifi_off,
+    driverActive: Icons.check_circle,
+    driverInactive: Icons.cancel,
+    driverBusy: Icons.delivery_dining,
   };
 
   static const Map<String, IconData> requestStatusIcons = {
@@ -112,10 +107,9 @@ class DriverStatusConstants {
 
   // Status priority (for sorting)
   static const Map<String, int> driverStatusPriority = {
-    active: 1,
-    busy: 2,
-    inactive: 3,
-    offline: 4,
+    driverActive: 1,
+    driverBusy: 2,
+    driverInactive: 3,
   };
 
   static const Map<String, int> requestStatusPriority = {
@@ -128,10 +122,9 @@ class DriverStatusConstants {
 
   // Status transitions
   static const Map<String, List<String>> allowedDriverStatusTransitions = {
-    inactive: [active],
-    active: [inactive, busy],
-    busy: [active, inactive],
-    offline: [inactive],
+    driverInactive: [driverActive],
+    driverActive: [driverInactive, driverBusy],
+    driverBusy: [driverActive, driverInactive],
   };
 
   static const Map<String, List<String>> allowedRequestStatusTransitions = {
@@ -192,7 +185,7 @@ class DriverStatusConstants {
   }
 
   static bool canAcceptOrders(String status) {
-    return status == active;
+    return status == driverActive;
   }
 
   static bool canRejectRequest(String status) {
@@ -236,7 +229,7 @@ class DriverStatusConstants {
   }
 
   static String getDefaultDriverStatus() {
-    return inactive;
+    return driverInactive;
   }
 
   static String getDefaultRequestStatus() {
@@ -245,22 +238,22 @@ class DriverStatusConstants {
 
   // Status-based behavior helpers
   static bool shouldShowLocationUpdate(String status) {
-    return [active, busy].contains(status);
+    return [driverActive, driverBusy].contains(status);
   }
 
   static bool shouldReceiveOrderRequests(String status) {
-    return status == active;
+    return status == driverActive;
   }
 
   static bool shouldShowDeliveryUI(String status) {
-    return status == busy;
+    return status == driverBusy;
   }
 
   static Duration getStatusUpdateInterval(String status) {
     switch (status) {
-      case active:
+      case driverActive:
         return const Duration(seconds: 30);
-      case busy:
+      case driverBusy:
         return const Duration(seconds: 15);
       default:
         return const Duration(minutes: 5);
@@ -270,7 +263,7 @@ class DriverStatusConstants {
   static Duration getRequestTimeout(String status) {
     switch (status) {
       case requestPending:
-        return const Duration(minutes: 2);
+        return const Duration(minutes: 15); // sesuai backend 15 menit
       default:
         return const Duration(minutes: 5);
     }
