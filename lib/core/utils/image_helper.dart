@@ -8,24 +8,39 @@ import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/core/errors/exceptions.dart';
 
 class ImageHelper {
+  static const Map<String, String> folderMapping = {
+    'users': 'users',
+    'drivers': 'drivers',
+    'stores': 'stores',
+    'menu-items': 'menu-items',
+  };
+
+  static const Map<String, String> prefixMapping = {
+    'users': 'avatar',
+    'drivers': 'driver',
+    'stores': 'store',
+    'menu-items': 'item',
+  };
+
   /// Convert image file to base64 string (format yang digunakan backend)
   static Future<String> convertToBase64(File imageFile) async {
     try {
-// Validate file exists
+      // Validate file exists
       if (!await imageFile.exists()) {
         throw FileNotFoundException(imageFile.path);
       }
+
       // Validate file size
       final fileSizeInBytes = await imageFile.length();
       if (fileSizeInBytes > AppConstants.maxImageSizeMB * 1024 * 1024) {
         throw FileSizeExceededException(AppConstants.maxImageSizeMB);
       }
 
-      // Validate file format
+      // Validate file format - allowedImageTypes
       final extension = getFileExtension(imageFile.path);
       if (!AppConstants.allowedImageFormats.contains(extension)) {
         throw UnsupportedFileTypeException(
-          'Unsupported image format: $extension. Allowed formats: ${AppConstants.allowedImageFormats.join(', ')}',
+          'Format gambar tidak didukung: $extension. Format yang diizinkan: ${AppConstants.allowedImageFormats.join(', ')}',
         );
       }
 
@@ -40,7 +55,58 @@ class ImageHelper {
       return 'data:$mimeType;base64,$base64String';
     } catch (e) {
       if (e is AppException) rethrow;
-      throw FileException('Failed to convert image to base64: ${e.toString()}');
+      throw FileException(
+          'Gagal mengkonversi gambar ke base64: ${e.toString()}');
+    }
+  }
+
+  ///Validate base64 image format (untuk validasi dari backend response)
+  static bool isValidBase64Image(String base64String) {
+    try {
+      // Check format sesuai backend
+      if (!base64String.startsWith('data:image/')) {
+        return false;
+      }
+
+      // Extract and validate base64 part
+      if (!base64String.contains(';base64,')) {
+        return false;
+      }
+
+      final base64Part = base64String.split(';base64,')[1];
+      base64Decode(base64Part);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  ///Extract image info from base64 (untuk debugging)
+  static Map<String, dynamic> getBase64ImageInfo(String base64String) {
+    try {
+      if (!base64String.startsWith('data:image/')) {
+        throw const DataParsingException();
+      }
+
+      final parts = base64String.split(';base64,');
+      final mimeType = parts[0].replaceFirst('data:', '');
+      final base64Data = parts[1];
+
+      // Get file size
+      final decodedBytes = base64Decode(base64Data);
+      final sizeInMB = decodedBytes.length / (1024 * 1024);
+
+      return {
+        'mimeType': mimeType,
+        'sizeInBytes': decodedBytes.length,
+        'sizeInMB': sizeInMB,
+        'isValid': sizeInMB <= AppConstants.maxImageSizeMB,
+      };
+    } catch (e) {
+      return {
+        'error': e.toString(),
+        'isValid': false,
+      };
     }
   }
 
@@ -50,17 +116,36 @@ class ImageHelper {
     int quality = 85,
     int? maxWidth,
     int? maxHeight,
+    bool maintainAspectRatio = true,
   }) async {
     try {
-// Read original image
+      // Read original image
       final imageBytes = await imageFile.readAsBytes();
       img.Image? originalImage = img.decodeImage(imageBytes);
       if (originalImage == null) {
         throw const DataParsingException();
       }
 
-      // Resize if dimensions specified
+      // Smart resizing untuk mengurangi ukuran sesuai backend limit
       if (maxWidth != null || maxHeight != null) {
+        if (maintainAspectRatio) {
+          // Maintain aspect ratio
+          final aspectRatio = originalImage.width / originalImage.height;
+
+          if (maxWidth != null && maxHeight != null) {
+            final targetRatio = maxWidth / maxHeight;
+            if (aspectRatio > targetRatio) {
+              maxHeight = (maxWidth / aspectRatio).round();
+            } else {
+              maxWidth = (maxHeight * aspectRatio).round();
+            }
+          } else if (maxWidth != null) {
+            maxHeight = (maxWidth / aspectRatio).round();
+          } else if (maxHeight != null) {
+            maxWidth = (maxHeight * aspectRatio).round();
+          }
+        }
+
         originalImage = img.copyResize(
           originalImage,
           width: maxWidth,
@@ -69,30 +154,75 @@ class ImageHelper {
         );
       }
 
-      // Compress image
+      // Compress image dengan format yang tepat
       List<int> compressedBytes;
       final extension = getFileExtension(imageFile.path);
 
       switch (extension) {
         case 'png':
+          // PNG compression level (0-9, 6 adalah balanced)
           compressedBytes = img.encodePng(originalImage, level: 6);
           break;
         case 'jpg':
         case 'jpeg':
         default:
+          // JPEG quality (0-100, 85 adalah balanced untuk backend)
           compressedBytes = img.encodeJpg(originalImage, quality: quality);
           break;
       }
 
       // Create compressed file
-      final compressedFile = File('${imageFile.path}_compressed');
+      final compressedFile = File('${imageFile.path}_compressed.${extension}');
       await compressedFile.writeAsBytes(compressedBytes);
 
       return compressedFile;
     } catch (e) {
       if (e is AppException) rethrow;
-      throw FileException('Failed to compress image: ${e.toString()}');
+      throw FileException('Gagal mengkompress gambar: ${e.toString()}');
     }
+  }
+
+  ///Auto compress untuk memenuhi backend size limit
+  static Future<File> autoCompressForBackend(File imageFile) async {
+    File currentFile = imageFile;
+    int quality = 95;
+    int maxAttempts = 5;
+    int attempt = 0;
+
+    while (attempt < maxAttempts) {
+      final size = await currentFile.length();
+
+      // Jika sudah sesuai backend limit, return
+      if (size <= AppConstants.maxImageSizeMB * 1024 * 1024) {
+        return currentFile;
+      }
+
+      // Compress dengan quality yang lebih rendah
+      quality = (quality * 0.8).round();
+      if (quality < 30) quality = 30; // Minimum quality
+
+      // Kompres ulang
+      final compressed = await compressImage(
+        currentFile,
+        quality: quality,
+        maxWidth: 1920, // Max width untuk mobile
+        maxHeight: 1080, // Max height untuk mobile
+      );
+
+      // Clean up previous compressed file jika bukan file original
+      if (currentFile != imageFile) {
+        try {
+          await currentFile.delete();
+        } catch (e) {
+          // Ignore deletion errors
+        }
+      }
+
+      currentFile = compressed;
+      attempt++;
+    }
+
+    return currentFile;
   }
 
   /// Validate image file size
@@ -105,7 +235,7 @@ class ImageHelper {
     }
   }
 
-  /// Validate image format
+  /// Validate image format - ✅ SESUAI BACKEND allowedImageTypes
   static bool validateImageFormat(String filePath) {
     final extension = getFileExtension(filePath);
     return AppConstants.allowedImageFormats.contains(extension);
@@ -141,11 +271,12 @@ class ImageHelper {
     String fileName,
   ) async {
     try {
-// Remove data URL prefix if present
+      // Remove data URL prefix if present
       String cleanBase64 = base64String;
       if (base64String.startsWith('data:')) {
         cleanBase64 = base64String.split(',')[1];
       }
+
       // Decode base64
       final imageBytes = base64Decode(cleanBase64);
 
@@ -155,7 +286,8 @@ class ImageHelper {
 
       return file;
     } catch (e) {
-      throw FileException('Failed to convert base64 to image: ${e.toString()}');
+      throw FileException(
+          'Gagal mengkonversi base64 ke gambar: ${e.toString()}');
     }
   }
 
@@ -171,7 +303,7 @@ class ImageHelper {
       return Size(image.width.toDouble(), image.height.toDouble());
     } catch (e) {
       if (e is AppException) rethrow;
-      throw FileException('Failed to get image dimensions: ${e.toString()}');
+      throw FileException('Gagal mendapatkan dimensi gambar: ${e.toString()}');
     }
   }
 
@@ -200,7 +332,7 @@ class ImageHelper {
       return thumbnailFile;
     } catch (e) {
       if (e is AppException) rethrow;
-      throw FileException('Failed to create thumbnail: ${e.toString()}');
+      throw FileException('Gagal membuat thumbnail: ${e.toString()}');
     }
   }
 
@@ -251,13 +383,13 @@ class ImageHelper {
           ? img.encodePng(croppedImage)
           : img.encodeJpg(croppedImage, quality: 90);
 
-      final croppedFile = File('${imageFile.path}_cropped');
+      final croppedFile = File('${imageFile.path}_cropped.${extension}');
       await croppedFile.writeAsBytes(croppedBytes);
 
       return croppedFile;
     } catch (e) {
       if (e is AppException) rethrow;
-      throw FileException('Failed to crop image: ${e.toString()}');
+      throw FileException('Gagal memotong gambar: ${e.toString()}');
     }
   }
 
@@ -276,48 +408,146 @@ class ImageHelper {
           await file.delete();
         }
       } catch (e) {
-        debugPrint('Failed to delete temp file: ${file.path}');
+        debugPrint('Gagal menghapus file sementara: ${file.path}');
       }
     }
   }
 
-  /// Process image for upload (compress and convert to base64)
+  ///Process image for upload (dengan auto-compress jika perlu)
   static Future<String> processImageForUpload(
     File imageFile, {
     int quality = 85,
     int? maxWidth,
     int? maxHeight,
+    bool autoCompress = true,
   }) async {
     File? processedFile;
+    List<File> tempFiles = [];
+
     try {
-      // Validate image
+      // Validate image format
       if (!validateImageFormat(imageFile.path)) {
         throw UnsupportedFileTypeException(
-          'Unsupported image format: ${getFileExtension(imageFile.path)}',
+          'Format gambar tidak didukung: ${getFileExtension(imageFile.path)}',
         );
       }
 
-      if (!await validateImageSize(imageFile)) {
-        throw FileSizeExceededException(AppConstants.maxImageSizeMB);
+      File fileToProcess = imageFile;
+
+      // Auto compress jika file terlalu besar
+      if (autoCompress && !await validateImageSize(imageFile)) {
+        fileToProcess = await autoCompressForBackend(imageFile);
+        tempFiles.add(fileToProcess);
       }
 
-      // Compress image
-      processedFile = await compressImage(
-        imageFile,
-        quality: quality,
-        maxWidth: maxWidth,
-        maxHeight: maxHeight,
-      );
+      // Manual compress jika diminta
+      if (maxWidth != null || maxHeight != null || quality < 95) {
+        processedFile = await compressImage(
+          fileToProcess,
+          quality: quality,
+          maxWidth: maxWidth,
+          maxHeight: maxHeight,
+        );
+        tempFiles.add(processedFile);
+      } else {
+        processedFile = fileToProcess;
+      }
+
+      // Final validation
+      if (!await validateImageSize(processedFile)) {
+        throw FileSizeExceededException(AppConstants.maxImageSizeMB);
+      }
 
       // Convert to base64
       final base64String = await convertToBase64(processedFile);
 
       return base64String;
     } finally {
-      // Clean up compressed file
-      if (processedFile != null) {
-        await cleanupTempFiles([processedFile]);
+      // Clean up temp files
+      if (tempFiles.isNotEmpty) {
+        await cleanupTempFiles(tempFiles);
       }
+    }
+  }
+
+  ///Generate file name sesuai backend pattern
+  static String generateBackendFileName(String folder, String prefix) {
+    final timestamp = DateTime.now().millisecondsSinceEpoch;
+    return '${prefix}_$timestamp';
+  }
+
+  ///Validate image requirements untuk berbagai use case
+  static Future<Map<String, dynamic>> validateImageRequirements(
+    File imageFile, {
+    required String purpose, // 'avatar', 'store', 'menu', etc.
+  }) async {
+    final result = <String, dynamic>{
+      'isValid': false,
+      'errors': <String>[],
+      'warnings': <String>[],
+      'info': <String, dynamic>{},
+    };
+
+    try {
+      // Basic validations
+      if (!await imageFile.exists()) {
+        result['errors'].add('File tidak ditemukan');
+        return result;
+      }
+
+      if (!validateImageFormat(imageFile.path)) {
+        result['errors'].add('Format file tidak didukung');
+        return result;
+      }
+
+      final size = await imageFile.length();
+      result['info']['sizeInBytes'] = size;
+      result['info']['sizeFormatted'] = getFormattedFileSize(size);
+
+      if (size > AppConstants.maxImageSizeMB * 1024 * 1024) {
+        result['errors'].add(
+            'Ukuran file terlalu besar (max ${AppConstants.maxImageSizeMB}MB)');
+      }
+
+      // Get dimensions
+      final dimensions = await getImageDimensions(imageFile);
+      result['info']['width'] = dimensions.width;
+      result['info']['height'] = dimensions.height;
+      result['info']['aspectRatio'] = dimensions.width / dimensions.height;
+
+      // Purpose-specific validations
+      switch (purpose) {
+        case 'avatar':
+          if (dimensions.width < 100 || dimensions.height < 100) {
+            result['warnings']
+                .add('Resolusi rendah untuk foto profil (min 100x100)');
+          }
+          if ((dimensions.width / dimensions.height - 1).abs() > 0.2) {
+            result['warnings']
+                .add('Rasio aspek tidak persegi untuk foto profil');
+          }
+          break;
+
+        case 'store':
+          if (dimensions.width < 300 || dimensions.height < 200) {
+            result['warnings']
+                .add('Resolusi rendah untuk foto toko (min 300x200)');
+          }
+          break;
+
+        case 'menu':
+          if (dimensions.width < 200 || dimensions.height < 150) {
+            result['warnings']
+                .add('Resolusi rendah untuk foto menu (min 200x150)');
+          }
+          break;
+      }
+
+      result['isValid'] = (result['errors'] as List).isEmpty;
+      return result;
+    } catch (e) {
+      result['errors'].add('Error validasi: ${e.toString()}');
+      return result;
     }
   }
 }

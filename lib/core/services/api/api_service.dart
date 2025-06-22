@@ -10,10 +10,16 @@ import 'package:del_pick/core/interceptors/auth_interceptor.dart';
 import 'package:del_pick/core/interceptors/error_interceptor.dart';
 import 'package:del_pick/core/interceptors/logging_interceptor.dart';
 import 'package:del_pick/core/interceptors/connectivity_interceptor.dart';
+import 'package:del_pick/core/errors/exceptions.dart';
 
 class ApiService extends getx.GetxService {
   late Dio _dio;
   final StorageService _storageService = getx.Get.find<StorageService>();
+
+  // Cache untuk token agar tidak membaca storage berulang kali
+  String? _cachedToken;
+  DateTime? _lastTokenCheck;
+  static const Duration _tokenCacheTimeout = Duration(minutes: 1);
 
   Dio get dio => _dio;
 
@@ -34,6 +40,7 @@ class ApiService extends getx.GetxService {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
         },
+        //response handling
         validateStatus: (status) => status! < 500,
       ),
     );
@@ -43,23 +50,29 @@ class ApiService extends getx.GetxService {
 
   void _setupInterceptors() {
     _dio.interceptors.clear();
-    _dio.interceptors.add(AuthInterceptor(_storageService));
-    _dio.interceptors.add(ConnectivityInterceptor());
 
-    if (EnvironmentConfig.enableLogging) {
-      _dio.interceptors.add(LoggingInterceptor());
-    }
+    //Auth -> Connectivity -> Logging -> Error
+    _dio.interceptors.add(AuthInterceptor(_storageService));
+
+    //Hanya tambahkan jika service tersedia
     try {
       _dio.interceptors.add(ConnectivityInterceptor());
     } catch (e) {
-      print('Warning: ConnectivityInterceptor not added: $e');
+      if (EnvironmentConfig.enableLogging) {
+        print('Warning: ConnectivityInterceptor not available: $e');
+      }
     }
-    _dio.interceptors.add(AuthInterceptor(_storageService));
+
+    //Logging hanya untuk development
+    if (EnvironmentConfig.enableLogging) {
+      _dio.interceptors.add(LoggingInterceptor());
+    }
+
+    // Error interceptor terakhir
     _dio.interceptors.add(ErrorInterceptor());
-    print('ApiService: Interceptors setup completed'); // Debug
   }
 
-  // GET request
+  /// GET request dengan improved error handling
   Future<Response> get(
     String path, {
     Map<String, dynamic>? queryParameters,
@@ -70,16 +83,18 @@ class ApiService extends getx.GetxService {
       final response = await _dio.get(
         path,
         queryParameters: queryParameters,
-        options: options,
+        options: _mergeOptions(options),
         cancelToken: cancelToken,
       );
-      return response;
+      return _validateResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioException(e);
     } catch (e) {
-      rethrow;
+      throw NetworkException('Unexpected error: $e');
     }
   }
 
-  // POST request
+  /// POST request dengan improved handling
   Future<Response> post(
     String path, {
     dynamic data,
@@ -92,16 +107,18 @@ class ApiService extends getx.GetxService {
         path,
         data: data,
         queryParameters: queryParameters,
-        options: options,
+        options: _mergeOptions(options),
         cancelToken: cancelToken,
       );
-      return response;
+      return _validateResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioException(e);
     } catch (e) {
-      rethrow;
+      throw NetworkException('Unexpected error: $e');
     }
   }
 
-  // PUT request
+  /// PUT request
   Future<Response> put(
     String path, {
     dynamic data,
@@ -114,16 +131,18 @@ class ApiService extends getx.GetxService {
         path,
         data: data,
         queryParameters: queryParameters,
-        options: options,
+        options: _mergeOptions(options),
         cancelToken: cancelToken,
       );
-      return response;
+      return _validateResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioException(e);
     } catch (e) {
-      rethrow;
+      throw NetworkException('Unexpected error: $e');
     }
   }
 
-  // PATCH request
+  /// PATCH request
   Future<Response> patch(
     String path, {
     dynamic data,
@@ -136,16 +155,18 @@ class ApiService extends getx.GetxService {
         path,
         data: data,
         queryParameters: queryParameters,
-        options: options,
+        options: _mergeOptions(options),
         cancelToken: cancelToken,
       );
-      return response;
+      return _validateResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioException(e);
     } catch (e) {
-      rethrow;
+      throw NetworkException('Unexpected error: $e');
     }
   }
 
-  // DELETE request
+  /// DELETE request
   Future<Response> delete(
     String path, {
     dynamic data,
@@ -158,16 +179,56 @@ class ApiService extends getx.GetxService {
         path,
         data: data,
         queryParameters: queryParameters,
-        options: options,
+        options: _mergeOptions(options),
         cancelToken: cancelToken,
       );
+      return _validateResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    } catch (e) {
+      throw NetworkException('Unexpected error: $e');
+    }
+  }
+
+  ///✅ FILE UPLOAD WITH BASE64 SUPPORT (sesuai backend)
+
+  /// Upload file sebagai base64
+  Future<Response> uploadBase64Image(
+    String path,
+    File file, {
+    Map<String, dynamic>? data,
+    CancelToken? cancelToken,
+  }) async {
+    try {
+      // ✅ Convert to base64 sesuai backend expectation
+      final bytes = await file.readAsBytes();
+      final base64String = base64Encode(bytes);
+      final extension = file.path.split('.').last.toLowerCase();
+
+      // ✅ Validasi format sesuai backend
+      if (!AppConstants.allowedImageFormats.contains(extension)) {
+        throw UnsupportedFileTypeException('Format $extension tidak didukung');
+      }
+
+      // ✅ Validasi size sesuai backend (5MB)
+      if (bytes.length > AppConstants.maxImageSizeMB * 1024 * 1024) {
+        throw FileSizeExceededException(AppConstants.maxImageSizeMB);
+      }
+
+      final requestData = {
+        'image': 'data:image/$extension;base64,$base64String',
+        ...?data,
+      };
+
+      final response =
+          await post(path, data: requestData, cancelToken: cancelToken);
       return response;
     } catch (e) {
       rethrow;
     }
   }
 
-  // Upload file
+  /// Upload file traditional multipart (jika diperlukan)
   Future<Response> uploadFile(
     String path,
     File file, {
@@ -190,158 +251,239 @@ class ApiService extends getx.GetxService {
         cancelToken: cancelToken,
         options: Options(headers: {'Content-Type': 'multipart/form-data'}),
       );
-      return response;
+      return _validateResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioException(e);
     } catch (e) {
-      rethrow;
+      throw NetworkException('File upload failed: $e');
     }
   }
 
-  // Upload multiple files
-  Future<Response> uploadFiles(
-    String path,
-    List<File> files, {
-    String fieldName = 'files',
-    Map<String, dynamic>? data,
-    ProgressCallback? onSendProgress,
-    CancelToken? cancelToken,
-  }) async {
-    try {
-      Map<String, dynamic> formDataMap = {};
+  // ===============================================
+  // ✅ HELPER METHODS - BACKEND COMPATIBILITY
+  // ===============================================
 
-      for (int i = 0; i < files.length; i++) {
-        String fileName = files[i].path.split('/').last;
-        formDataMap['$fieldName[$i]'] = await MultipartFile.fromFile(
-          files[i].path,
-          filename: fileName,
-        );
+  /// Merge default options dengan custom options
+  Options _mergeOptions(Options? options) {
+    final defaultOptions = Options(
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+      },
+    );
+
+    if (options == null) return defaultOptions;
+
+    return Options(
+      method: options.method ?? defaultOptions.method,
+      sendTimeout: options.sendTimeout ?? defaultOptions.sendTimeout,
+      receiveTimeout: options.receiveTimeout ?? defaultOptions.receiveTimeout,
+      extra: {...?defaultOptions.extra, ...?options.extra},
+      headers: {...?defaultOptions.headers, ...?options.headers},
+      responseType: options.responseType ?? defaultOptions.responseType,
+      contentType: options.contentType ?? defaultOptions.contentType,
+      validateStatus: options.validateStatus ?? defaultOptions.validateStatus,
+      receiveDataWhenStatusError: options.receiveDataWhenStatusError ??
+          defaultOptions.receiveDataWhenStatusError,
+      followRedirects:
+          options.followRedirects ?? defaultOptions.followRedirects,
+      maxRedirects: options.maxRedirects ?? defaultOptions.maxRedirects,
+    );
+  }
+
+  /// Validasi response format sesuai backend
+  Response _validateResponse(Response response) {
+    // ✅ Backend selalu mengembalikan JSON dengan struktur tertentu
+    if (response.data is! Map<String, dynamic>) {
+      throw DataParsingException();
+    }
+
+    final data = response.data as Map<String, dynamic>;
+
+    // ✅ Backend format: { message, data?, errors? }
+    if (!data.containsKey('message')) {
+      throw DataParsingException();
+    }
+
+    return response;
+  }
+
+  /// Handle DioException sesuai backend error responses
+  Exception _handleDioException(DioException e) {
+    switch (e.type) {
+      case DioExceptionType.connectionTimeout:
+      case DioExceptionType.sendTimeout:
+      case DioExceptionType.receiveTimeout:
+        return const TimeoutException();
+
+      case DioExceptionType.connectionError:
+        return const ConnectionException();
+
+      case DioExceptionType.badResponse:
+        return _parseBackendError(e);
+
+      case DioExceptionType.cancel:
+        return const NetworkException('Request cancelled');
+
+      case DioExceptionType.unknown:
+      default:
+        if (e.error is SocketException) {
+          return const ConnectionException();
+        }
+        return NetworkException(e.message ?? 'Unknown network error');
+    }
+  }
+
+  /// Parse backend error response format
+  Exception _parseBackendError(DioException e) {
+    final statusCode = e.response?.statusCode ?? 0;
+    final data = e.response?.data;
+
+    if (data is Map<String, dynamic>) {
+      final message = data['message'] ?? 'An error occurred';
+      final code = data['code']?.toString();
+      final errors = data['errors'];
+
+      // ✅ Handle validation errors sesuai backend format
+      if (statusCode == 400 && errors != null) {
+        Map<String, List<String>>? validationErrors;
+
+        if (errors is Map<String, dynamic>) {
+          validationErrors = <String, List<String>>{};
+          errors.forEach((key, value) {
+            if (value is List) {
+              validationErrors![key] = value.cast<String>();
+            } else if (value is String) {
+              validationErrors![key] = [value];
+            }
+          });
+        } else if (errors is String) {
+          validationErrors = {
+            'general': [errors]
+          };
+        }
+
+        return ValidationException(message,
+            errors: validationErrors, code: code);
       }
 
-      if (data != null) {
-        formDataMap.addAll(data);
+      // ✅ Handle specific backend status codes
+      switch (statusCode) {
+        case 401:
+          if (message.toLowerCase().contains('token') ||
+              message.toLowerCase().contains('expired')) {
+            return const TokenExpiredException();
+          }
+          return const UnauthorizedException();
+
+        case 403:
+          return const ForbiddenException();
+
+        case 404:
+          return NotFoundException(message);
+
+        case 409:
+          return AlreadyExistsException(message);
+
+        case 422:
+          return ValidationException(message, code: code);
+
+        case 429:
+          return const TooManyRequestsException();
+
+        default:
+          return ServerException(statusCode, message, code: code);
       }
-
-      FormData formData = FormData.fromMap(formDataMap);
-
-      final response = await _dio.post(
-        path,
-        data: formData,
-        onSendProgress: onSendProgress,
-        cancelToken: cancelToken,
-        options: Options(headers: {'Content-Type': 'multipart/form-data'}),
-      );
-      return response;
-    } catch (e) {
-      rethrow;
     }
+
+    return ServerException(statusCode, 'Server error occurred');
   }
 
-  // Download file
-  Future<Response> downloadFile(
-    String path,
-    String savePath, {
-    Map<String, dynamic>? queryParameters,
-    ProgressCallback? onReceiveProgress,
-    CancelToken? cancelToken,
-  }) async {
-    try {
-      final response = await _dio.download(
-        path,
-        savePath,
-        queryParameters: queryParameters,
-        onReceiveProgress: onReceiveProgress,
-        cancelToken: cancelToken,
-      );
-      return response;
-    } catch (e) {
-      rethrow;
-    }
-  }
+  //AUTHENTICATION METHODS
 
-  // Set authentication token
+  /// Set authentication token dengan cache
   void setAuthToken(String token) {
+    _cachedToken = token;
+    _lastTokenCheck = DateTime.now();
     _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
-  // Clear authentication token
+  /// Get cached auth token
+  String? getAuthToken() {
+    final now = DateTime.now();
+
+    // Refresh cache jika expired
+    if (_lastTokenCheck == null ||
+        now.difference(_lastTokenCheck!).compareTo(_tokenCacheTimeout) > 0) {
+      _cachedToken = _storageService.readString(StorageConstants.authToken);
+      _lastTokenCheck = now;
+    }
+
+    return _cachedToken;
+  }
+
+  /// Clear authentication
   void clearAuthToken() {
+    _cachedToken = null;
+    _lastTokenCheck = null;
     _dio.options.headers.remove('Authorization');
   }
 
-  // Add custom header
-  void addHeader(String key, String value) {
-    _dio.options.headers[key] = value;
-  }
+  // ===============================================
+  // ✅ UTILITY METHODS
+  // ===============================================
 
-  // Remove custom header
-  void removeHeader(String key) {
-    _dio.options.headers.remove(key);
-  }
+  /// Create cancel token
+  CancelToken createCancelToken() => CancelToken();
 
-  // Clear all custom headers
-  void clearHeaders() {
-    _dio.options.headers.clear();
-    _dio.options.headers['Content-Type'] = 'application/json';
-    _dio.options.headers['Accept'] = 'application/json';
-  }
-
-  // Update base URL (for environment switching)
-  void updateBaseUrl(String baseUrl) {
-    _dio.options.baseUrl = baseUrl;
-  }
-
-  // Update timeout settings
-  void updateTimeout({
-    Duration? connectTimeout,
-    Duration? receiveTimeout,
-    Duration? sendTimeout,
-  }) {
-    if (connectTimeout != null) {
-      _dio.options.connectTimeout = connectTimeout;
-    }
-    if (receiveTimeout != null) {
-      _dio.options.receiveTimeout = receiveTimeout;
-    }
-    if (sendTimeout != null) {
-      _dio.options.sendTimeout = sendTimeout;
-    }
-  }
-
-  // Create cancel token
-  CancelToken createCancelToken() {
-    return CancelToken();
-  }
-
-  // Cancel request
+  /// Cancel requests
   void cancelRequests(CancelToken cancelToken, [String? reason]) {
     cancelToken.cancel(reason);
   }
 
-  // Check if request was cancelled
+  /// Check if request was cancelled
   bool isRequestCancelled(dynamic error) {
     return error is DioException && error.type == DioExceptionType.cancel;
   }
 
-  // Retry request
+  /// Retry request
   Future<Response> retryRequest(RequestOptions requestOptions) async {
-    try {
-      final response = await _dio.fetch(requestOptions);
-      return response;
-    } catch (e) {
-      rethrow;
-    }
+    return await _dio.fetch(requestOptions);
   }
 
-  // Get current auth token
-  String? getAuthToken() {
-    final authHeader = _dio.options.headers['Authorization'] as String?;
-    if (authHeader != null && authHeader.startsWith('Bearer ')) {
-      return authHeader.substring(7);
-    }
-    return null;
-  }
-
-  // Refresh configuration
+  /// Refresh configuration
   void refreshConfiguration() {
     _initializeDio();
+  }
+
+  /// Add custom header
+  void addHeader(String key, String value) {
+    _dio.options.headers[key] = value;
+  }
+
+  /// Remove custom header
+  void removeHeader(String key) {
+    _dio.options.headers.remove(key);
+  }
+
+  /// Update base URL
+  void updateBaseUrl(String baseUrl) {
+    _dio.options.baseUrl = baseUrl;
+  }
+
+  /// Health check endpoint
+  Future<bool> healthCheck() async {
+    try {
+      final response = await get('/health');
+      return response.statusCode == 200;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Clear all caches
+  void clearCache() {
+    _cachedToken = null;
+    _lastTokenCheck = null;
   }
 }
