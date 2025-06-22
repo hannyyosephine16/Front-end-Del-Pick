@@ -1,204 +1,153 @@
+import 'package:del_pick/app/app.dart';
 import 'package:flutter/material.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 
 class OrderStatusConstants {
-  // Order status values
-  static const String pending = 'pending';
-  static const String approved = 'approved';
-  static const String preparing = 'preparing';
-  static const String onDelivery = 'on_delivery';
-  static const String delivered = 'delivered';
-  static const String cancelled = 'cancelled';
+  // Order status values (SESUAI BACKEND models/order.js)
+  static const String pending = AppConstants.orderPending;
+  static const String confirmed = AppConstants.orderConfirmed;
+  static const String preparing = AppConstants.orderPreparing;
+  static const String readyForPickup = AppConstants.orderReadyForPickup;
+  static const String onDelivery = AppConstants.orderOnDelivery;
+  static const String delivered = AppConstants.orderDelivered;
+  static const String cancelled = AppConstants.orderCancelled;
+  static const String rejected = AppConstants.orderRejected;
 
-  // Delivery status values
-  static const String waiting = 'waiting';
-  static const String pickingUp = 'picking_up';
-  // static const String onDelivery = 'on_delivery';
-  static const String deliveryDelivered = 'delivered';
+  // Delivery status values (SESUAI BACKEND models/order.js)
+  static const String deliveryPending = AppConstants.deliveryPending;
+  static const String pickedUp = AppConstants.deliveryPickedUp;
+  static const String onWay = AppConstants.deliveryOnWay;
+  static const String deliveryDelivered = AppConstants.deliveryDelivered;
 
   // Status lists
   static const List<String> allOrderStatuses = [
     pending,
-    approved,
+    confirmed,
     preparing,
+    readyForPickup,
     onDelivery,
     delivered,
     cancelled,
+    rejected,
   ];
 
   static const List<String> allDeliveryStatuses = [
-    waiting,
-    pickingUp,
-    onDelivery,
-    delivered,
+    deliveryPending,
+    pickedUp, // FIXED
+    onWay, // FIXED
+    deliveryDelivered,
   ];
-  // Helper methods
-  static bool isActiveStatus(String status) {
-    return [pending, approved, preparing, onDelivery].contains(status);
-  }
-
-  static bool isCompletedStatus(String status) {
-    return status == delivered;
-  }
-
-  static bool isCancelledStatus(String status) {
-    return status == cancelled;
-  }
-
-  static bool canTrack(String status) {
-    return [preparing, onDelivery].contains(status);
-  }
-
-  static bool canCancel(String status) {
-    return [pending, approved, preparing].contains(status);
-  }
-
-  static bool canReview(String status) {
-    return status == delivered;
-  }
 
   static const List<String> activeOrderStatuses = [
     pending,
-    approved,
+    confirmed, // FIXED
     preparing,
+    readyForPickup, // DITAMBAHKAN
     onDelivery,
   ];
 
-  static const List<String> completedOrderStatuses = [delivered, cancelled];
+  static const List<String> completedOrderStatuses = [
+    delivered,
+    cancelled,
+    rejected
+  ];
 
-  static const List<String> cancellableStatuses = [pending, approved];
+  static const List<String> cancellableStatuses = [pending, confirmed]; // FIXED
 
   // Status display names
-  // Status display names
-  static String getDisplayName(String status) {
-    switch (status) {
-      case pending:
-        return 'Pending';
-      case approved:
-        return 'Approved';
-      case preparing:
-        return 'Preparing';
-      case onDelivery:
-        return 'On Delivery';
-      case delivered:
-        return 'Delivered';
-      case cancelled:
-        return 'Cancelled';
-      default:
-        return 'Unknown';
-    }
-  }
-
-  // Status colors (for UI)
-  static String getStatusColor(String status) {
-    switch (status) {
-      case pending:
-      case approved:
-        return 'warning';
-      case preparing:
-        return 'info';
-      case onDelivery:
-        return 'secondary';
-      case delivered:
-        return 'success';
-      case cancelled:
-        return 'error';
-      default:
-        return 'default';
-    }
-  }
-
   static const Map<String, String> orderStatusNames = {
     pending: 'Menunggu Konfirmasi',
-    approved: 'Dikonfirmasi',
+    confirmed: 'Dikonfirmasi',
     preparing: 'Sedang Disiapkan',
+    readyForPickup: 'Siap Diambil',
     onDelivery: 'Dalam Pengiriman',
     delivered: 'Selesai',
     cancelled: 'Dibatalkan',
+    rejected: 'Ditolak',
   };
 
   static const Map<String, String> deliveryStatusNames = {
-    waiting: 'Menunggu Driver',
-    pickingUp: 'Driver Menuju Toko',
-    onDelivery: 'Dalam Perjalanan',
-    delivered: 'Terkirim',
+    deliveryPending: 'Menunggu Driver',
+    pickedUp: 'Telah Diambil',
+    onWay: 'Dalam Perjalanan',
+    deliveryDelivered: 'Terkirim',
   };
 
   // Status descriptions
   static const Map<String, String> orderStatusDescriptions = {
     pending: 'Pesanan Anda sedang menunggu konfirmasi dari toko',
-    approved: 'Pesanan telah dikonfirmasi dan sedang mencari driver',
+    confirmed: 'Pesanan telah dikonfirmasi dan sedang mencari driver',
     preparing: 'Toko sedang menyiapkan pesanan Anda',
+    readyForPickup: 'Pesanan siap diambil oleh driver',
     onDelivery: 'Driver sedang mengirimkan pesanan Anda',
     delivered: 'Pesanan telah berhasil dikirimkan',
     cancelled: 'Pesanan telah dibatalkan',
+    rejected: 'Pesanan ditolak oleh toko',
   };
 
   static const Map<String, String> deliveryStatusDescriptions = {
-    waiting: 'Sedang mencari driver untuk mengantarkan pesanan Anda',
-    pickingUp: 'Driver sedang menuju ke toko untuk mengambil pesanan',
-    onDelivery: 'Driver sedang dalam perjalanan menuju alamat pengiriman',
-    delivered: 'Pesanan telah sampai di tujuan',
+    deliveryPending: 'Sedang mencari driver untuk mengantarkan pesanan Anda',
+    pickedUp: 'Driver telah mengambil pesanan dari toko', // FIXED
+    onWay: 'Driver sedang dalam perjalanan menuju alamat pengiriman', // FIXED
+    deliveryDelivered: 'Pesanan telah sampai di tujuan',
   };
 
   // Status colors
   static const Map<String, Color> orderStatusColors = {
     pending: AppColors.orderPending,
-    approved: AppColors.orderApproved,
+    confirmed: AppColors.orderApproved,
     preparing: AppColors.orderPreparing,
+    readyForPickup: AppColors.info,
     onDelivery: AppColors.orderOnDelivery,
     delivered: AppColors.orderDelivered,
     cancelled: AppColors.orderCancelled,
+    rejected: AppColors.error,
   };
 
   static const Map<String, Color> deliveryStatusColors = {
-    waiting: AppColors.orderPending,
-    pickingUp: AppColors.orderApproved,
-    onDelivery: AppColors.orderOnDelivery,
-    delivered: AppColors.orderDelivered,
+    deliveryPending: AppColors.orderPending,
+    pickedUp: AppColors.orderApproved,
+    onWay: AppColors.orderOnDelivery,
+    deliveryDelivered: AppColors.orderDelivered,
   };
 
   // Status icons
   static const Map<String, IconData> orderStatusIcons = {
     pending: Icons.access_time,
-    approved: Icons.check_circle_outline,
+    confirmed: Icons.check_circle_outline,
     preparing: Icons.restaurant,
+    readyForPickup: Icons.shopping_bag,
     onDelivery: Icons.delivery_dining,
     delivered: Icons.check_circle,
     cancelled: Icons.cancel,
+    rejected: Icons.close,
   };
 
   static const Map<String, IconData> deliveryStatusIcons = {
-    waiting: Icons.search,
-    pickingUp: Icons.directions_car,
-    onDelivery: Icons.delivery_dining,
-    delivered: Icons.check_circle,
+    deliveryPending: Icons.search,
+    pickedUp: Icons.check,
+    onWay: Icons.delivery_dining,
+    deliveryDelivered: Icons.check_circle,
   };
 
   // Status progression
   static const Map<String, int> orderStatusOrder = {
     pending: 0,
-    approved: 1,
+    confirmed: 1, // FIXED
     preparing: 2,
-    onDelivery: 3,
-    delivered: 4,
-    cancelled: -1, // Special case for cancelled
+    readyForPickup: 3,
+    onDelivery: 4,
+    delivered: 5,
+    cancelled: -1,
+    rejected: -2,
   };
 
   static const Map<String, int> deliveryStatusOrder = {
-    waiting: 0,
-    pickingUp: 1,
-    onDelivery: 2,
-    delivered: 3,
+    deliveryPending: 0,
+    pickedUp: 1,
+    onWay: 2,
+    deliveryDelivered: 3,
   };
-
-  static String getStatusName(String status) {
-    return orderStatusNames[status] ?? status;
-  }
-
-  static String getStatusDescription(String status) {
-    return orderStatusDescriptions[status] ?? '';
-  }
 
   // Utility methods
   static String getOrderStatusName(String status) {
@@ -246,7 +195,7 @@ class OrderStatusConstants {
   }
 
   static bool canTrackOrder(String status) {
-    return [preparing, onDelivery].contains(status);
+    return [preparing, readyForPickup, onDelivery].contains(status);
   }
 
   static bool canReviewOrder(String status) {
@@ -264,10 +213,12 @@ class OrderStatusConstants {
   static String getNextOrderStatus(String currentStatus) {
     switch (currentStatus) {
       case pending:
-        return approved;
-      case approved:
+        return confirmed; // FIXED
+      case confirmed: // FIXED
         return preparing;
       case preparing:
+        return readyForPickup; // FIXED
+      case readyForPickup: // DITAMBAHKAN
         return onDelivery;
       case onDelivery:
         return delivered;
@@ -278,22 +229,83 @@ class OrderStatusConstants {
 
   static String getNextDeliveryStatus(String currentStatus) {
     switch (currentStatus) {
-      case waiting:
-        return pickingUp;
-      case pickingUp:
-        return onDelivery;
-      case onDelivery:
-        return delivered;
+      case deliveryPending:
+        return pickedUp;
+      case pickedUp:
+        return onWay;
+      case onWay:
+        return deliveryDelivered;
       default:
         return currentStatus;
     }
   }
 
   static List<String> getOrderStatusTimeline() {
-    return [pending, approved, preparing, onDelivery, delivered];
+    return [
+      pending,
+      confirmed,
+      preparing,
+      readyForPickup,
+      onDelivery,
+      delivered
+    ];
   }
 
   static List<String> getDeliveryStatusTimeline() {
-    return [waiting, pickingUp, onDelivery, delivered];
+    return [deliveryPending, pickedUp, onWay, deliveryDelivered];
+  }
+
+  // Helper methods
+  static bool isActiveStatus(String status) {
+    return activeOrderStatuses.contains(status);
+  }
+
+  static bool isCompletedStatus(String status) {
+    return status == delivered;
+  }
+
+  static bool isCancelledStatus(String status) {
+    return [cancelled, rejected].contains(status);
+  }
+
+  static bool canTrack(String status) {
+    return canTrackOrder(status);
+  }
+
+  static bool canCancel(String status) {
+    return canCancelOrder(status);
+  }
+
+  static bool canReview(String status) {
+    return canReviewOrder(status);
+  }
+
+  static String getDisplayName(String status) {
+    return getOrderStatusName(status);
+  }
+
+  static String getStatusColor(String status) {
+    final color = getOrderStatusColor(status);
+    if (color == AppColors.orderPending || color == AppColors.orderApproved) {
+      return 'warning';
+    } else if (color == AppColors.info) {
+      return 'info';
+    } else if (color == AppColors.orderOnDelivery) {
+      return 'secondary';
+    } else if (color == AppColors.orderDelivered) {
+      return 'success';
+    } else if (color == AppColors.orderCancelled || color == AppColors.error) {
+      return 'error';
+    } else {
+      return 'default';
+    }
+  }
+
+  static String getStatusName(String status) {
+    return getOrderStatusName(status);
+  }
+
+  static String getStatusDescription(String status) {
+    return getOrderStatusDescription(status);
   }
 }

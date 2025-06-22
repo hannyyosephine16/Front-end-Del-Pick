@@ -1,26 +1,22 @@
-// lib/core/constants/app_constants.dart - SESUAI BACKEND
+// lib/core/constants/app_constants.dart - FIXED TO MATCH BACKEND
 class AppConstants {
   // App Information
   static const String appName = 'DelPick';
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
 
-  // ========================================================================
-  // USER ROLES (sesuai backend - HANYA 3 ROLE)
-  // ========================================================================
+  // USER ROLES
   static const String roleCustomer = 'customer';
   static const String roleDriver = 'driver';
   static const String roleStore = 'store';
 
   static const List<String> validRoles = [roleCustomer, roleDriver, roleStore];
 
-  // ========================================================================
   // ORDER STATUSES (sesuai backend models/order.js)
-  // ========================================================================
   static const String orderPending = 'pending';
-  static const String orderConfirmed = 'confirmed';
+  static const String orderConfirmed = 'confirmed'; // BUKAN 'approved'
   static const String orderPreparing = 'preparing';
-  static const String orderReadyForPickup = 'ready_for_pickup';
+  static const String orderReadyForPickup = 'ready_for_pickup'; // DITAMBAHKAN
   static const String orderOnDelivery = 'on_delivery';
   static const String orderDelivered = 'delivered';
   static const String orderCancelled = 'cancelled';
@@ -88,10 +84,10 @@ class AppConstants {
   ];
 
   // MENU ITEM STATUS
-  static const String menuAvailable = 'available';
-  static const String menuUnavailable = 'unavailable';
+  static const bool menuAvailable = true;
+  static const bool menuUnavailable = false;
 
-  // VALIDATION RULES (sesuai backend validations/schemas.js)
+  // VALIDATION RULES
   static const int minPasswordLength = 6;
   static const int maxPasswordLength = 50;
   static const int minNameLength = 3;
@@ -100,7 +96,7 @@ class AppConstants {
   static const int maxAddressLength = 255;
   static const int maxNotesLength = 255;
 
-  // Regular expressions (sesuai backend validation)
+  // Regular expressions
   static const String emailRegex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$';
   static const String phoneRegex = r'^[0-9]{10,13}$'; // sesuai backend
   static const String passwordRegex = r'^.{6,}$'; // minimal 6 karakter
@@ -111,9 +107,9 @@ class AppConstants {
 
   // PAGINATION (sesuai backend)
   static const int defaultPageSize = 10;
-  static const int maxPageSize = 50;
+  static const int maxPageSize = 100;
 
-  // LOCATION (sesuai backend app_config.dart)
+  // LOCATION (sesuai backend)
   static const double defaultLatitude = 2.38349390603264; // IT Del
   static const double defaultLongitude = 99.14866498216043;
   static const double maxDeliveryRadius = 5.0; // km
@@ -168,9 +164,6 @@ class AppConstants {
   static const double minZoom = 5.0;
   static const double maxZoom = 20.0;
 
-  // SERVICE CHARGE
-  static const double serviceChargeRate = 0.1; // 10%
-
   // ERROR MESSAGES
   static const String errorGeneral = 'Terjadi kesalahan. Silakan coba lagi.';
   static const String errorNetwork =
@@ -191,92 +184,44 @@ class AppConstants {
   static const String successOrderPlaced = 'Pesanan berhasil dibuat';
   static const String successOrderCancelled = 'Pesanan berhasil dibatalkan';
 
-  // User Roles
-  static const List<String> userRoles = ['customer', 'driver', 'store'];
-
-  // Order Status
-  static const List<String> orderStatuses = [
-    'pending',
-    'confirmed',
-    'preparing',
-    'ready_for_pickup',
-    'on_delivery',
-    'delivered',
-    'cancelled',
-    'rejected'
-  ];
-
-  // Delivery Status
-  static const List<String> deliveryStatuses = [
-    'pending',
-    'picked_up',
-    'on_way',
-    'delivered'
-  ];
-
-  // Driver Status
-  static const List<String> driverStatuses = ['active', 'inactive', 'busy'];
-
-  // Store Status
-  static const List<String> storeStatuses = ['active', 'inactive', 'closed'];
-
-  // Driver Request Status
-  static const List<String> driverRequestStatuses = [
-    'pending',
-    'accepted',
-    'rejected',
-    'completed',
-    'expired'
-  ];
-
   // UTILITY METHODS
-  /// Check if role is valid
   static bool isValidRole(String? role) {
     return role != null && validRoles.contains(role);
   }
 
-  /// Check if order status is valid
   static bool isValidOrderStatus(String? status) {
     return status != null && allOrderStatuses.contains(status);
   }
 
-  /// Check if delivery status is valid
   static bool isValidDeliveryStatus(String? status) {
     return status != null && allDeliveryStatuses.contains(status);
   }
 
-  /// Check if driver status is valid
   static bool isValidDriverStatus(String? status) {
     return status != null && allDriverStatuses.contains(status);
   }
 
-  /// Check if store status is valid
   static bool isValidStoreStatus(String? status) {
     return status != null && allStoreStatuses.contains(status);
   }
 
-  /// Check if driver request status is valid
   static bool isValidDriverRequestStatus(String? status) {
     return status != null && allDriverRequestStatuses.contains(status);
   }
 
-  /// Check if order can be cancelled
   static bool canCancelOrder(String status) {
     return [orderPending, orderConfirmed, orderPreparing].contains(status);
   }
 
-  /// Check if order can be tracked
   static bool canTrackOrder(String status) {
     return [orderPreparing, orderReadyForPickup, orderOnDelivery]
         .contains(status);
   }
 
-  /// Check if driver can accept requests
   static bool canDriverAcceptRequests(String status) {
     return status == driverActive;
   }
 
-  /// Check if store is operational
   static bool isStoreOperational(String status) {
     return status == storeActive;
   }
