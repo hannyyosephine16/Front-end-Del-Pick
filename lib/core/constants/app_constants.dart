@@ -12,11 +12,11 @@ class AppConstants {
 
   static const List<String> validRoles = [roleCustomer, roleDriver, roleStore];
 
-  // ORDER STATUSES (sesuai backend models/order.js)
+  // ORDER STATUSES
   static const String orderPending = 'pending';
-  static const String orderConfirmed = 'confirmed'; // BUKAN 'approved'
+  static const String orderConfirmed = 'confirmed';
   static const String orderPreparing = 'preparing';
-  static const String orderReadyForPickup = 'ready_for_pickup'; // DITAMBAHKAN
+  static const String orderReadyForPickup = 'ready_for_pickup';
   static const String orderOnDelivery = 'on_delivery';
   static const String orderDelivered = 'delivered';
   static const String orderCancelled = 'cancelled';
@@ -33,7 +33,7 @@ class AppConstants {
     orderRejected,
   ];
 
-  // DELIVERY STATUSES (sesuai backend models/order.js)
+  // DELIVERY STATUSES
   static const String deliveryPending = 'pending';
   static const String deliveryPickedUp = 'picked_up';
   static const String deliveryOnWay = 'on_way';
@@ -110,6 +110,14 @@ class AppConstants {
   static const int maxPageSize = 100;
 
   // LOCATION (sesuai backend)
+
+  // Default static coordinates IT DEL(Customer)
+  static const double destinationLatitude = 2.3834831864787818;
+  static const double destinationLongitude = 99.14857915147614;
+
+  // Delivery fee calculation
+  static const double deliveryFeePerKm = 2000; // Rp 2000/km
+
   static const double defaultLatitude = 2.38349390603264; // IT Del
   static const double defaultLongitude = 99.14866498216043;
   static const double maxDeliveryRadius = 5.0; // km
@@ -156,7 +164,7 @@ class AppConstants {
   static const String notificationGeneral = 'general';
 
   // LANGUAGES
-  static const String defaultLanguage = 'id'; // Indonesia sebagai default
+  static const String defaultLanguage = 'id';
   static const List<String> supportedLanguages = ['id', 'en'];
 
   // MAPS

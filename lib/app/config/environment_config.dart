@@ -1,6 +1,6 @@
-// lib/app/config/environment_config.dart
+// lib/app/config/environment_config.dart - FIXED TO MATCH BACKEND
 class EnvironmentConfig {
-  // API Configuration (sesuai backend)
+  // API Configuration (sesuai backend server.js dan routes)
   static const String baseUrl = 'https://delpick.horas-code.my.id/api/v1';
   static const String socketUrl = 'https://delpick.horas-code.my.id';
   static const bool enableLogging = true;

@@ -1,3 +1,4 @@
+import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 
 class AppColors {
@@ -42,7 +43,7 @@ class AppColors {
 
   // Order status colors
   static const Color orderPending = Color(0xFFFF9800);
-  static const Color orderApproved = Color(0xFF2196F3);
+  static const Color orderConfirmed = Color(0xFF2196F3);
   static const Color orderPreparing = Color(0xFFFF5722);
   static const Color orderOnDelivery = Color(0xFF9C27B0);
   static const Color orderDelivered = Color(0xFF4CAF50);
@@ -110,24 +111,24 @@ class AppColors {
     return getOrderStatusColor(status).withOpacity(0.1);
   }
 
-  /// Utility method to get order status color
+  /// Utility method to get order status color (SESUAI BACKEND)
   static Color getOrderStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'pending':
+      case AppConstants.orderPending:
         return orderPending;
-      case 'confirmed':
-        return orderApproved;
-      case 'preparing':
+      case AppConstants.orderConfirmed:
+        return orderConfirmed;
+      case AppConstants.orderPreparing:
         return orderPreparing;
-      case 'ready_for_pickup':
+      case AppConstants.orderReadyForPickup:
         return info;
-      case 'on_delivery':
+      case AppConstants.orderOnDelivery:
         return orderOnDelivery;
-      case 'delivered':
+      case AppConstants.orderDelivered:
         return orderDelivered;
-      case 'cancelled':
+      case AppConstants.orderCancelled:
         return orderCancelled;
-      case 'rejected':
+      case AppConstants.orderRejected:
         return error;
       default:
         return textSecondary;
@@ -137,11 +138,11 @@ class AppColors {
   /// Utility method to get driver status color
   static Color getDriverStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'active':
+      case AppConstants.driverActive:
         return driverActive;
-      case 'inactive':
+      case AppConstants.driverInactive:
         return driverInactive;
-      case 'busy':
+      case AppConstants.driverBusy:
         return driverBusy;
       default:
         return textSecondary;
@@ -150,14 +151,11 @@ class AppColors {
 
   static Color getStoreStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'active':
-      case 'open':
+      case AppConstants.storeActive:
         return storeOpen;
-      case 'inactive':
-      case 'closed':
+      case AppConstants.storeInactive:
+      case AppConstants.storeClosed:
         return storeClosed;
-      case 'busy':
-        return storeBusy;
       default:
         return textSecondary;
     }
@@ -166,32 +164,31 @@ class AppColors {
   /// Method untuk driver request status (sesuai backend)
   static Color getDriverRequestStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'pending':
+      case AppConstants.requestPending:
         return orderPending;
-      case 'accepted':
-        return orderApproved;
-      case 'rejected':
+      case AppConstants.requestAccepted:
+        return orderConfirmed;
+      case AppConstants.requestRejected:
         return orderCancelled;
-      case 'completed':
+      case AppConstants.requestCompleted:
         return orderDelivered;
-      case 'expired':
+      case AppConstants.requestExpired:
         return textSecondary;
       default:
         return textSecondary;
     }
   }
-  // static const Color orderCancelled = Color(0xFFF44336);
 
-  /// Method untuk delivery status:
+  /// Method untuk delivery status (SESUAI BACKEND):
   static Color getDeliveryStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'waiting':
+      case AppConstants.deliveryPending:
         return orderPending;
-      case 'picking_up':
-        return orderApproved;
-      case 'on_delivery':
+      case AppConstants.deliveryPickedUp:
+        return orderConfirmed;
+      case AppConstants.deliveryOnWay:
         return orderOnDelivery;
-      case 'delivered':
+      case AppConstants.deliveryDelivered:
         return orderDelivered;
       default:
         return textSecondary;
