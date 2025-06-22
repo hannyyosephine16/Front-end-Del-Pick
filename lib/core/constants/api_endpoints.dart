@@ -1,135 +1,104 @@
-// lib/core/constants/api_endpoints.dart - ENHANCED VERSION
-class ApiEndpoints {
-  // Base URLs
-  static const String baseUrl = 'https://delpick.horas-code.my.id/api/v1';
+// lib/core/constants/api_endpoints.dart
+import 'package:del_pick/app/app.dart';
 
-  // Base paths
+class ApiEndpoints {
+  /// Base URLs
+  static const String baseUrl = EnvironmentConfig.baseUrl;
+
+  /// Base paths
   static const String auth = '/auth';
+  static const String users = '/users';
   static const String customers = '/customers';
   static const String drivers = '/drivers';
   static const String stores = '/stores';
-  static const String menuItems = '/menu';
+  static const String menu = '/menu';
   static const String orders = '/orders';
   static const String driverRequests = '/driver-requests';
-  static const String tracking = '/tracking';
+  static const String health = '/health';
 
-  // Auth endpoints
+  /// AUTH ENDPOINTS
   static const String login = '$auth/login';
   static const String register = '$auth/register';
   static const String logout = '$auth/logout';
   static const String profile = '$auth/profile';
-  static const String updateProfile = '$auth/update-profile';
   static const String forgotPassword = '$auth/forgot-password';
   static const String resetPassword = '$auth/reset-password';
+  static const String verifyEmail = '$auth/verify-email';
+  static const String resendVerification = '$auth/resend-verification';
 
-  // ✅ ADDED: Customer endpoints (berdasarkan backend Anda)
+  /// USER ENDPOINTS
+  static const String updateProfile = '$users/profile';
+  static const String deleteProfile = '$users/profile';
+  static const String updateFcmToken = '$users/fcm-token';
+  static const String notifications = '$users/notifications';
+  static String markNotificationAsRead(int id) =>
+      '$users/notifications/$id/read';
+  static String deleteNotification(int id) => '$users/notifications/$id';
+
+  /// CUSTOMER ENDPOINTS (sesuai backend routes/v1/customerRoutes.js)
   static const String getAllCustomers = customers;
   static String getCustomerById(int id) => '$customers/$id';
   static const String createCustomer = customers;
   static String updateCustomer(int id) => '$customers/$id';
   static String deleteCustomer(int id) => '$customers/$id';
 
-  // Store endpoints
+  /// STORE ENDPOINTS (sesuai backend routes/v1/storeRoutes.js)
   static const String getAllStores = stores;
   static String getStoreById(int id) => '$stores/$id';
   static const String createStore = stores;
   static String updateStore(int id) => '$stores/$id';
   static String deleteStore(int id) => '$stores/$id';
-  static const String updateStoreProfile = '$stores/update';
-  static String updateStoreStatus(int id) => '$stores/$id/status';
 
-  // Menu item endpoints
-  static const String getAllMenuItems = menuItems;
-  static String getMenuItemsByStoreId(int storeId) =>
-      '$menuItems/store/$storeId';
-  static String getMenuItemById(int id) => '$menuItems/$id';
-  static const String createMenuItem = menuItems;
-  static String updateMenuItem(int id) => '$menuItems/$id';
-  static String deleteMenuItem(int id) => '$menuItems/$id';
+  /// MENU ENDPOINTS (sesuai backend routes/v1/menuRoutes.js)
+  static const String getAllMenuItems = menu;
+  static String getMenuItemsByStoreId(int storeId) => '$menu/store/$storeId';
+  static String getMenuItemById(int id) => '$menu/$id';
+  static const String createMenuItem = menu;
+  static String updateMenuItem(int id) => '$menu/$id';
+  static String deleteMenuItem(int id) => '$menu/$id';
+  static String updateMenuItemStatus(int id) => '$menu/$id/status';
 
-  // Order endpoints
+  /// ORDER ENDPOINTS (sesuai backend routes/v1/orderRoutes.js)
   static const String createOrder = orders;
-  static const String userOrders = '$orders/user';
-  static const String storeOrders = '$orders/store';
+  static const String customerOrders = '$orders/customer'; // sesuai backend
+  static const String storeOrders = '$orders/store'; // sesuai backend
   static String getOrderById(int id) => '$orders/$id';
-  static String processOrder(int id) => '$orders/$id/process';
-  static String cancelOrder(int id) => '$orders/$id/cancel';
-  static const String createReview = '$orders/review';
-  static const String updateOrderStatus = '$orders/status';
+  static String updateOrderStatus(int id) => '$orders/$id/status';
+  static String processOrder(int id) => '$orders/$id/process'; // sesuai backend
+  static String createOrderReview(int id) => '$orders/$id/review';
 
-  // Driver endpoints
+  /// TRACKING ENDPOINTS (sesuai backend routes/v1/orderRoutes.js)
+  static String getOrderTracking(int orderId) => '$orders/$orderId/tracking';
+  static String startDelivery(int orderId) => '$orders/$orderId/tracking/start';
+  static String completeDelivery(int orderId) =>
+      '$orders/$orderId/tracking/complete';
+  static String updateTrackingDriverLocation(int orderId) =>
+      '$orders/$orderId/tracking/location';
+  static String getTrackingHistory(int orderId) =>
+      '$orders/$orderId/tracking/history';
+
+  /// DRIVER ENDPOINTS (sesuai backend routes/v1/driverRoutes.js)
   static const String getAllDrivers = drivers;
   static String getDriverById(int id) => '$drivers/$id';
   static const String createDriver = drivers;
   static String updateDriver(int id) => '$drivers/$id';
   static String deleteDriver(int id) => '$drivers/$id';
-  static const String updateDriverLocation = '$drivers/location';
-  static String getDriverLocation(int driverId) =>
-      '$drivers/$driverId/location';
-  static const String updateDriverStatus = '$drivers/status';
-  static const String updateDriverProfile = '$drivers/update';
-  static const String driverOrders = '$drivers/orders';
+  static String updateDriverStatus(int id) => '$drivers/$id/status';
+  static String updateDriverLocation(int id) => '$drivers/$id/location';
 
-  // Driver request endpoints
+  /// DRIVER REQUEST ENDPOINTS (sesuai backend routes/v1/driverRequestRoutes.js)
   static const String getDriverRequests = driverRequests;
   static String getDriverRequestById(int id) => '$driverRequests/$id';
   static String respondToDriverRequest(int id) => '$driverRequests/$id/respond';
 
-  // Tracking endpoints
-  static String getTrackingData(int orderId) => '$tracking/$orderId';
-  static String startDelivery(int orderId) => '$tracking/$orderId/start';
-  static String completeDelivery(int orderId) => '$tracking/$orderId/complete';
+  /// HEALTH CHECK ENDPOINTS (sesuai backend routes/v1/healthRoutes.js)
+  static const String healthCheck = health;
+  static const String healthDatabase = '$health/db';
+  static const String healthCache = '$health/cache';
+  static const String healthStorage = '$health/storage';
 
-  // ✅ ADDED: File upload endpoints (jika backend support)
-  static const String uploadImage = '/upload/image';
-  static const String uploadAvatar = '/upload/avatar';
-  static const String uploadStoreImage = '/upload/store';
-  static const String uploadMenuImage = '/upload/menu';
-
-  // ✅ ADDED: Search endpoints (useful untuk future features)
-  static const String searchStores = '$stores/search';
-  static const String searchMenuItems = '$menuItems/search';
-  static const String searchOrders = '$orders/search';
-
-  // ✅ ADDED: Statistics endpoints (untuk dashboard/analytics)
-  static const String orderStatistics = '$orders/statistics';
-  static const String storeStatistics = '$stores/statistics';
-  static const String driverStatistics = '$drivers/statistics';
-  static const String userStatistics = '$customers/statistics';
-
-  // ✅ ADDED: Notification endpoints (future feature)
-  static const String notifications = '/notifications';
-  static const String markNotificationRead = '$notifications/read';
-  static const String getUnreadCount = '$notifications/unread-count';
-
-  // ✅ ADDED: Location services
-  static const String getNearbyStores = '$stores/nearby';
-  static const String getDeliveryZones = '/delivery-zones';
-  static const String checkDeliveryAvailability = '/delivery/check';
-
-  // ✅ ADDED: Admin endpoints (untuk management)
-  static const String adminDashboard = '/admin/dashboard';
-  static const String adminReports = '/admin/reports';
-  static const String adminSettings = '/admin/settings';
-
-  // ✅ ADDED: Payment endpoints (jika ada integration)
-  static const String payments = '/payments';
-  static const String createPayment = '$payments/create';
-  static const String verifyPayment = '$payments/verify';
-  static const String paymentHistory = '$payments/history';
-
-  // ✅ ADDED: Promotion/Coupon endpoints (future feature)
-  static const String promotions = '/promotions';
-  static const String coupons = '/coupons';
-  static const String applyCoupon = '$coupons/apply';
-  static const String validateCoupon = '$coupons/validate';
-
-  // ✅ ADDED: App configuration endpoints
-  static const String appConfig = '/config';
-  static const String appVersion = '/version';
-  static const String maintenanceMode = '/maintenance';
-
-  // ✅ ADDED: Helper methods dengan query parameters
+  /// HELPER METHODS DENGAN QUERY PARAMETERS
+  /// Get stores with filters
   static String getStoresWithFilters({
     double? latitude,
     double? longitude,
@@ -148,15 +117,13 @@ class ApiEndpoints {
     if (page != null) params['page'] = page;
     if (limit != null) params['limit'] = limit;
 
-    final queryString =
-        params.entries.map((e) => '${e.key}=${e.value}').join('&');
-
-    return queryString.isEmpty ? stores : '$stores?$queryString';
+    return _buildUrlWithParams(stores, params);
   }
 
+  /// Get orders with filters
   static String getOrdersWithFilters({
     String? status,
-    String? userId,
+    String? customerId,
     String? storeId,
     String? driverId,
     DateTime? startDate,
@@ -166,42 +133,71 @@ class ApiEndpoints {
   }) {
     final params = <String, dynamic>{};
     if (status != null) params['status'] = status;
-    if (userId != null) params['userId'] = userId;
-    if (storeId != null) params['storeId'] = storeId;
-    if (driverId != null) params['driverId'] = driverId;
-    if (startDate != null) params['startDate'] = startDate.toIso8601String();
-    if (endDate != null) params['endDate'] = endDate.toIso8601String();
+    if (customerId != null) params['customer_id'] = customerId;
+    if (storeId != null) params['store_id'] = storeId;
+    if (driverId != null) params['driver_id'] = driverId;
+    if (startDate != null) params['start_date'] = startDate.toIso8601String();
+    if (endDate != null) params['end_date'] = endDate.toIso8601String();
     if (page != null) params['page'] = page;
     if (limit != null) params['limit'] = limit;
 
-    final queryString =
-        params.entries.map((e) => '${e.key}=${e.value}').join('&');
-
-    return queryString.isEmpty ? orders : '$orders?$queryString';
+    return _buildUrlWithParams(orders, params);
   }
 
-  // ✅ ADDED: Pagination helper
+  /// Get menu items with filters
+  static String getMenuItemsWithFilters({
+    int? storeId,
+    String? category,
+    bool? isAvailable,
+    double? minPrice,
+    double? maxPrice,
+    String? search,
+    int? page,
+    int? limit,
+  }) {
+    final params = <String, dynamic>{};
+    if (storeId != null) params['store_id'] = storeId;
+    if (category != null) params['category'] = category;
+    if (isAvailable != null) params['is_available'] = isAvailable;
+    if (minPrice != null) params['min_price'] = minPrice;
+    if (maxPrice != null) params['max_price'] = maxPrice;
+    if (search != null) params['search'] = search;
+    if (page != null) params['page'] = page;
+    if (limit != null) params['limit'] = limit;
+
+    return _buildUrlWithParams(menu, params);
+  }
+
+  /// Add pagination to endpoint
   static String addPagination(String endpoint, {int? page, int? limit}) {
     final params = <String, dynamic>{};
     if (page != null) params['page'] = page;
     if (limit != null) params['limit'] = limit;
 
+    return _buildUrlWithParams(endpoint, params);
+  }
+
+  /// Build URL with query parameters
+  static String _buildUrlWithParams(
+      String endpoint, Map<String, dynamic> params) {
     if (params.isEmpty) return endpoint;
 
-    final queryString =
-        params.entries.map((e) => '${e.key}=${e.value}').join('&');
+    final queryString = params.entries
+        .map((e) => '${e.key}=${Uri.encodeComponent(e.value.toString())}')
+        .join('&');
 
     final separator = endpoint.contains('?') ? '&' : '?';
     return '$endpoint$separator$queryString';
   }
 
-  // ✅ ADDED: API versioning support
-  static String v1(String endpoint) => '/api/v1$endpoint';
-  static String v2(String endpoint) => '/api/v2$endpoint';
+  /// Get full URL
+  static String getFullUrl(String endpoint) {
+    return '$baseUrl$endpoint';
+  }
 
-  // Review endpoints (existing)
-  static const String reviews = '/reviews';
-  static String getStoreReviews(int storeId) => '$reviews/store/$storeId';
-  static String getDriverReviews(int driverId) => '$reviews/driver/$driverId';
-  static String getUserReviews(int userId) => '$reviews/user/$userId';
+  /// Get full URL with parameters
+  static String getFullUrlWithParams(
+      String endpoint, Map<String, dynamic> params) {
+    return getFullUrl(_buildUrlWithParams(endpoint, params));
+  }
 }

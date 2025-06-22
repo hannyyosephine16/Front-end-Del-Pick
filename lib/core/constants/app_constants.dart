@@ -1,177 +1,283 @@
-// lib/core/constants/app_constants.dart
+// lib/core/constants/app_constants.dart - SESUAI BACKEND
 class AppConstants {
+  // App Information
   static const String appName = 'DelPick';
   static const String appVersion = '1.0.0';
   static const String appBuildNumber = '1';
 
-  // User roles
+  // ========================================================================
+  // USER ROLES (sesuai backend - HANYA 3 ROLE)
+  // ========================================================================
   static const String roleCustomer = 'customer';
   static const String roleDriver = 'driver';
   static const String roleStore = 'store';
-  static const String roleAdmin = 'admin';
 
-  // Order statuses
+  static const List<String> validRoles = [roleCustomer, roleDriver, roleStore];
+
+  // ========================================================================
+  // ORDER STATUSES (sesuai backend models/order.js)
+  // ========================================================================
   static const String orderPending = 'pending';
-  static const String orderApproved = 'approved';
+  static const String orderConfirmed = 'confirmed';
   static const String orderPreparing = 'preparing';
+  static const String orderReadyForPickup = 'ready_for_pickup';
   static const String orderOnDelivery = 'on_delivery';
   static const String orderDelivered = 'delivered';
   static const String orderCancelled = 'cancelled';
+  static const String orderRejected = 'rejected';
 
-  // Delivery statuses
-  static const String deliveryWaiting = 'waiting';
-  static const String deliveryPickingUp = 'picking_up';
-  static const String deliveryOnDelivery = 'on_delivery';
+  static const List<String> allOrderStatuses = [
+    orderPending,
+    orderConfirmed,
+    orderPreparing,
+    orderReadyForPickup,
+    orderOnDelivery,
+    orderDelivered,
+    orderCancelled,
+    orderRejected,
+  ];
+
+  // DELIVERY STATUSES (sesuai backend models/order.js)
+  static const String deliveryPending = 'pending';
+  static const String deliveryPickedUp = 'picked_up';
+  static const String deliveryOnWay = 'on_way';
   static const String deliveryDelivered = 'delivered';
 
-  // Driver statuses
+  static const List<String> allDeliveryStatuses = [
+    deliveryPending,
+    deliveryPickedUp,
+    deliveryOnWay,
+    deliveryDelivered,
+  ];
+
+  // DRIVER STATUSES (sesuai backend models/driver.js)
   static const String driverActive = 'active';
   static const String driverInactive = 'inactive';
   static const String driverBusy = 'busy';
 
-  // Store statuses
-  static const String storeOpen = 'active';
-  static const String storeClosed = 'inactive';
+  static const List<String> allDriverStatuses = [
+    driverActive,
+    driverInactive,
+    driverBusy,
+  ];
 
-  // Request statuses
+  // STORE STATUSES (sesuai backend models/store.js)
+  static const String storeActive = 'active';
+  static const String storeInactive = 'inactive';
+  static const String storeClosed = 'closed';
+
+  static const List<String> allStoreStatuses = [
+    storeActive,
+    storeInactive,
+    storeClosed,
+  ];
+
+  // DRIVER REQUEST STATUSES (sesuai backend models/driverRequest.js)
   static const String requestPending = 'pending';
   static const String requestAccepted = 'accepted';
   static const String requestRejected = 'rejected';
-  static const String requestExpired = 'expired';
   static const String requestCompleted = 'completed';
+  static const String requestExpired = 'expired';
 
-  // Payment statuses
-  static const String paymentPending = 'pending';
-  static const String paymentPaid = 'paid';
-  static const String paymentFailed = 'failed';
-  static const String paymentRefunded = 'refunded';
+  static const List<String> allDriverRequestStatuses = [
+    requestPending,
+    requestAccepted,
+    requestRejected,
+    requestCompleted,
+    requestExpired,
+  ];
 
-  // Image upload
+  // MENU ITEM STATUS
+  static const String menuAvailable = 'available';
+  static const String menuUnavailable = 'unavailable';
+
+  // VALIDATION RULES (sesuai backend validations/schemas.js)
+  static const int minPasswordLength = 6;
+  static const int maxPasswordLength = 50;
+  static const int minNameLength = 3;
+  static const int maxNameLength = 50;
+  static const int maxDescriptionLength = 500;
+  static const int maxAddressLength = 255;
+  static const int maxNotesLength = 255;
+
+  // Regular expressions (sesuai backend validation)
+  static const String emailRegex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$';
+  static const String phoneRegex = r'^[0-9]{10,13}$'; // sesuai backend
+  static const String passwordRegex = r'^.{6,}$'; // minimal 6 karakter
+
+  // IMAGE UPLOAD (sesuai backend)
   static const int maxImageSizeMB = 5;
   static const List<String> allowedImageFormats = ['jpg', 'jpeg', 'png'];
 
-  // Pagination
+  // PAGINATION (sesuai backend)
   static const int defaultPageSize = 10;
   static const int maxPageSize = 50;
 
-  // Location
+  // LOCATION (sesuai backend app_config.dart)
   static const double defaultLatitude = 2.38349390603264; // IT Del
   static const double defaultLongitude = 99.14866498216043;
   static const double maxDeliveryRadius = 5.0; // km
   static const int locationUpdateInterval = 15; // seconds
 
-  // Rating
+  // RATING (sesuai backend)
   static const int minRating = 1;
   static const int maxRating = 5;
 
-  // Currency
+  // CURRENCY
   static const String currency = 'IDR';
   static const String currencySymbol = 'Rp';
 
-  // Time formats
+  // TIME FORMATS (sesuai backend)
   static const String dateFormat = 'dd/MM/yyyy';
   static const String timeFormat = 'HH:mm';
   static const String dateTimeFormat = 'dd/MM/yyyy HH:mm';
   static const String apiDateFormat = 'yyyy-MM-dd';
   static const String apiDateTimeFormat = 'yyyy-MM-ddTHH:mm:ss.SSSZ';
 
-  // Validation
-  static const int minPasswordLength = 6;
-  static const int maxPasswordLength = 100;
-  static const int minNameLength = 3;
-  static const int maxNameLength = 50;
-  static const int maxDescriptionLength = 500;
-  static const int maxAddressLength = 200;
-  static const int maxNotesLength = 500;
-
-  // Regular expressions - Fixed string literals
-  static const String emailRegex = r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$';
-  static const String phoneRegex = r'^[0-9]{10,15}$';
-  static const String passwordRegex =
-      r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d@$!%*?&]{6,}$';
-
-  // Animation durations
-  static const int shortAnimationDuration = 200;
-  static const int mediumAnimationDuration = 300;
-  static const int longAnimationDuration = 500;
-
-  // Timeouts
+  // TIMEOUTS (sesuai backend)
   static const int apiTimeout = 30; // seconds
   static const int connectionTimeout = 10; // seconds
   static const int orderCancelTimeout = 15 * 60; // 15 minutes
-  static const int driverRequestTimeout = 2 * 60; // 2 minutes
+  static const int driverRequestTimeout =
+      15 * 60; // 15 minutes (sesuai backend)
 
-  // Cache durations
+  // CACHE DURATIONS
   static const int shortCacheDuration = 5 * 60; // 5 minutes
   static const int mediumCacheDuration = 30 * 60; // 30 minutes
   static const int longCacheDuration = 60 * 60; // 1 hour
   static const int verylongCacheDuration = 24 * 60 * 60; // 24 hours
 
-  // Notification types
+  // ANIMATION DURATIONS
+  static const int shortAnimationDuration = 200;
+  static const int mediumAnimationDuration = 300;
+  static const int longAnimationDuration = 500;
+
+  // NOTIFICATION TYPES
   static const String notificationOrderUpdate = 'order_update';
   static const String notificationDeliveryUpdate = 'delivery_update';
+  static const String notificationDriverRequest = 'driver_request';
   static const String notificationPromotion = 'promotion';
   static const String notificationGeneral = 'general';
-  static const String notificationDriverRequest = 'driver_request';
 
-  // Languages
-  static const String defaultLanguage = 'en';
-  static const List<String> supportedLanguages = ['en', 'id'];
+  // LANGUAGES
+  static const String defaultLanguage = 'id'; // Indonesia sebagai default
+  static const List<String> supportedLanguages = ['id', 'en'];
 
-  // Maps
+  // MAPS
   static const double defaultZoom = 15.0;
   static const double minZoom = 5.0;
   static const double maxZoom = 20.0;
 
-  // Service charge
+  // SERVICE CHARGE
   static const double serviceChargeRate = 0.1; // 10%
 
-  // Error messages
-  static const String errorGeneral = 'Something went wrong. Please try again.';
+  // ERROR MESSAGES
+  static const String errorGeneral = 'Terjadi kesalahan. Silakan coba lagi.';
   static const String errorNetwork =
-      'Network error. Please check your connection.';
-  static const String errorTimeout = 'Request timeout. Please try again.';
+      'Tidak ada koneksi internet. Periksa koneksi Anda.';
+  static const String errorTimeout = 'Permintaan timeout. Silakan coba lagi.';
   static const String errorUnauthorized =
-      'You are not authorized to perform this action.';
-  static const String errorNotFound = 'Requested resource not found.';
-  static const String errorValidation =
-      'Please check your input and try again.';
-  static const String errorServer = 'Server error. Please try again later.';
+      'Anda tidak memiliki izin untuk melakukan tindakan ini.';
+  static const String errorNotFound = 'Data yang diminta tidak ditemukan.';
+  static const String errorValidation = 'Periksa input Anda dan coba lagi.';
+  static const String errorServer =
+      'Kesalahan server. Silakan coba lagi nanti.';
 
-  // Success messages
-  static const String successLogin = 'Login successful';
-  static const String successRegister = 'Registration successful';
-  static const String successUpdate = 'Update successful';
-  static const String successDelete = 'Delete successful';
-  static const String successOrderPlaced = 'Order placed successfully';
-  static const String successOrderCancelled = 'Order cancelled successfully';
+  // SUCCESS MESSAGES
+  static const String successLogin = 'Login berhasil';
+  static const String successRegister = 'Registrasi berhasil';
+  static const String successUpdate = 'Update berhasil';
+  static const String successDelete = 'Hapus berhasil';
+  static const String successOrderPlaced = 'Pesanan berhasil dibuat';
+  static const String successOrderCancelled = 'Pesanan berhasil dibatalkan';
 
-  // Default values
-  // lib/core/constants/app_constants.dart - Update the image constants
+  // User Roles
+  static const List<String> userRoles = ['customer', 'driver', 'store'];
 
-// Replace the asset paths with placeholder URLs or remove them temporarily
-  static const String defaultAvatarUrl = 'https://via.placeholder.com/150x150/CCCCCC/FFFFFF?text=User';
-  static const String defaultStoreImageUrl = 'https://via.placeholder.com/300x200/CCCCCC/FFFFFF?text=Store';
-  static const String defaultFoodImageUrl = 'https://via.placeholder.com/200x150/CCCCCC/FFFFFF?text=Food';
-  // static const String defaultAvatarUrl =
-  //     'assets/images/placeholders/placeholder_user.png';
-  // static const String defaultStoreImageUrl =
-  //     'assets/images/placeholders/placeholder_store.png';
-  // static const String defaultFoodImageUrl =
-  //     'assets/images/placeholders/placeholder_food.png';
+  // Order Status
+  static const List<String> orderStatuses = [
+    'pending',
+    'confirmed',
+    'preparing',
+    'ready_for_pickup',
+    'on_delivery',
+    'delivered',
+    'cancelled',
+    'rejected'
+  ];
 
-  // Social media
-  static const String websiteUrl = 'https://delpick.com';
-  static const String supportEmail = 'support@delpick.com';
-  static const String privacyPolicyUrl = 'https://delpick.com/privacy';
-  static const String termsOfServiceUrl = 'https://delpick.com/terms';
-  static const String facebookUrl = 'https://facebook.com/delpick';
-  static const String instagramUrl = 'https://instagram.com/delpick';
-  static const String twitterUrl = 'https://twitter.com/delpick';
+  // Delivery Status
+  static const List<String> deliveryStatuses = [
+    'pending',
+    'picked_up',
+    'on_way',
+    'delivered'
+  ];
 
-  // File paths
-  static const String documentsPath = '/Documents/DelPick';
-  static const String imagesPath = '/Images';
-  static const String cachePath = '/Cache';
-  static const String logsPath = '/Logs';
+  // Driver Status
+  static const List<String> driverStatuses = ['active', 'inactive', 'busy'];
+
+  // Store Status
+  static const List<String> storeStatuses = ['active', 'inactive', 'closed'];
+
+  // Driver Request Status
+  static const List<String> driverRequestStatuses = [
+    'pending',
+    'accepted',
+    'rejected',
+    'completed',
+    'expired'
+  ];
+
+  // UTILITY METHODS
+  /// Check if role is valid
+  static bool isValidRole(String? role) {
+    return role != null && validRoles.contains(role);
+  }
+
+  /// Check if order status is valid
+  static bool isValidOrderStatus(String? status) {
+    return status != null && allOrderStatuses.contains(status);
+  }
+
+  /// Check if delivery status is valid
+  static bool isValidDeliveryStatus(String? status) {
+    return status != null && allDeliveryStatuses.contains(status);
+  }
+
+  /// Check if driver status is valid
+  static bool isValidDriverStatus(String? status) {
+    return status != null && allDriverStatuses.contains(status);
+  }
+
+  /// Check if store status is valid
+  static bool isValidStoreStatus(String? status) {
+    return status != null && allStoreStatuses.contains(status);
+  }
+
+  /// Check if driver request status is valid
+  static bool isValidDriverRequestStatus(String? status) {
+    return status != null && allDriverRequestStatuses.contains(status);
+  }
+
+  /// Check if order can be cancelled
+  static bool canCancelOrder(String status) {
+    return [orderPending, orderConfirmed, orderPreparing].contains(status);
+  }
+
+  /// Check if order can be tracked
+  static bool canTrackOrder(String status) {
+    return [orderPreparing, orderReadyForPickup, orderOnDelivery]
+        .contains(status);
+  }
+
+  /// Check if driver can accept requests
+  static bool canDriverAcceptRequests(String status) {
+    return status == driverActive;
+  }
+
+  /// Check if store is operational
+  static bool isStoreOperational(String status) {
+    return status == storeActive;
+  }
 }

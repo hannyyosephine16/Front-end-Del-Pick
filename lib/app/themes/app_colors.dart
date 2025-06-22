@@ -110,27 +110,31 @@ class AppColors {
     return getOrderStatusColor(status).withOpacity(0.1);
   }
 
-  // Utility method to get order status color
+  /// Utility method to get order status color
   static Color getOrderStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'pending':
         return orderPending;
-      case 'approved':
+      case 'confirmed':
         return orderApproved;
       case 'preparing':
         return orderPreparing;
+      case 'ready_for_pickup':
+        return info;
       case 'on_delivery':
         return orderOnDelivery;
       case 'delivered':
         return orderDelivered;
       case 'cancelled':
         return orderCancelled;
+      case 'rejected':
+        return error;
       default:
         return textSecondary;
     }
   }
 
-  // Utility method to get driver status color
+  /// Utility method to get driver status color
   static Color getDriverStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'active':
@@ -159,9 +163,26 @@ class AppColors {
     }
   }
 
+  /// Method untuk driver request status (sesuai backend)
+  static Color getDriverRequestStatusColor(String status) {
+    switch (status.toLowerCase()) {
+      case 'pending':
+        return orderPending;
+      case 'accepted':
+        return orderApproved;
+      case 'rejected':
+        return orderCancelled;
+      case 'completed':
+        return orderDelivered;
+      case 'expired':
+        return textSecondary;
+      default:
+        return textSecondary;
+    }
+  }
   // static const Color orderCancelled = Color(0xFFF44336);
 
-// Method untuk delivery status:
+  /// Method untuk delivery status:
   static Color getDeliveryStatusColor(String status) {
     switch (status.toLowerCase()) {
       case 'waiting':
@@ -175,5 +196,10 @@ class AppColors {
       default:
         return textSecondary;
     }
+  }
+
+  /// Method untuk mendapatkan background color driver request status
+  static Color getDriverRequestStatusBackgroundColor(String status) {
+    return getDriverRequestStatusColor(status).withOpacity(0.1);
   }
 }
