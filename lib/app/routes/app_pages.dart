@@ -80,13 +80,13 @@ class AppPages {
       name: Routes.LOGIN,
       page: () => const LoginScreen(),
       binding: AuthBinding(),
-      middlewares: [AuthMiddleware()],
+      // middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: Routes.FORGOT_PASSWORD,
       page: () => const ForgotPasswordScreen(),
       binding: AuthBinding(),
-      middlewares: [AuthMiddleware()],
+      // middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: Routes.RESET_PASSWORD,

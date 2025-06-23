@@ -15,6 +15,7 @@ import 'package:del_pick/features/shared/controllers/notification_controller.dar
 import 'package:del_pick/features/shared/controllers/connectivity_controller.dart';
 
 import '../../core/services/api/auth_service.dart';
+import '../../features/shared/controllers/splash_controller.dart';
 
 class InitialBinding extends Bindings {
   @override
@@ -30,7 +31,7 @@ class InitialBinding extends Bindings {
     Get.lazyPut<NotificationService>(() => NotificationService(), fenix: true);
     Get.lazyPut<ConnectivityService>(() => ConnectivityService(), fenix: true);
     Get.lazyPut<PermissionService>(() => PermissionService(), fenix: true);
-
+    Get.lazyPut<SplashController>(() => SplashController());
     Get.lazyPut<ThemeController>(() => ThemeController(), fenix: true);
     Get.lazyPut<LanguageController>(() => LanguageController(), fenix: true);
     Get.lazyPut<NotificationController>(() => NotificationController(),

@@ -1,31 +1,18 @@
+// lib/features/shared/screens/splash_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
-import 'package:del_pick/app/routes/app_routes.dart';
+import 'package:del_pick/features/shared/controllers/splash_controller.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
-}
-
-class _SplashScreenState extends State<SplashScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _navigateToNext();
-  }
-
-  void _navigateToNext() {
-    Future.delayed(const Duration(seconds: 3), () {
-      Get.offNamed(Routes.LOGIN);
-    });
-  }
-
-  @override
   Widget build(BuildContext context) {
+    // Initialize controller
+    Get.put(SplashController());
+
     return Scaffold(
       backgroundColor: AppColors.primary,
       body: Center(
@@ -49,55 +36,13 @@ class _SplashScreenState extends State<SplashScreen> {
                 color: AppColors.textOnPrimary,
               ),
             ),
+            const SizedBox(height: 40),
+            const CircularProgressIndicator(
+              color: AppColors.textOnPrimary,
+            ),
           ],
         ),
       ),
     );
-  }
-}
-
-// Placeholder screens
-class OnboardingScreen extends StatelessWidget {
-  const OnboardingScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Onboarding Screen')));
-  }
-}
-
-class MainNavigationScreen extends StatelessWidget {
-  const MainNavigationScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Main Navigation Screen')));
-  }
-}
-
-class NoInternetScreen extends StatelessWidget {
-  const NoInternetScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('No Internet Screen')));
-  }
-}
-
-class MaintenanceScreen extends StatelessWidget {
-  const MaintenanceScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Maintenance Screen')));
-  }
-}
-
-class ErrorScreen extends StatelessWidget {
-  const ErrorScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: Text('Error Screen')));
   }
 }

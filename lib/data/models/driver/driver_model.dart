@@ -1,3 +1,4 @@
+// lib/data/models/driver/driver_model.dart - FIXED VERSION
 import 'package:del_pick/data/models/auth/user_model.dart';
 
 class DriverModel {
@@ -28,6 +29,40 @@ class DriverModel {
     required this.createdAt,
     required this.updatedAt,
   });
+
+  // ✅ ADD copyWith method
+  DriverModel copyWith({
+    int? id,
+    int? userId,
+    String? licenseNumber,
+    String? vehiclePlate,
+    String? status,
+    double? rating,
+    int? reviewsCount,
+    double? latitude,
+    double? longitude,
+    UserModel? user,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return DriverModel(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      licenseNumber: licenseNumber ?? this.licenseNumber,
+      vehiclePlate: vehiclePlate ?? this.vehiclePlate,
+      status: status ?? this.status,
+      rating: rating ?? this.rating,
+      reviewsCount: reviewsCount ?? this.reviewsCount,
+      latitude: latitude ?? this.latitude,
+      longitude: longitude ?? this.longitude,
+      user: user ?? this.user,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
+
+  // ✅ ADD vehicleNumber getter untuk compatibility
+  String get vehicleNumber => vehiclePlate;
 
   factory DriverModel.fromJson(Map<String, dynamic> json) {
     return DriverModel(

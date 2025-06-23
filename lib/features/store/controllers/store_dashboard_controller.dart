@@ -84,7 +84,7 @@ class StoreDashboardController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items instead of .data
+        // ✅ FIXED: Use .items from PaginatedResponse
         final newOrders = result.data!.items;
 
         if (refresh) {
@@ -100,7 +100,7 @@ class StoreDashboardController extends GetxController {
         }
       } else {
         _hasError.value = true;
-        _errorMessage.value = result.message ?? 'Failed to load orders';
+        _errorMessage.value = result.errorMessage;
       }
     } catch (e) {
       _hasError.value = true;
@@ -120,7 +120,7 @@ class StoreDashboardController extends GetxController {
       );
 
       if (pendingResult.isSuccess && pendingResult.data != null) {
-        // ✅ FIXED: Use .items instead of .data
+        // ✅ FIXED: Use .items from PaginatedResponse
         _pendingOrders.value = pendingResult.data!.items;
       }
 
@@ -130,7 +130,7 @@ class StoreDashboardController extends GetxController {
       );
 
       if (preparingResult.isSuccess && preparingResult.data != null) {
-        // ✅ FIXED: Use .items instead of .data
+        // ✅ FIXED: Use .items from PaginatedResponse
         _preparingOrders.value = preparingResult.data!.items;
       }
     } catch (e) {
@@ -154,7 +154,7 @@ class StoreDashboardController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items instead of .data
+        // ✅ FIXED: Use .items from PaginatedResponse
         final newOrders = result.data!.items;
         _orders.addAll(newOrders);
 
@@ -215,7 +215,7 @@ class StoreDashboardController extends GetxController {
       } else {
         Get.snackbar(
           'Error',
-          result.message ?? 'Failed to process order',
+          result.errorMessage,
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -306,9 +306,10 @@ class StoreDashboardController extends GetxController {
         .where((order) => order.orderStatus == OrderStatusConstants.cancelled)
         .length;
 
+    // ✅ FIXED: Use grandTotal instead of total
     final totalRevenue = _orders
         .where((order) => order.orderStatus == OrderStatusConstants.delivered)
-        .fold(0.0, (sum, order) => sum + order.total);
+        .fold(0.0, (sum, order) => sum + order.grandTotal);
 
     return {
       'totalOrders': totalOrders,

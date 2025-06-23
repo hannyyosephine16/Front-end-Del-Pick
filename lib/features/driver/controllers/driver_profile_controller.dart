@@ -42,7 +42,7 @@ class DriverProfileController extends GetxController {
   String get driverEmail => userProfile?.email ?? '';
   String get driverPhone => userProfile?.phone ?? '';
   String get driverStatus => driverProfile?.status ?? 'inactive';
-  String get vehicleNumber => driverProfile?.vehicleNumber ?? '';
+  String get vehicleNumber => driverProfile?.vehiclePlate ?? '';
   double get rating => driverProfile?.rating ?? 0.0;
   int get reviewsCount => driverProfile?.reviewsCount ?? 0;
 
@@ -105,7 +105,7 @@ class DriverProfileController extends GetxController {
       if (driverData != null) {
         print('✅ Found driver data in AuthController: $driverData');
         _driverProfile.value = DriverModel.fromJson(driverData);
-        print('✅ Driver profile set: ${_driverProfile.value?.vehicleNumber}');
+        print('✅ Driver profile set: ${_driverProfile.value?.vehiclePlate}');
         return;
       }
 
@@ -172,7 +172,8 @@ class DriverProfileController extends GetxController {
       _driverProfile.value = DriverModel(
         id: 0, // Will be set when API is available
         userId: user.id,
-        vehicleNumber: '',
+        licenseNumber: '',
+        vehiclePlate: '',
         status: 'inactive',
         rating: 0.0,
         reviewsCount: 0,
@@ -425,7 +426,7 @@ class DriverProfileController extends GetxController {
       // Update specific fields
       if (updatedData.containsKey('vehicleNumber')) {
         _driverProfile.value = currentProfile.copyWith(
-          vehicleNumber: updatedData['vehicleNumber'] as String,
+          vehiclePlate: updatedData['vehicleNumber'] as String,
         );
       }
 

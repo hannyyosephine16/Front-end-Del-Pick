@@ -6,8 +6,6 @@ import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
 import '../../../data/models/driver/driver_model.dart';
-// Di file widget yang error, tambahkan import ini:
-import 'package:del_pick/data/models/order/order_model_extensions.dart';
 
 class DriverInfoWidget extends StatelessWidget {
   final DriverModel driver;
@@ -61,15 +59,13 @@ class DriverInfoWidget extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppDimensions.spacingXS),
-                    if (driver.vehiclePlate != null) ...[
-                      Text(
-                        'Vehicle: ${driver.vehiclePlate}',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.textSecondary,
-                        ),
+                    Text(
+                      'Vehicle: ${driver.vehiclePlate}',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
                       ),
-                      const SizedBox(height: AppDimensions.spacingXS),
-                    ],
+                    ),
+                    const SizedBox(height: AppDimensions.spacingXS),
                     _buildRatingWidget(),
                   ],
                 ),
@@ -100,11 +96,11 @@ class DriverInfoWidget extends StatelessWidget {
           width: 2,
         ),
       ),
-      child: driver.avatar != null && driver.avatar!.isNotEmpty
+      child: driver.user?.avatar != null && driver.user!.avatar!.isNotEmpty
           ? ClipRRect(
               borderRadius: BorderRadius.circular(30),
               child: CachedNetworkImage(
-                imageUrl: driver.avatar!,
+                imageUrl: driver.user!.avatar!,
                 fit: BoxFit.cover,
                 placeholder: (context, url) => _buildDefaultAvatar(),
                 errorWidget: (context, error, stackTrace) =>
@@ -124,7 +120,7 @@ class DriverInfoWidget extends StatelessWidget {
   }
 
   Widget _buildRatingWidget() {
-    if (driver.rating == null || driver.rating == 0) {
+    if (driver.rating == 0) {
       return Text(
         'New Driver',
         style: AppTextStyles.bodySmall.copyWith(
@@ -142,12 +138,12 @@ class DriverInfoWidget extends StatelessWidget {
         ),
         const SizedBox(width: AppDimensions.spacingXS / 2),
         Text(
-          driver.rating!.toStringAsFixed(1),
+          driver.formattedRating,
           style: AppTextStyles.bodySmall.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
-        if (driver.reviewsCount != null && driver.reviewsCount! > 0) ...[
+        if (driver.reviewsCount > 0) ...[
           const SizedBox(width: AppDimensions.spacingXS),
           Text(
             '(${driver.reviewsCount})',

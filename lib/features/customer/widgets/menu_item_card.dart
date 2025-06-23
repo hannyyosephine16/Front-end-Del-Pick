@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:del_pick/data/models/menu/menu_item_model.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
-import 'package:del_pick/data/models/order/order_model_extensions.dart';
 
 class MenuItemCard extends StatelessWidget {
   final MenuItemModel menuItem;
@@ -109,24 +108,6 @@ class MenuItemCard extends StatelessWidget {
                               'Unavailable',
                               style: AppTextStyles.labelSmall.copyWith(
                                 color: AppColors.error,
-                              ),
-                            ),
-                          )
-                        else if (menuItem.quantity != null &&
-                            menuItem.quantity! <= 0)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8,
-                              vertical: 4,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppColors.warning.withOpacity(0.1),
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            child: Text(
-                              'Out of Stock',
-                              style: AppTextStyles.labelSmall.copyWith(
-                                color: AppColors.warning,
                               ),
                             ),
                           ),

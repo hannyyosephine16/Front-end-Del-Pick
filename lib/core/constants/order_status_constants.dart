@@ -1,4 +1,5 @@
 // lib/core/constants/order_status_constants.dart - FIXED VERSION
+import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:flutter/material.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 
@@ -21,16 +22,16 @@ class OrderStatusConstants {
   static const String deliveryRejected = 'rejected';
 
   // Status lists
-  static const List<String> allOrderStatuses = [
-    pending,
-    confirmed,
-    preparing,
-    readyForPickup,
-    onDelivery,
-    delivered,
-    cancelled,
-    rejected
-  ];
+  // static const List<String> allOrderStatuses = [
+  //   pending,
+  //   confirmed,
+  //   preparing,
+  //   readyForPickup,
+  //   onDelivery,
+  //   delivered,
+  //   cancelled,
+  //   rejected
+  // ];
 
   static const List<String> activeStatuses = [
     pending,
@@ -297,4 +298,94 @@ class OrderStatusConstants {
         return null;
     }
   }
+
+  static bool isValidOrderStatus(String status) {
+    return [
+      AppConstants.orderPending,
+      AppConstants.orderConfirmed,
+      AppConstants.orderPreparing,
+      AppConstants.orderReadyForPickup,
+      AppConstants.orderOnDelivery,
+      AppConstants.orderDelivered,
+      AppConstants.orderCancelled,
+      AppConstants.orderRejected,
+    ].contains(status);
+  }
+
+  static bool isValidDeliveryStatus(String status) {
+    return [
+      deliveryPending,
+      deliveryPickedUp,
+      deliveryOnWay,
+      deliveryDelivered,
+      deliveryRejected,
+    ].contains(status);
+  }
+
+  static bool isValidUserRole(String role) {
+    return [
+      AppConstants.roleCustomer,
+      AppConstants.roleStore,
+      AppConstants.roleDriver,
+      AppConstants.roleAdmin,
+    ].contains(role);
+  }
+
+  static bool isValidStoreStatus(String status) {
+    return [
+      AppConstants.storeActive,
+      AppConstants.storeInactive,
+      AppConstants.storeClosed,
+    ].contains(status);
+  }
+
+  // =================================================================
+  // STATUS LISTS FOR UI
+  // =================================================================
+
+  static const List<String> allOrderStatuses = [
+    AppConstants.orderPending,
+    AppConstants.orderConfirmed,
+    AppConstants.orderPreparing,
+    AppConstants.orderReadyForPickup,
+    AppConstants.orderOnDelivery,
+    AppConstants.orderDelivered,
+    AppConstants.orderCancelled,
+    AppConstants.orderRejected,
+  ];
+
+  static const List<String> activeOrderStatuses = [
+    AppConstants.orderPending,
+    AppConstants.orderConfirmed,
+    AppConstants.orderPreparing,
+    AppConstants.orderReadyForPickup,
+    AppConstants.orderOnDelivery,
+  ];
+
+  static const List<String> completedOrderStatuses = [
+    AppConstants.orderDelivered,
+    AppConstants.orderCancelled,
+    AppConstants.orderRejected,
+  ];
+
+  static const List<String> allDeliveryStatuses = [
+    deliveryPending,
+    deliveryPickedUp,
+    deliveryOnWay,
+    deliveryDelivered,
+    deliveryRejected,
+  ];
+
+  static const List<String> allUserRoles = [
+    AppConstants.roleCustomer,
+    AppConstants.roleStore,
+    AppConstants.roleDriver,
+    AppConstants.roleAdmin,
+  ];
+
+  static const List<String> allStoreStatuses = [
+    AppConstants.storeActive,
+    AppConstants.storeInactive,
+    AppConstants.storeClosed,
+  ];
 }

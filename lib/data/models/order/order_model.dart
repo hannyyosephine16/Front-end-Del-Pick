@@ -1,4 +1,4 @@
-// lib/data/models/order/order_model.dart - ADD THESE GETTERS
+// lib/data/models/order/order_model.dart - FIXED VERSION WITH deliveryAddress
 import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
@@ -25,10 +25,9 @@ class OrderModel {
   final List<OrderItemModel>? items;
   final StoreModel? store;
   final UserModel? customer;
-  final dynamic driver; // ✅ Changed to dynamic to handle backend structure
+  final dynamic driver;
   final DateTime createdAt;
   final DateTime updatedAt;
-  // ... existing fields and constructor ...
 
   OrderModel({
     required this.id,
@@ -55,7 +54,13 @@ class OrderModel {
     required this.updatedAt,
   });
 
-  // ✅ ADD THESE GETTERS
+  // ✅ ADD deliveryAddress getter - FIXED
+  String get deliveryAddress {
+    // HARDCODED address sesuai backend (destinasi statis)
+    return 'Medan, North Sumatra, Indonesia';
+  }
+
+  // ✅ Existing getters
   String get code => 'ORD${id.toString().padLeft(6, '0')}';
 
   String get statusDisplayName =>
@@ -81,7 +86,6 @@ class OrderModel {
   String get formattedTotal =>
       'Rp ${grandTotal.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
 
-  // ✅ Existing methods stay the same
   factory OrderModel.fromJson(Map<String, dynamic> json) {
     return OrderModel(
       id: json['id'] as int,
@@ -125,6 +129,7 @@ class OrderModel {
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
+
   Map<String, dynamic> toJson() {
     return {
       'id': id,
