@@ -1,4 +1,4 @@
-// lib/features/customer/screens/checkout_screen.dart
+// lib/features/customer/screens/checkout_screen.dart - FINAL CLEAN VERSION
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -24,25 +24,18 @@ class CheckoutScreen extends StatelessWidget {
       ),
       body: Obx(() {
         // Empty cart state
-        if (controller.isEmpty) {
+        if (controller.cartItems.isEmpty) {
           return _buildEmptyCartState();
         }
 
         return Column(
           children: [
-            // Error banner (if any)
-            if (controller.hasError) _buildErrorBanner(controller),
-
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(AppDimensions.paddingLG),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Delivery Address Section
-                    _buildDeliveryAddressSection(controller),
-                    const SizedBox(height: AppDimensions.spacingXL),
-
                     // Store Info Section
                     _buildStoreInfoSection(controller),
                     const SizedBox(height: AppDimensions.spacingXL),
@@ -55,7 +48,7 @@ class CheckoutScreen extends StatelessWidget {
                     _buildNotesSection(controller),
                     const SizedBox(height: AppDimensions.spacingXL),
 
-                    // Order Summary Section
+                    // Order Summary Section (NO payment method)
                     _buildOrderSummarySection(controller),
 
                     // Add some bottom padding for better scrolling
@@ -105,118 +98,6 @@ class CheckoutScreen extends StatelessWidget {
               foregroundColor: AppColors.textOnPrimary,
             ),
             child: const Text('Continue Shopping'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildErrorBanner(CheckoutController controller) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.all(AppDimensions.paddingLG),
-      padding: const EdgeInsets.all(AppDimensions.paddingMD),
-      decoration: BoxDecoration(
-        color: Colors.red.shade50,
-        border: Border.all(color: Colors.red.shade200),
-        borderRadius: BorderRadius.circular(AppDimensions.radiusMD),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.error_outline,
-                color: Colors.red.shade600,
-                size: AppDimensions.iconSM,
-              ),
-              const SizedBox(width: AppDimensions.spacingSM),
-              Expanded(
-                child: Text(
-                  'Order Error',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: Colors.red.shade800,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppDimensions.spacingSM),
-          Text(
-            controller.errorMessage,
-            style: AppTextStyles.bodySmall.copyWith(
-              color: Colors.red.shade700,
-            ),
-          ),
-          const SizedBox(height: AppDimensions.spacingMD),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              TextButton(
-                onPressed: () {
-                  // Clear error and try again
-                  controller.retryOrder();
-                },
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red.shade700,
-                ),
-                child: const Text('Try Again'),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDeliveryAddressSection(CheckoutController controller) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingLG),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                Icons.location_on,
-                color: AppColors.primary,
-                size: AppDimensions.iconMD,
-              ),
-              const SizedBox(width: AppDimensions.spacingSM),
-              Text('Delivery Address', style: AppTextStyles.h6),
-            ],
-          ),
-          const SizedBox(height: AppDimensions.spacingMD),
-          Obx(() => Text(
-                controller.deliveryAddress,
-                style: AppTextStyles.bodyLarge.copyWith(
-                  fontWeight: FontWeight.w500,
-                ),
-              )),
-          const SizedBox(height: AppDimensions.spacingSM),
-          Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppDimensions.paddingSM,
-              vertical: AppDimensions.paddingXS,
-            ),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-            ),
-            child: Text(
-              'Default delivery location',
-              style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.primary,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
           ),
         ],
       ),
@@ -437,7 +318,7 @@ class CheckoutScreen extends StatelessWidget {
           ),
           const SizedBox(height: AppDimensions.spacingMD),
           TextField(
-            onChanged: controller.updateNotes,
+            onChanged: controller.setDeliveryNotes,
             maxLines: 3,
             maxLength: 200,
             decoration: InputDecoration(
@@ -464,6 +345,7 @@ class CheckoutScreen extends StatelessWidget {
     );
   }
 
+  // Order Summary - NO payment method selection, only cash
   Widget _buildOrderSummarySection(CheckoutController controller) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
@@ -477,41 +359,95 @@ class CheckoutScreen extends StatelessWidget {
         children: [
           Text('Order Summary', style: AppTextStyles.h6),
           const SizedBox(height: AppDimensions.spacingMD),
+
+          // Subtotal
           _buildSummaryRow('Subtotal', controller.formattedSubtotal),
           const SizedBox(height: AppDimensions.spacingSM),
+
+          // Delivery fee info
           _buildSummaryRow(
-            'Service Charge (10%)',
-            controller.formattedServiceCharge,
+            'Delivery Fee',
+            'Calculated by distance',
             isSecondary: true,
+            isCalculated: true,
           ),
+
           const Divider(height: AppDimensions.spacingLG),
-          _buildSummaryRow(
-            'Total',
-            controller.formattedTotal,
-            isTotal: true,
+
+          // Total shows as "Will be calculated"
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Total', style: AppTextStyles.h6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Text(
+                    'Will be calculated',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  Text(
+                    'after order confirmation',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
+
           const SizedBox(height: AppDimensions.spacingSM),
+
+          // Info about delivery and payment (CASH ONLY)
           Container(
             padding: const EdgeInsets.all(AppDimensions.paddingSM),
             decoration: BoxDecoration(
-              color: Colors.green.shade50,
+              color: Colors.blue.shade50,
               borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
             ),
-            child: Row(
+            child: Column(
               children: [
-                Icon(
-                  Icons.info_outline,
-                  size: AppDimensions.iconSM,
-                  color: Colors.green.shade600,
-                ),
-                const SizedBox(width: AppDimensions.spacingSM),
-                Expanded(
-                  child: Text(
-                    'Payment will be collected upon delivery',
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: Colors.green.shade700,
+                Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: AppDimensions.iconSM,
+                      color: Colors.blue.shade600,
                     ),
-                  ),
+                    const SizedBox(width: AppDimensions.spacingSM),
+                    Expanded(
+                      child: Text(
+                        'Delivery fee calculated based on distance from store',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppDimensions.spacingXS),
+                Row(
+                  children: [
+                    Icon(
+                      Icons.payment_outlined,
+                      size: AppDimensions.iconSM,
+                      color: Colors.blue.shade600,
+                    ),
+                    const SizedBox(width: AppDimensions.spacingSM),
+                    Expanded(
+                      child: Text(
+                        'Payment: Cash on Delivery (COD)',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -528,91 +464,56 @@ class CheckoutScreen extends StatelessWidget {
         color: AppColors.surface,
         border: Border(top: BorderSide(color: AppColors.border)),
       ),
-      child: Obx(() => Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              // Order validation info
-              if (!controller.canPlaceOrder && !controller.isEmpty) ...[
-                Container(
-                  padding: const EdgeInsets.all(AppDimensions.paddingSM),
-                  margin:
-                      const EdgeInsets.only(bottom: AppDimensions.spacingSM),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade50,
-                    borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.warning_amber_outlined,
-                        size: AppDimensions.iconSM,
-                        color: Colors.orange.shade600,
-                      ),
-                      const SizedBox(width: AppDimensions.spacingSM),
-                      Expanded(
-                        child: Text(
-                          'Please fix the issues above to continue',
-                          style: AppTextStyles.bodySmall.copyWith(
-                            color: Colors.orange.shade700,
+      child: Obx(() => SizedBox(
+            width: double.infinity,
+            height: 50,
+            child: ElevatedButton(
+              onPressed:
+                  controller.cartItems.isNotEmpty && !controller.isLoading
+                      ? controller.showOrderConfirmation
+                      : null,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textOnPrimary,
+                disabledBackgroundColor:
+                    AppColors.textSecondary.withOpacity(0.3),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
+                ),
+                elevation: controller.cartItems.isNotEmpty ? 2 : 0,
+              ),
+              child: controller.isLoading
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed:
-                      controller.canPlaceOrder ? controller.placeOrder : null,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.primary,
-                    foregroundColor: AppColors.textOnPrimary,
-                    disabledBackgroundColor:
-                        AppColors.textSecondary.withOpacity(0.3),
-                    shape: RoundedRectangleBorder(
-                      borderRadius:
-                          BorderRadius.circular(AppDimensions.radiusLG),
-                    ),
-                    elevation: controller.canPlaceOrder ? 2 : 0,
-                  ),
-                  child: controller.isLoading
-                      ? Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                valueColor:
-                                    AlwaysStoppedAnimation<Color>(Colors.white),
-                              ),
-                            ),
-                            const SizedBox(width: AppDimensions.spacingSM),
-                            Text(
-                              'Placing Order...',
-                              style: AppTextStyles.buttonLarge,
-                            ),
-                          ],
-                        )
-                      : Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.shopping_cart_checkout),
-                            const SizedBox(width: AppDimensions.spacingSM),
-                            Text(
-                              'Place Order (${controller.formattedTotal})',
-                              style: AppTextStyles.buttonLarge,
-                            ),
-                          ],
+                        const SizedBox(width: AppDimensions.spacingSM),
+                        Text(
+                          'Placing Order...',
+                          style: AppTextStyles.buttonLarge,
                         ),
-                ),
-              ),
-            ],
+                      ],
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.shopping_cart_checkout),
+                        const SizedBox(width: AppDimensions.spacingSM),
+                        Text(
+                          'Place Order (${controller.formattedSubtotal})',
+                          style: AppTextStyles.buttonLarge,
+                        ),
+                      ],
+                    ),
+            ),
           )),
     );
   }
@@ -622,6 +523,7 @@ class CheckoutScreen extends StatelessWidget {
     String value, {
     bool isTotal = false,
     bool isSecondary = false,
+    bool isCalculated = false,
   }) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -636,16 +538,22 @@ class CheckoutScreen extends StatelessWidget {
         ),
         Text(
           value,
-          style: isTotal
-              ? AppTextStyles.h6.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.bold,
+          style: isCalculated
+              ? AppTextStyles.bodySmall.copyWith(
+                  color: AppColors.textSecondary,
+                  fontStyle: FontStyle.italic,
                 )
-              : AppTextStyles.bodyMedium.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color:
-                      isSecondary ? AppColors.textSecondary : AppColors.primary,
-                ),
+              : isTotal
+                  ? AppTextStyles.h6.copyWith(
+                      color: AppColors.primary,
+                      fontWeight: FontWeight.bold,
+                    )
+                  : AppTextStyles.bodyMedium.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isSecondary
+                          ? AppColors.textSecondary
+                          : AppColors.primary,
+                    ),
         ),
       ],
     );

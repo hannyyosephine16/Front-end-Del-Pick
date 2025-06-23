@@ -13,6 +13,7 @@ import 'package:del_pick/core/interceptors/connectivity_interceptor.dart';
 import 'package:del_pick/core/errors/exceptions.dart';
 
 class ApiService extends getx.GetxService {
+  // final Dio _dio;
   late Dio _dio;
   final StorageService _storageService = getx.Get.find<StorageService>();
 

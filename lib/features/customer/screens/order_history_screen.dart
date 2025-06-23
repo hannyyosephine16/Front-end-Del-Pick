@@ -1,6 +1,8 @@
 // lib/features/customer/screens/order_history_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/models/order/order_model_extensions.dart';
 import 'package:del_pick/features/customer/controllers/order_history_controller.dart';
 import 'package:del_pick/features/customer/widgets/order_history_card.dart';
 import 'package:del_pick/features/customer/widgets/order_filter_tabs.dart';
