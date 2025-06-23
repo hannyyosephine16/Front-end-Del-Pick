@@ -29,6 +29,10 @@ class OrderProvider {
     return await _apiService.get(ApiEndpoints.getOrderById(orderId));
   }
 
+  Future<Response> getOrderDetail(int orderId) async {
+    return await _apiService.get(ApiEndpoints.getOrderById(orderId));
+  }
+
   Future<Response> updateOrderStatus(
       int orderId, Map<String, dynamic> data) async {
     return await _apiService.patch(
@@ -44,6 +48,13 @@ class OrderProvider {
     );
   }
 
+  Future<Response> cancelOrder(int orderId) async {
+    return await _apiService.patch(
+      ApiEndpoints.updateOrderStatus(orderId),
+      data: {'order_status': 'cancelled'},
+    );
+  }
+
   Future<Response> createReview(int orderId, Map<String, dynamic> data) async {
     return await _apiService.post(
       ApiEndpoints.createOrderReview(orderId),
@@ -51,10 +62,33 @@ class OrderProvider {
     );
   }
 
-  // ========================================================================
-  // TRACKING METHODS
-  // ========================================================================
+  // Driver-specific methods
+  Future<Response> getDriverOrders({
+    int? page,
+    int? limit,
+    String? status,
+  }) async {
+    final params = <String, dynamic>{};
+    if (page != null) params['page'] = page;
+    if (limit != null) params['limit'] = limit;
+    if (status != null) params['status'] = status;
 
+    return await _apiService.get(
+      ApiEndpoints.customerOrders, // Use customer orders endpoint
+      queryParameters: params.isNotEmpty ? params : null,
+    );
+  }
+
+  Future<Response> getDriverActiveOrders() async {
+    return await _apiService.get(
+      ApiEndpoints.customerOrders,
+      queryParameters: {
+        'status': 'preparing,ready_for_pickup,on_delivery',
+      },
+    );
+  }
+
+  // Tracking methods
   Future<Response> getOrderTracking(int orderId) async {
     return await _apiService.get(ApiEndpoints.getOrderTracking(orderId));
   }
@@ -77,5 +111,9 @@ class OrderProvider {
 
   Future<Response> getTrackingHistory(int orderId) async {
     return await _apiService.get(ApiEndpoints.getTrackingHistory(orderId));
+  }
+
+  Future<Response> trackOrder(int orderId) async {
+    return await _apiService.get(ApiEndpoints.getOrderTracking(orderId));
   }
 }

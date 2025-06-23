@@ -12,9 +12,7 @@ class OrderRepository {
 
   OrderRepository(this._orderProvider);
 
-  // ========================================================================
   // EXISTING METHODS - JANGAN DIUBAH
-  // ========================================================================
 
   Future<Result<OrderModel>> createOrder(Map<String, dynamic> data) async {
     try {
@@ -201,10 +199,11 @@ class OrderRepository {
   }
 
   Future<Result<OrderModel>> updateOrderStatus(
+    int orderId,
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await _orderProvider.updateOrderStatus(data);
+      final response = await _orderProvider.updateOrderStatus(orderId, data);
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
@@ -280,9 +279,11 @@ class OrderRepository {
     }
   }
 
-  Future<Result<void>> createReview(Map<String, dynamic> data) async {
+// lib/data/repositories/order_repository.dart - FIXED createReview method
+  Future<Result<void>> createReview(
+      int orderId, Map<String, dynamic> data) async {
     try {
-      final response = await _orderProvider.createReview(data);
+      final response = await _orderProvider.createReview(orderId, data);
 
       if (response.statusCode == 201 || response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
@@ -302,7 +303,6 @@ class OrderRepository {
       return Result.failure(ErrorHandler.getErrorMessage(failure));
     }
   }
-
   // ========================================================================
   // DRIVER METHODS - FIXED VERSION (menggunakan Response pattern)
   // ========================================================================

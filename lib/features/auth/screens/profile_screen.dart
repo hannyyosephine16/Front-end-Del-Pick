@@ -503,8 +503,8 @@ class ProfileScreen extends StatelessWidget {
         return 'Driver';
       case AppConstants.roleStore:
         return 'Store Owner';
-      case AppConstants.roleAdmin:
-        return 'Administrator';
+      // case AppConstants.roleAdmin:
+      //   return 'Administrator';
       default:
         return role.capitalizeFirst ?? role;
     }

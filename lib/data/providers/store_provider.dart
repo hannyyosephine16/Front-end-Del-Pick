@@ -68,11 +68,57 @@ class StoreProvider {
     );
   }
 
-  // ========================================================================
-  // STORE MANAGEMENT METHODS (for store role)
-  // ========================================================================
+  Future<Response> getStoresSortedByRating({
+    String sortOrder = 'DESC',
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'sortBy': 'rating',
+      'sortOrder': sortOrder,
+      ...?params,
+    };
 
-  /// Get store orders (for store owner) - GET /orders/store
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: queryParams,
+    );
+  }
+
+  Future<Response> getStoresSortedByDistance({
+    required double latitude,
+    required double longitude,
+    String sortOrder = 'ASC',
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'latitude': latitude,
+      'longitude': longitude,
+      'sortBy': 'distance',
+      'sortOrder': sortOrder,
+      ...?params,
+    };
+
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: queryParams,
+    );
+  }
+
+  Future<Response> getStoresByStatus({
+    required String status,
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'status': status,
+      ...?params,
+    };
+
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: queryParams,
+    );
+  }
+
   Future<Response> getStoreOrders({Map<String, dynamic>? params}) async {
     return await _apiService.get(
       ApiEndpoints.storeOrders,
@@ -80,7 +126,6 @@ class StoreProvider {
     );
   }
 
-  /// Process order (approve/reject) - POST /orders/{orderId}/process
   Future<Response> processOrder(int orderId, Map<String, dynamic> data) async {
     return await _apiService.post(
       ApiEndpoints.processOrder(orderId),
@@ -88,7 +133,6 @@ class StoreProvider {
     );
   }
 
-  /// Update order status - PATCH /orders/{orderId}/status
   Future<Response> updateOrderStatus(
       int orderId, Map<String, dynamic> data) async {
     return await _apiService.patch(

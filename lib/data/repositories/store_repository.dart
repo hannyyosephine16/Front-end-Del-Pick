@@ -92,8 +92,6 @@ class StoreRepository {
     int page = 1,
     int limit = 10,
     String? status,
-    double? minRating,
-    double? maxDistance,
     double? latitude,
     double? longitude,
   }) async {
@@ -105,8 +103,6 @@ class StoreRepository {
         page: page,
         limit: limit,
         status: status,
-        minRating: minRating,
-        maxDistance: maxDistance,
         latitude: latitude,
         longitude: longitude,
       );
@@ -118,12 +114,10 @@ class StoreRepository {
             .toList();
 
         final paginatedResponse = PaginatedResponse<StoreModel>(
-          items: [],
-          // data: stores,
+          items: stores,
           totalItems: data['totalItems'] ?? 0,
           totalPages: data['totalPages'] ?? 0,
           currentPage: data['currentPage'] ?? 1,
-          // limit: limit,
         );
 
         return Result.success(paginatedResponse);

@@ -11,8 +11,14 @@ class AppConstants {
   static const String roleCustomer = 'customer';
   static const String roleDriver = 'driver';
   static const String roleStore = 'store';
-
-  static const List<String> validRoles = [roleCustomer, roleDriver, roleStore];
+  static const String roleAdmin = 'admin';
+  static const List<String> validRoles = [
+    roleCustomer,
+    roleDriver,
+    roleStore,
+    roleAdmin
+  ];
+  // static const List<String> validRoles = [roleCustomer, roleDriver, roleStore];
 
   // ORDER STATUSES
   static const String orderPending = 'pending';
