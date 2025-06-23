@@ -1,3 +1,4 @@
+// lib/data/providers/store_provider.dart - FIXED VERSION
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
@@ -7,86 +8,39 @@ class StoreProvider {
   final ApiService _apiService = getx.Get.find<ApiService>();
 
   Future<Response> getAllStores({Map<String, dynamic>? params}) async {
-    try {
-      print('StoreProvider: Making API call to ${ApiEndpoints.getAllStores}');
-      print('StoreProvider: Params: $params');
-
-      final response = await _apiService.get(
-        ApiEndpoints.getAllStores,
-        queryParameters: params,
-      );
-
-      print('StoreProvider: API Response Status: ${response.statusCode}');
-      print('StoreProvider: API Response Headers: ${response.headers}');
-      print(
-          'StoreProvider: API Response Data Type: ${response.data.runtimeType}');
-      print('StoreProvider: API Response Data: ${response.data}');
-
-      // TAMBAHAN: Validasi response structure
-      if (response.data is Map<String, dynamic>) {
-        final data = response.data as Map<String, dynamic>;
-        print('StoreProvider: Response is Map with keys: ${data.keys}');
-
-        if (data['data'] != null) {
-          print('StoreProvider: data field type: ${data['data'].runtimeType}');
-          if (data['data'] is Map && data['data']['stores'] != null) {
-            print(
-                'StoreProvider: stores field type: ${data['data']['stores'].runtimeType}');
-            print(
-                'StoreProvider: stores length: ${data['data']['stores'].length}');
-          }
-        }
-      }
-
-      return response;
-    } catch (e) {
-      print('StoreProvider: Error in getAllStores: $e');
-      print('StoreProvider: Error type: ${e.runtimeType}');
-      rethrow;
-    }
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: params,
+    );
   }
 
-  Future<Response> getNearbyStores({
-    required double latitude,
-    required double longitude,
-    Map<String, dynamic>? params,
-  }) async {
-    try {
-      final queryParams = {
-        'latitude': latitude.toString(),
-        'longitude': longitude.toString(),
-        ...?params,
-      };
-
-      print('StoreProvider: Making API call for nearby stores');
-      print('StoreProvider: Query params: $queryParams');
-
-      final response = await _apiService.get(
-        ApiEndpoints.getAllStores,
-        queryParameters: queryParams,
-      );
-
-      print(
-          'StoreProvider: Nearby API Response Status: ${response.statusCode}');
-      print('StoreProvider: Nearby API Response Data: ${response.data}');
-
-      return response;
-    } catch (e) {
-      print('StoreProvider: Error in getNearbyStores: $e');
-      rethrow;
-    }
+  Future<Response> getStoreById(int storeId) async {
+    return await _apiService.get(ApiEndpoints.getStoreById(storeId));
   }
 
   Future<Response> getStoreDetail(int storeId) async {
     return await _apiService.get(ApiEndpoints.getStoreById(storeId));
   }
 
-  /// Get store by ID
-  Future<Response> getStoreById(int storeId) async {
-    return await _apiService.get(ApiEndpoints.getStoreById(storeId));
+  Future<Response> getNearbyStores({
+    required double latitude,
+    required double longitude,
+    double? radius,
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = <String, dynamic>{
+      'latitude': latitude,
+      'longitude': longitude,
+      if (radius != null) 'radius': radius,
+      ...?params,
+    };
+
+    return await _apiService.get(
+      ApiEndpoints.getAllStores,
+      queryParameters: queryParams,
+    );
   }
 
-  /// Search stores with pagination and filters
   Future<Response> searchStores({
     String? search,
     String? sortBy,
@@ -94,52 +48,19 @@ class StoreProvider {
     int? page,
     int? limit,
     String? status,
-    double? minRating,
-    double? maxDistance,
     double? latitude,
     double? longitude,
   }) async {
     final params = <String, dynamic>{};
 
-    // Search parameter
-    if (search != null && search.isNotEmpty) {
-      params['search'] = search;
-    }
-
-    // Sorting parameters
-    if (sortBy != null) {
-      params['sortBy'] = sortBy;
-    }
-    if (sortOrder != null) {
-      params['sortOrder'] = sortOrder;
-    }
-
-    // Pagination parameters
-    if (page != null) {
-      params['page'] = page.toString();
-    }
-    if (limit != null) {
-      params['limit'] = limit.toString();
-    }
-
-    // Filter parameters
-    if (status != null) {
-      params['status'] = status;
-    }
-    if (minRating != null) {
-      params['minRating'] = minRating.toString();
-    }
-    if (maxDistance != null) {
-      params['maxDistance'] = maxDistance.toString();
-    }
-
-    // Location parameters for distance calculation
-    if (latitude != null) {
-      params['latitude'] = latitude.toString();
-    }
-    if (longitude != null) {
-      params['longitude'] = longitude.toString();
-    }
+    if (search != null && search.isNotEmpty) params['search'] = search;
+    if (sortBy != null) params['sortBy'] = sortBy;
+    if (sortOrder != null) params['sortOrder'] = sortOrder;
+    if (page != null) params['page'] = page;
+    if (limit != null) params['limit'] = limit;
+    if (status != null) params['status'] = status;
+    if (latitude != null) params['latitude'] = latitude;
+    if (longitude != null) params['longitude'] = longitude;
 
     return await _apiService.get(
       ApiEndpoints.getAllStores,
@@ -147,67 +68,32 @@ class StoreProvider {
     );
   }
 
-  /// Get stores by status (active/inactive)
-  Future<Response> getStoresByStatus({
-    required String status,
-    Map<String, dynamic>? params,
-  }) async {
-    final queryParams = <String, dynamic>{
-      'status': status,
-      ...?params,
-    };
+  // ========================================================================
+  // STORE MANAGEMENT METHODS (for store role)
+  // ========================================================================
 
+  /// Get store orders (for store owner) - GET /orders/store
+  Future<Response> getStoreOrders({Map<String, dynamic>? params}) async {
     return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
+      ApiEndpoints.storeOrders,
+      queryParameters: params,
     );
   }
 
-  /// Get stores sorted by rating
-  Future<Response> getStoresSortedByRating({
-    String sortOrder = 'DESC',
-    Map<String, dynamic>? params,
-  }) async {
-    final queryParams = <String, dynamic>{
-      'sortBy': 'rating',
-      'sortOrder': sortOrder,
-      ...?params,
-    };
-
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
+  /// Process order (approve/reject) - POST /orders/{orderId}/process
+  Future<Response> processOrder(int orderId, Map<String, dynamic> data) async {
+    return await _apiService.post(
+      ApiEndpoints.processOrder(orderId),
+      data: data,
     );
   }
 
-  /// Get stores sorted by distance (requires location)
-  Future<Response> getStoresSortedByDistance({
-    required double latitude,
-    required double longitude,
-    String sortOrder = 'ASC',
-    Map<String, dynamic>? params,
-  }) async {
-    final queryParams = <String, dynamic>{
-      'latitude': latitude.toString(),
-      'longitude': longitude.toString(),
-      'sortBy': 'distance',
-      'sortOrder': sortOrder,
-      ...?params,
-    };
-
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
+  /// Update order status - PATCH /orders/{orderId}/status
+  Future<Response> updateOrderStatus(
+      int orderId, Map<String, dynamic> data) async {
+    return await _apiService.patch(
+      ApiEndpoints.updateOrderStatus(orderId),
+      data: data,
     );
   }
-  // Future<Response> updateStoreStatus(
-  //     int storeId,
-  //     Map<String, dynamic> data,
-  //     )
-  // async {
-  //   return await _apiService.patch(
-  //     ApiEndpoints.updateStoreStatus(storeId),
-  //     data: data,
-  //   );
-  // }
 }

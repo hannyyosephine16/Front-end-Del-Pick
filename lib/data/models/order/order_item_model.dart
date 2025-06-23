@@ -1,82 +1,65 @@
+// lib/data/models/order/order_item_model.dart - FIXED VERSION
 class OrderItemModel {
   final int id;
   final int orderId;
+  final int? menuItemId;
   final String name;
+  final String? description;
+  final String? imageUrl;
+  final String? category;
   final double price;
   final int quantity;
-  final String? imageUrl;
   final String? notes;
-  final DateTime? createdAt;
-  final DateTime? updatedAt;
+  final DateTime createdAt;
+  final DateTime updatedAt;
 
   OrderItemModel({
     required this.id,
     required this.orderId,
+    this.menuItemId,
     required this.name,
+    this.description,
+    this.imageUrl,
+    this.category,
     required this.price,
     required this.quantity,
-    this.imageUrl,
     this.notes,
-    this.createdAt,
-    this.updatedAt,
+    required this.createdAt,
+    required this.updatedAt,
   });
 
   factory OrderItemModel.fromJson(Map<String, dynamic> json) {
     return OrderItemModel(
       id: json['id'] as int,
-      orderId: json['orderId'] as int,
+      orderId: json['order_id'] as int,
+      menuItemId: json['menu_item_id'] as int?,
       name: json['name'] as String,
+      description: json['description'] as String?,
+      imageUrl: json['image_url'] as String?,
+      category: json['category'] as String?,
       price: (json['price'] as num).toDouble(),
       quantity: json['quantity'] as int,
-      imageUrl: json['imageUrl'] as String?,
       notes: json['notes'] as String?,
-      createdAt:
-          json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'] as String)
-              : null,
-      updatedAt:
-          json['updatedAt'] != null
-              ? DateTime.parse(json['updatedAt'] as String)
-              : null,
+      createdAt: DateTime.parse(json['created_at'] as String),
+      updatedAt: DateTime.parse(json['updated_at'] as String),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'orderId': orderId,
+      'order_id': orderId,
+      'menu_item_id': menuItemId,
       'name': name,
+      'description': description,
+      'image_url': imageUrl,
+      'category': category,
       'price': price,
       'quantity': quantity,
-      'imageUrl': imageUrl,
       'notes': notes,
-      'createdAt': createdAt?.toIso8601String(),
-      'updatedAt': updatedAt?.toIso8601String(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
-  }
-
-  OrderItemModel copyWith({
-    int? id,
-    int? orderId,
-    String? name,
-    double? price,
-    int? quantity,
-    String? imageUrl,
-    String? notes,
-    DateTime? createdAt,
-    DateTime? updatedAt,
-  }) {
-    return OrderItemModel(
-      id: id ?? this.id,
-      orderId: orderId ?? this.orderId,
-      name: name ?? this.name,
-      price: price ?? this.price,
-      quantity: quantity ?? this.quantity,
-      imageUrl: imageUrl ?? this.imageUrl,
-      notes: notes ?? this.notes,
-      createdAt: createdAt ?? this.createdAt,
-      updatedAt: updatedAt ?? this.updatedAt,
-    );
   }
 
   double get totalPrice => price * quantity;
@@ -86,19 +69,4 @@ class OrderItemModel {
 
   String get formattedTotalPrice =>
       'Rp ${totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
-
-  @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-      other is OrderItemModel &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-
-  @override
-  String toString() {
-    return 'OrderItemModel{id: $id, name: $name, quantity: $quantity, price: $price}';
-  }
 }
