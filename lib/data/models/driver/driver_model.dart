@@ -1,4 +1,3 @@
-// lib/data/models/driver/driver_model.dart - NEW FILE
 import 'package:del_pick/data/models/auth/user_model.dart';
 
 class DriverModel {
@@ -11,7 +10,7 @@ class DriverModel {
   final int reviewsCount;
   final double? latitude;
   final double? longitude;
-  final UserModel? user; // Driver's user information
+  final UserModel? user;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -66,7 +65,6 @@ class DriverModel {
     };
   }
 
-  // ✅ Helper methods
   String get name => user?.name ?? 'Unknown Driver';
   String get phone => user?.phone ?? '';
   String get email => user?.email ?? '';

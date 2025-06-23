@@ -6,6 +6,8 @@ import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
 import '../../../data/models/driver/driver_model.dart';
+// Di file widget yang error, tambahkan import ini:
+import 'package:del_pick/data/models/order/order_model_extensions.dart';
 
 class DriverInfoWidget extends StatelessWidget {
   final DriverModel driver;

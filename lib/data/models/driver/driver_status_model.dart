@@ -1,4 +1,3 @@
-// lib/data/models/driver/driver_status_model.dart - FIXED VERSION
 import 'package:del_pick/core/constants/driver_status_constants.dart';
 import 'driver_location_model.dart';
 
@@ -56,12 +55,10 @@ class DriverStatusModel {
     };
   }
 
-  // Status checks (sesuai backend)
   bool get isActive => status == DriverStatusConstants.driverActive;
   bool get isInactive => status == DriverStatusConstants.driverInactive;
   bool get isBusy => status == DriverStatusConstants.driverBusy;
 
-  // Transition checks
   bool get canGoOnline => DriverStatusConstants.canTransitionDriverStatus(
       status, DriverStatusConstants.driverActive);
   bool get canGoOffline => DriverStatusConstants.canTransitionDriverStatus(
@@ -69,13 +66,11 @@ class DriverStatusModel {
   bool get canBeBusy => DriverStatusConstants.canTransitionDriverStatus(
       status, DriverStatusConstants.driverBusy);
 
-  // Business logic checks
   bool get canToggleStatus => !isBusy && activeOrderCount == 0;
   bool get requiresLocationPermission =>
       canGoOnline && (location?.hasLocation != true);
   bool get hasValidLocation => location?.hasLocation == true;
 
-  // Display helpers
   String get statusDisplayName =>
       DriverStatusConstants.getDriverStatusName(status);
   String get statusDescription =>
