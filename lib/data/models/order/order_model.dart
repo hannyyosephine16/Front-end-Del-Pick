@@ -1,6 +1,7 @@
 // lib/data/models/order/order_model.dart - FIXED VERSION
 import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
+import 'package:del_pick/data/models/order/order_model_extensions.dart';
 import 'order_item_model.dart';
 import 'package:intl/intl.dart';
 

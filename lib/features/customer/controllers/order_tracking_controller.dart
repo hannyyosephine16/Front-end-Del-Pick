@@ -1,4 +1,3 @@
-
 // lib/features/customer/controllers/order_tracking_controller.dart
 
 import 'dart:async';
@@ -8,6 +7,7 @@ import 'package:del_pick/data/repositories/tracking_repository.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/tracking/tracking_info_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/models/order/order_model_extensions.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
@@ -43,7 +43,6 @@ class OrderTrackingController extends GetxController {
   TrackingInfoModel? get trackingInfo => _trackingInfo.value;
   bool get isTrackingActive => _isTrackingActive.value;
   int get refreshCounter => _refreshCounter.value;
-
 
   // // Computed properties
   // bool get canTrack => order?.canTrack ?? false;
@@ -227,10 +226,9 @@ class OrderTrackingController extends GetxController {
       case OrderStatusConstants.onDelivery:
         return hasDriver
 
-      //  ? 'Your order is on the way with ${trackingInfo!.driver!.name}'
+            //  ? 'Your order is on the way with ${trackingInfo!.driver!.name}'
 
             ? 'Your order is on the way with ${driverInfo!.name}'
-
             : 'Your order is being delivered';
       case OrderStatusConstants.delivered:
         return 'Your order has been delivered successfully';

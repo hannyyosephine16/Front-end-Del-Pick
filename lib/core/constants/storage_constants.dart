@@ -70,6 +70,7 @@ class StorageConstants {
   // Cart data
   static const String cartItems = 'cart_items';
   static const String cartStoreId = 'cart_store_id';
+  static const String cartStoreName = 'cart_store_name';
   static const String cartTotal = 'cart_total';
   static const String cartUpdatedAt = 'cart_updated_at';
 

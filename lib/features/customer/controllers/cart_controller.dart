@@ -10,23 +10,20 @@ import 'package:del_pick/core/constants/storage_constants.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
 
+// Cart hanya menghitung harga items yang ditambahkan
 class CartController extends GetxController {
   final StorageService _storageService = Get.find<StorageService>();
-
-  // Observable state
   final RxList<CartItemModel> _cartItems = <CartItemModel>[].obs;
+  final RxDouble _subtotal = 0.0.obs;
+  final RxDouble _total = 0.0.obs;
   final RxInt _currentStoreId = 0.obs;
   final RxString _currentStoreName = ''.obs;
-  final RxDouble _subtotal = 0.0.obs;
-  final RxDouble _serviceCharge = 0.0.obs;
-  final RxDouble _total = 0.0.obs;
 
   // Getters
   List<CartItemModel> get cartItems => _cartItems;
   int get currentStoreId => _currentStoreId.value;
   String get currentStoreName => _currentStoreName.value;
   double get subtotal => _subtotal.value;
-  double get serviceCharge => _serviceCharge.value;
   double get total => _total.value;
   int get itemCount => _cartItems.fold(0, (sum, item) => sum + item.quantity);
   bool get isEmpty => _cartItems.isEmpty;
@@ -42,7 +39,8 @@ class CartController extends GetxController {
     try {
       final cartData = _storageService.readJsonList(StorageConstants.cartItems);
       final storeId = _storageService.readInt(StorageConstants.cartStoreId);
-      final storeName = _storageService.readString('cart_store_name') ?? '';
+      final storeName =
+          _storageService.readString(StorageConstants.cartStoreName) ?? '';
 
       if (cartData != null && storeId != null) {
         _cartItems.value =
@@ -55,6 +53,24 @@ class CartController extends GetxController {
       // If error loading, start with empty cart
       _clearCart();
     }
+  }
+
+  void removeFromCart(int menuItemId) {
+    _cartItems.removeWhere((item) => item.menuItemId == menuItemId);
+
+    if (_cartItems.isEmpty) {
+      _currentStoreId.value = 0;
+      _currentStoreName.value = '';
+    }
+
+    _calculateTotals();
+    _saveCartToStorage();
+
+    Get.snackbar(
+      'Removed',
+      'Item removed from cart',
+      snackPosition: SnackPosition.BOTTOM,
+    );
   }
 
   void _saveCartToStorage() {
@@ -81,10 +97,10 @@ class CartController extends GetxController {
       0.0,
       (sum, item) => sum + (item.price * item.quantity),
     );
-    _serviceCharge.value = _subtotal.value * AppConstants.serviceChargeRate;
-    _total.value = _subtotal.value + _serviceCharge.value;
+    // ✅ NO delivery fee calculation - backend yang handle
   }
 
+  //Add item to cart
   Future<bool> addToCart(
     MenuItemModel menuItem,
     StoreModel store, {
@@ -114,14 +130,13 @@ class CartController extends GetxController {
       );
 
       if (existingIndex != -1) {
-        // Update existing item
+        // ✅ UPDATE: Tambah quantity item yang sama
         final existingItem = _cartItems[existingIndex];
         _cartItems[existingIndex] = existingItem.copyWith(
           quantity: existingItem.quantity + quantity,
-          notes: notes ?? existingItem.notes,
         );
       } else {
-        // Add new item
+        // ✅ ADD NEW: Item baru ke cart
         final cartItem = CartItemModel.fromMenuItem(
           menuItemId: menuItem.id,
           storeId: store.id,
@@ -134,15 +149,14 @@ class CartController extends GetxController {
         _cartItems.add(cartItem);
       }
 
-      _calculateTotals();
+      _calculateTotals(); //Recalculate setiap ada perubahan
       _saveCartToStorage();
-
+      // return true;
       Get.snackbar(
         'Success',
         '${menuItem.name} added to cart',
         snackPosition: SnackPosition.BOTTOM,
       );
-
       return true;
     } catch (e) {
       Get.snackbar(
@@ -154,6 +168,7 @@ class CartController extends GetxController {
     }
   }
 
+  // Update quantity
   void updateQuantity(int menuItemId, int newQuantity) {
     if (newQuantity <= 0) {
       removeFromCart(menuItemId);
@@ -166,27 +181,9 @@ class CartController extends GetxController {
 
     if (index != -1) {
       _cartItems[index] = _cartItems[index].copyWith(quantity: newQuantity);
-      _calculateTotals();
+      _calculateTotals(); // ✅ Recalculate
       _saveCartToStorage();
     }
-  }
-
-  void removeFromCart(int menuItemId) {
-    _cartItems.removeWhere((item) => item.menuItemId == menuItemId);
-
-    if (_cartItems.isEmpty) {
-      _currentStoreId.value = 0;
-      _currentStoreName.value = '';
-    }
-
-    _calculateTotals();
-    _saveCartToStorage();
-
-    Get.snackbar(
-      'Removed',
-      'Item removed from cart',
-      snackPosition: SnackPosition.BOTTOM,
-    );
   }
 
   void _clearCart() {
@@ -194,12 +191,12 @@ class CartController extends GetxController {
     _currentStoreId.value = 0;
     _currentStoreName.value = '';
     _subtotal.value = 0.0;
-    _serviceCharge.value = 0.0;
+    // _serviceCharge.value = 0.0;
     _total.value = 0.0;
 
     _storageService.remove(StorageConstants.cartItems);
     _storageService.remove(StorageConstants.cartStoreId);
-    _storageService.remove('cart_store_name');
+    _storageService.remove(StorageConstants.cartStoreName);
     _storageService.remove(StorageConstants.cartTotal);
     _storageService.remove(StorageConstants.cartUpdatedAt);
   }
@@ -255,15 +252,9 @@ class CartController extends GetxController {
         'storeId': _currentStoreId.value,
         'storeName': _currentStoreName.value,
         'subtotal': _subtotal.value,
-        'serviceCharge': _serviceCharge.value,
+        // 'serviceCharge': _serviceCharge.value,
         'total': _total.value,
       },
     );
   }
-
-  // Helper methods for formatting
-  String get formattedSubtotal => 'Rp ${_subtotal.value.toStringAsFixed(0)}';
-  String get formattedServiceCharge =>
-      'Rp ${_serviceCharge.value.toStringAsFixed(0)}';
-  String get formattedTotal => 'Rp ${_total.value.toStringAsFixed(0)}';
 }
