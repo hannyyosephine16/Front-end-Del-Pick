@@ -1,4 +1,5 @@
 // lib/data/datasources/remote/order_remote_datasource.dart - SESUAI ApiService ANDA
+import 'package:del_pick/core/constants/api_endpoints.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:dio/dio.dart';
@@ -13,10 +14,7 @@ class OrderRemoteDataSource {
   })  : _apiService = apiService,
         _authLocalDataSource = authLocalDataSource;
 
-  // ========================================================================
-  // DRIVER ENDPOINTS - SESUAI SWAGGER
-  // ========================================================================
-
+  // DRIVER ENDPOINTS
   /// Get driver orders - ENDPOINT: GET /drivers/orders
   Future<Response> getDriverOrders({
     int? page,
@@ -66,9 +64,7 @@ class OrderRemoteDataSource {
     return await _apiService.get('/orders/$orderId');
   }
 
-  // ========================================================================
-  // TRACKING ENDPOINTS untuk Driver - SESUAI SWAGGER
-  // ========================================================================
+  // TRACKING ENDPOINTS untuk Driver
 
   /// Start delivery - ENDPOINT: PUT /tracking/{orderId}/start
   Future<Response> startDelivery(String orderId) async {
@@ -85,23 +81,17 @@ class OrderRemoteDataSource {
     return await _apiService.get('/tracking/$orderId');
   }
 
-  // ========================================================================
   // CUSTOMER ENDPOINTS - SESUAI SWAGGER
-  // ========================================================================
-
   /// Get orders untuk customer - ENDPOINT: GET /orders/user
-  Future<Response> getCustomerOrders({
-    int? page,
-    int? limit,
-    String? status,
-  }) async {
+  Future<Response> getCustomerOrders(
+      {int? page, int? limit, String? status}) async {
     final queryParams = <String, dynamic>{};
     if (page != null) queryParams['page'] = page;
     if (limit != null) queryParams['limit'] = limit;
     if (status != null) queryParams['status'] = status;
 
     return await _apiService.get(
-      '/orders/user',
+      ApiEndpoints.customerOrders,
       queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
   }
@@ -124,45 +114,37 @@ class OrderRemoteDataSource {
     return await _apiService.put('/orders/$orderId/cancel');
   }
 
-  // ========================================================================
   // STORE OWNER ENDPOINTS - SESUAI SWAGGER
-  // ========================================================================
-
   /// Get store orders - ENDPOINT: GET /orders/store
-  Future<Response> getStoreOrders({
-    int? page,
-    int? limit,
-    String? status,
-  }) async {
+  Future<Response> getStoreOrders(
+      {int? page, int? limit, String? status}) async {
     final queryParams = <String, dynamic>{};
     if (page != null) queryParams['page'] = page;
     if (limit != null) queryParams['limit'] = limit;
     if (status != null) queryParams['status'] = status;
 
     return await _apiService.get(
-      '/orders/store',
+      ApiEndpoints.storeOrders,
       queryParameters: queryParams.isNotEmpty ? queryParams : null,
     );
   }
 
   /// Process order - ENDPOINT: PUT /orders/{orderId}/process
-  Future<Response> processOrder(
-      String orderId, Map<String, dynamic> data) async {
-    return await _apiService.put(
-      '/orders/$orderId/process',
-      data: data, // {action: "approve" atau "reject", rejectionReason?: string}
+  Future<Response> processOrder(int orderId, String action) async {
+    return await _apiService.post(
+      // '/orders/$orderId/process',
+      ApiEndpoints.processOrder(orderId),
+      data: {'action': action},
     );
   }
 
-  // ========================================================================
-  // REVIEW ENDPOINTS - SESUAI SWAGGER
-  // ========================================================================
-
+  // REVIEW ENDPOINTS
   /// Create order review - ENDPOINT: POST /orders/review
-  Future<Response> createOrderReview(Map<String, dynamic> data) async {
+  Future<Response> createOrderReview(
+      int orderId, Map<String, dynamic> reviewData) async {
     return await _apiService.post(
-      '/orders/review',
-      data: data,
+      ApiEndpoints.createOrderReview(orderId),
+      data: reviewData,
     );
   }
 }

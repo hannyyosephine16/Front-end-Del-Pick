@@ -10,6 +10,7 @@ class StorageConstants {
   static const String userAvatar = 'user_avatar';
   static const String isLoggedIn = 'is_logged_in';
   static const String lastLoginTime = 'last_login_time';
+  static const String fcmToken = 'fcm_token';
 
   // User preferences
   static const String language = 'language';

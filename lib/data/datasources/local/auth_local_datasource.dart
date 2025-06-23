@@ -21,32 +21,39 @@ class AuthLocalDataSource {
   }
 
   Future<void> saveUser(UserModel user) async {
-    await _storageService.writeJson(StorageConstants.userId, user.toJson());
+    await _storageService.writeString(
+        StorageConstants.userId, user.id.toString());
     await _storageService.writeString(StorageConstants.userRole, user.role);
     await _storageService.writeString(StorageConstants.userEmail, user.email);
     await _storageService.writeString(StorageConstants.userName, user.name);
     if (user.phone != null) {
       await _storageService.writeString(
-        StorageConstants.userPhone,
-        user.phone!,
-      );
+          StorageConstants.userPhone, user.phone!);
     }
     if (user.avatar != null) {
       await _storageService.writeString(
-        StorageConstants.userAvatar,
-        user.avatar!,
-      );
+          StorageConstants.userAvatar, user.avatar!);
     }
   }
 
   Future<UserModel?> getUser() async {
-    final userData = _storageService.readJson(StorageConstants.userId);
-    if (userData != null) {
-      try {
-        return UserModel.fromJson(userData);
-      } catch (e) {
-        return null;
-      }
+    final userId = _storageService.readString(StorageConstants.userId);
+    final userRole = _storageService.readString(StorageConstants.userRole);
+    final userEmail = _storageService.readString(StorageConstants.userEmail);
+    final userName = _storageService.readString(StorageConstants.userName);
+
+    if (userId != null &&
+        userRole != null &&
+        userEmail != null &&
+        userName != null) {
+      return UserModel(
+        id: int.parse(userId),
+        name: userName,
+        email: userEmail,
+        role: userRole,
+        phone: _storageService.readString(StorageConstants.userPhone),
+        avatar: _storageService.readString(StorageConstants.userAvatar),
+      );
     }
     return null;
   }

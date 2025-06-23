@@ -60,12 +60,12 @@ class ApiEndpoints {
 
   /// ORDER ENDPOINTS (sesuai backend routes/v1/orderRoutes.js)
   static const String createOrder = orders;
-  static const String customerOrders = '$orders/customer'; // sesuai backend
-  static const String storeOrders = '$orders/store'; // sesuai backend
-  static String getOrderById(int id) => '$orders/$id';
-  static String updateOrderStatus(int id) => '$orders/$id/status';
-  static String processOrder(int id) => '$orders/$id/process'; // sesuai backend
-  static String createOrderReview(int id) => '$orders/$id/review';
+  static const String customerOrders = '$orders/customer';
+  static const String storeOrders = '$orders/store';
+  static String getOrderById(int orderId) => '$orders/$orderId';
+  static String updateOrderStatus(int orderId) => '$orders/$orderId/status';
+  static String processOrder(int orderId) => '$orders/$orderId/process';
+  static String createOrderReview(int orderId) => '$orders/$orderId/review';
 
   /// TRACKING ENDPOINTS (sesuai backend routes/v1/orderRoutes.js)
   static String getOrderTracking(int orderId) => '$orders/$orderId/tracking';
@@ -79,17 +79,20 @@ class ApiEndpoints {
 
   /// DRIVER ENDPOINTS (sesuai backend routes/v1/driverRoutes.js)
   static const String getAllDrivers = drivers;
-  static String getDriverById(int id) => '$drivers/$id';
+  static String getDriverById(int driverId) => '$drivers/$driverId';
   static const String createDriver = drivers;
-  static String updateDriver(int id) => '$drivers/$id';
-  static String deleteDriver(int id) => '$drivers/$id';
-  static String updateDriverStatus(int id) => '$drivers/$id/status';
-  static String updateDriverLocation(int id) => '$drivers/$id/location';
+  static String updateDriverbyAdmin(int driverId) => '$drivers/$driverId';
+  static String deleteDriver(int driverId) => '$drivers/$driverId';
+  static String updateDriverStatus(int driverId) => '$drivers/$driverId/status';
+  static String updateDriverLocation(int driverId) =>
+      '$drivers/$driverId/location';
 
   /// DRIVER REQUEST ENDPOINTS (sesuai backend routes/v1/driverRequestRoutes.js)
   static const String getDriverRequests = driverRequests;
-  static String getDriverRequestById(int id) => '$driverRequests/$id';
-  static String respondToDriverRequest(int id) => '$driverRequests/$id/respond';
+  static String getDriverRequestById(int requestId) =>
+      '$driverRequests/$requestId';
+  static String respondToDriverRequest(int requestId) =>
+      '$driverRequests/$requestId/respond';
 
   /// HEALTH CHECK ENDPOINTS (sesuai backend routes/v1/healthRoutes.js)
   static const String healthCheck = health;

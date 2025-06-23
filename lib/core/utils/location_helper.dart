@@ -4,7 +4,7 @@ import 'dart:math' as math;
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
-import 'package:del_pick/core/errors/exceptions.dart';
+import 'package:del_pick/core/errors/exceptions.dart' as app_exceptions;
 
 class LocationHelper {
   static const Duration _defaultTimeout = Duration(seconds: 30);
@@ -19,7 +19,7 @@ class LocationHelper {
       // Check if location services are enabled
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
-        throw const LocationServiceDisabledException();
+        throw const app_exceptions.LocationServiceDisabledException();
       }
 
       // Check location permissions
@@ -27,12 +27,12 @@ class LocationHelper {
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
-          throw const LocationPermissionDeniedException();
+          throw const app_exceptions.LocationPermissionDeniedException();
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        throw const LocationPermissionDeniedException();
+        throw const app_exceptions.LocationPermissionDeniedException();
       }
 
       // Get current position
@@ -43,10 +43,10 @@ class LocationHelper {
 
       return position;
     } on TimeoutException {
-      throw const LocationTimeoutException();
+      throw const app_exceptions.LocationTimeoutException();
     } catch (e) {
-      if (e is LocationException) rethrow;
-      throw LocationException(
+      if (e is app_exceptions.LocationException) rethrow;
+      throw app_exceptions.LocationException(
           'Failed to get current location: ${e.toString()}');
     }
   }
@@ -139,7 +139,8 @@ class LocationHelper {
 
       return 'Unknown location';
     } catch (e) {
-      throw LocationException('Failed to get address: ${e.toString()}');
+      throw app_exceptions.LocationException(
+          'Failed to get address: ${e.toString()}');
     }
   }
 
@@ -165,7 +166,8 @@ class LocationHelper {
 
       return null;
     } catch (e) {
-      throw LocationException('Failed to get coordinates: ${e.toString()}');
+      throw app_exceptions.LocationException(
+          'Failed to get coordinates: ${e.toString()}');
     }
   }
 
