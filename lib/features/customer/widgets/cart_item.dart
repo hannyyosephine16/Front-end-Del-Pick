@@ -58,7 +58,7 @@ class CartItemWidget extends StatelessWidget {
                     : Container(
                         color: AppColors.border,
                         child: Image.asset(
-                          AppConstants.defaultFoodImageUrl,
+                          AppConstants.defaultImageUrl,
                           fit: BoxFit.cover,
                         ),
                       ),

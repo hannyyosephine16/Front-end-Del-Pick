@@ -58,9 +58,9 @@ class DriverInfoWidget extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: AppDimensions.spacingXS),
-                    if (driver.vehicleNumber != null) ...[
+                    if (driver.vehiclePlate != null) ...[
                       Text(
-                        'Vehicle: ${driver.vehicleNumber}',
+                        'Vehicle: ${driver.vehiclePlate}',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.textSecondary,
                         ),

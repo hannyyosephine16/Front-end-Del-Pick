@@ -5,7 +5,8 @@ class UserModel {
   final String? phone;
   final String role;
   final String? avatar;
-  final bool isActive;
+  final String? fcmToken;
+  // final bool isActive;
   final DateTime? emailVerifiedAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -17,7 +18,8 @@ class UserModel {
     this.phone,
     required this.role,
     this.avatar,
-    this.isActive = true,
+    this.fcmToken,
+    // this.isActive = true,
     this.emailVerifiedAt,
     this.createdAt,
     this.updatedAt,
@@ -31,7 +33,8 @@ class UserModel {
       phone: json['phone'] as String?,
       role: json['role'] as String,
       avatar: json['avatar'] as String?,
-      isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
+      // isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
+      fcmToken: json['fcm_token'] as String?,
       emailVerifiedAt: json['email_verified_at'] != null
           ? DateTime.parse(json['email_verified_at'] as String)
           : json['emailVerifiedAt'] != null
@@ -58,7 +61,8 @@ class UserModel {
       'phone': phone,
       'role': role,
       'avatar': avatar,
-      'is_active': isActive,
+      'fcm_token': fcmToken,
+      // 'is_active': isActive,
       'email_verified_at': emailVerifiedAt?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
@@ -72,7 +76,8 @@ class UserModel {
     String? phone,
     String? role,
     String? avatar,
-    bool? isActive,
+    // bool? isActive,
+    String? fcmToken,
     DateTime? emailVerifiedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -84,7 +89,8 @@ class UserModel {
       phone: phone ?? this.phone,
       role: role ?? this.role,
       avatar: avatar ?? this.avatar,
-      isActive: isActive ?? this.isActive,
+      // isActive: isActive ?? this.isActive,
+      fcmToken: fcmToken ?? this.fcmToken,
       emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -96,7 +102,8 @@ class UserModel {
   bool get isDriver => role == 'driver';
   bool get isStore => role == 'store';
   bool get isAdmin => role == 'admin';
-
+  bool get hasAvatar => avatar != null && avatar!.isNotEmpty;
+  bool get hasFcmToken => fcmToken != null && fcmToken!.isNotEmpty;
   bool get isEmailVerified => emailVerifiedAt != null;
 
   String get initials {

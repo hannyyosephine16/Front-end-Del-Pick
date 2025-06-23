@@ -1,7 +1,8 @@
-// lib/data/models/order/order_model_extensions.dart
+// lib/data/models/order/order_model_extensions.dart - FIXED VERSION
 import 'package:flutter/material.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
+import 'package:intl/intl.dart';
 
 extension OrderModelExtensions on OrderModel {
   // ✅ Individual status checking methods - Backend Compatible
@@ -44,6 +45,8 @@ extension OrderModelExtensions on OrderModel {
 
   // ✅ Total calculations - Backend Compatible
   double get grandTotal => totalAmount + deliveryFee;
+  // Alias for compatibility
+  double get total => grandTotal;
 
   String get formattedTotal =>
       'Rp ${grandTotal.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
@@ -81,12 +84,13 @@ extension OrderModelExtensions on OrderModel {
     }
   }
 
-  // ✅ Timing helpers - Backend Compatible
+  // ✅ Timing helpers - Backend Compatible (FIXED DateTime parsing)
   String? get estimatedTimeRemaining {
     if (estimatedDeliveryTime == null) return null;
 
     final now = DateTime.now();
-    final estimatedTime = DateTime.parse(estimatedDeliveryTime!);
+    // ✅ FIXED: estimatedDeliveryTime is already DateTime, no need to parse
+    final estimatedTime = estimatedDeliveryTime!;
 
     if (estimatedTime.isBefore(now)) {
       return 'Overdue';
@@ -107,15 +111,16 @@ extension OrderModelExtensions on OrderModel {
     }
 
     final now = DateTime.now();
-    final estimatedTime = DateTime.parse(estimatedDeliveryTime!);
+    // ✅ FIXED: estimatedDeliveryTime is already DateTime
+    final estimatedTime = estimatedDeliveryTime!;
 
     return now.isAfter(estimatedTime);
   }
 
+  // ✅ FIXED: createdAt is already DateTime
   String get formattedCreatedAt {
-    final date = DateTime.parse(createdAt);
     final now = DateTime.now();
-    final difference = now.difference(date);
+    final difference = now.difference(createdAt);
 
     if (difference.inDays > 0) {
       return '${difference.inDays} days ago';
@@ -128,15 +133,36 @@ extension OrderModelExtensions on OrderModel {
     }
   }
 
-  // ✅ Driver information - Backend Compatible
-  bool get hasDriver => driverId != null;
-  String get driverName => driver?.user?.name ?? 'No Driver Assigned';
+  // ✅ Date formatting helpers
+  String get formattedDate {
+    return DateFormat('MMM dd, yyyy').format(createdAt);
+  }
+
+  String get formattedOrderDate {
+    return DateFormat('MMM dd, yyyy • HH:mm').format(createdAt);
+  }
+
+  String get formattedTime {
+    return DateFormat('HH:mm').format(createdAt);
+  }
+
+  // ✅ Driver information - Backend Compatible (FIXED driver access)
+  bool get hasDriver => driverId != null && driver != null;
+
+  // ✅ FIXED: Access driver name correctly from backend structure
+  String get driverName {
+    // Backend structure: driver.user.name (not driver.user.user.name)
+    return driver?.name ?? 'No Driver Assigned';
+  }
 
   // ✅ Items information - Backend Compatible
   int get itemsCount {
     if (items == null) return 0;
     return items!.fold(0, (sum, item) => sum + item.quantity);
   }
+
+  // ✅ ADDED: Alias for compatibility
+  int get totalItems => itemsCount;
 
   String get itemsSummary {
     if (items == null || items!.isEmpty) return 'No items';
@@ -224,43 +250,51 @@ extension OrderModelExtensions on OrderModel {
   bool get hasTrackingUpdates {
     return trackingUpdates != null && trackingUpdates!.isNotEmpty;
   }
-}
 
-// // lib/data/models/order/order_model_extensions.dart - NEW FILE
-// import 'package:flutter/material.dart';
-// import 'package:del_pick/data/models/order/order_model.dart';
-// import 'package:del_pick/core/constants/order_status_constants.dart';
-//
-// extension OrderModelExtensions on OrderModel {
-//   // ✅ Status checking methods
-//   bool get isPending => orderStatus == OrderStatusConstants.pending;
-//   bool get isConfirmed => orderStatus == OrderStatusConstants.confirmed;
-//   bool get isPreparing => orderStatus == OrderStatusConstants.preparing;
-//   bool get isReadyForPickup =>
-//       orderStatus == OrderStatusConstants.readyForPickup;
-//   bool get isOnDelivery => orderStatus == OrderStatusConstants.onDelivery;
-//   bool get isDelivered => orderStatus == OrderStatusConstants.delivered;
-//   bool get isCancelled => orderStatus == OrderStatusConstants.cancelled;
-//   bool get isRejected => orderStatus == OrderStatusConstants.rejected;
-//
-//   // Helper methods
-//   bool get isActive => OrderStatusConstants.isActive(orderStatus);
-//   bool get isCompleted => OrderStatusConstants.isCompleted(orderStatus);
-//   bool get canCancel => OrderStatusConstants.canCancel(orderStatus);
-//   bool get canTrack => OrderStatusConstants.canTrack(orderStatus);
-//
-//   String get statusDisplayName =>
-//       OrderStatusConstants.getStatusName(orderStatus);
-//   Color get statusColor => OrderStatusConstants.getStatusColor(orderStatus);
-//
-//   // ✅ Generate order code dari ID
-//   String get code => 'ORD${id.toString().padLeft(6, '0')}';
-//
-//   // ✅ Total calculations
-//   double get total => totalAmount + deliveryFee;
-//   String get formattedTotal =>
-//       'Rp ${total.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
-//
-//   // Store name from relationship
-//   String get storeName => store?.name ?? 'Unknown Store';
-// }
+  // ✅ Additional helpers for UI
+  String get statusDescription {
+    switch (orderStatus) {
+      case 'pending':
+        return 'Your order is being processed';
+      case 'confirmed':
+        return 'Order confirmed by store';
+      case 'preparing':
+        return 'Store is preparing your order';
+      case 'ready_for_pickup':
+        return 'Order ready for pickup';
+      case 'on_delivery':
+        return 'Driver is delivering your order';
+      case 'delivered':
+        return 'Order delivered successfully';
+      case 'cancelled':
+        return 'Order was cancelled';
+      case 'rejected':
+        return 'Order was rejected by store';
+      default:
+        return 'Unknown status';
+    }
+  }
+
+  IconData get statusIcon {
+    switch (orderStatus) {
+      case 'pending':
+        return Icons.schedule;
+      case 'confirmed':
+        return Icons.check_circle_outline;
+      case 'preparing':
+        return Icons.restaurant;
+      case 'ready_for_pickup':
+        return Icons.shopping_bag;
+      case 'on_delivery':
+        return Icons.local_shipping;
+      case 'delivered':
+        return Icons.check_circle;
+      case 'cancelled':
+        return Icons.cancel;
+      case 'rejected':
+        return Icons.block;
+      default:
+        return Icons.help_outline;
+    }
+  }
+}

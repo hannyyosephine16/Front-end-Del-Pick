@@ -1,7 +1,6 @@
-// lib/data/models/order/order_model.dart - FIXED VERSION
+// lib/data/models/order/order_model.dart - CORRECTED VERSION
 import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
-import 'package:del_pick/data/models/order/order_model_extensions.dart';
 import 'order_item_model.dart';
 import 'package:intl/intl.dart';
 
@@ -14,18 +13,18 @@ class OrderModel {
   final String deliveryStatus;
   final double totalAmount;
   final double deliveryFee;
-  final double? destinationLatitude; // ✅ ADDED: Backend field
-  final double? destinationLongitude; // ✅ ADDED: Backend field
+  final double? destinationLatitude;
+  final double? destinationLongitude;
   final DateTime? estimatedPickupTime;
   final DateTime? actualPickupTime;
   final DateTime? estimatedDeliveryTime;
   final DateTime? actualDeliveryTime;
-  final String? cancellationReason; // ✅ ADDED: Backend field
-  final List<dynamic>? trackingUpdates; // ✅ ADDED: Backend JSON field
+  final String? cancellationReason;
+  final List<dynamic>? trackingUpdates;
   final List<OrderItemModel>? items;
   final StoreModel? store;
   final UserModel? customer;
-  final UserModel? driver;
+  final dynamic driver; // ✅ Changed to dynamic to handle backend structure
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -60,12 +59,10 @@ class OrderModel {
       customerId: json['customer_id'] as int,
       storeId: json['store_id'] as int,
       driverId: json['driver_id'] as int?,
-      // ✅ FIXED: Handle backend field names properly
       orderStatus: json['order_status'] as String,
       deliveryStatus: json['delivery_status'] as String,
       totalAmount: (json['total_amount'] as num).toDouble(),
       deliveryFee: (json['delivery_fee'] as num).toDouble(),
-      // ✅ ADDED: New backend fields
       destinationLatitude: (json['destination_latitude'] as num?)?.toDouble(),
       destinationLongitude: (json['destination_longitude'] as num?)?.toDouble(),
       estimatedPickupTime: json['estimated_pickup_time'] != null
@@ -94,9 +91,8 @@ class OrderModel {
       customer: json['customer'] != null
           ? UserModel.fromJson(json['customer'] as Map<String, dynamic>)
           : null,
-      driver: json['driver'] != null
-          ? UserModel.fromJson(json['driver'] as Map<String, dynamic>)
-          : null,
+      driver:
+          json['driver'], // ✅ Keep as dynamic to handle different structures
       createdAt: DateTime.parse(json['created_at'] as String),
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
@@ -123,7 +119,7 @@ class OrderModel {
       'items': items?.map((item) => item.toJson()).toList(),
       'store': store?.toJson(),
       'customer': customer?.toJson(),
-      'driver': driver?.toJson(),
+      'driver': driver,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
