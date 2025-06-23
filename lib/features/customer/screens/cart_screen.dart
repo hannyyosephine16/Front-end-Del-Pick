@@ -35,7 +35,6 @@ class CartScreen extends StatelessWidget {
           return const EmptyStateWidget(
             message: 'Your cart is empty',
             icon: Icons.shopping_cart_outlined,
-            // actionText: 'Browse Restaurants',
           );
         }
 
@@ -235,6 +234,7 @@ class CartScreen extends StatelessWidget {
               ),
               child: Column(
                 children: [
+                  // ✅ FIXED: Hanya tampilkan subtotal, karena backend yang calculate delivery fee
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -244,25 +244,35 @@ class CartScreen extends StatelessWidget {
                       ),
                       Text(
                         controller.formattedSubtotal,
-                        style: AppTextStyles.bodyMedium,
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
                     ],
                   ),
+
+                  // ✅ NEW: Info tentang delivery fee
                   const SizedBox(height: 8),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Service Charge (10%)',
+                        'Delivery Fee',
                         style: AppTextStyles.bodyMedium,
                       ),
                       Text(
-                        controller.formattedServiceCharge,
-                        style: AppTextStyles.bodyMedium,
+                        'Calculated at checkout',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.textSecondary,
+                          fontStyle: FontStyle.italic,
+                        ),
                       ),
                     ],
                   ),
+
                   const Divider(height: 24),
+
+                  // ✅ FIXED: Total hanya subtotal, delivery fee akan ditambah di backend
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -271,13 +281,26 @@ class CartScreen extends StatelessWidget {
                         style: AppTextStyles.h6,
                       ),
                       Text(
-                        controller.formattedTotal,
+                        controller
+                            .formattedSubtotal, // ✅ Gunakan subtotal karena delivery fee dihitung backend
                         style: AppTextStyles.h6.copyWith(
                           color: AppColors.primary,
                         ),
                       ),
                     ],
                   ),
+
+                  // ✅ NEW: Info note
+                  const SizedBox(height: 8),
+                  Text(
+                    '*Final total including delivery fee will be calculated based on distance',
+                    style: AppTextStyles.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                      fontStyle: FontStyle.italic,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+
                   const SizedBox(height: 16),
                   SizedBox(
                     width: double.infinity,

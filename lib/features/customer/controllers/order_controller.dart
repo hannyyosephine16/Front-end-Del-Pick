@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/models/order/order_model_extensions.dart'; // ✅ ADD THIS
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
 

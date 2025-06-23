@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/models/order/order_model_extensions.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
 

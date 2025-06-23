@@ -1,16 +1,15 @@
-// lib/features/customer/controllers/checkout_controller.dart - OPTIMIZED VERSION
+// lib/features/customer/controllers/checkout_controller.dart - FIXED VERSION
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/order/cart_item_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
+import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
 
 class CheckoutController extends GetxController {
-  // ✅ LAZY: Repositories akan di-inject saat dibutuhkan
-  late final _orderRepository = Get.find();
-  late final _cartController = Get.find<CartController>();
+  final OrderRepository _orderRepository = Get.find<OrderRepository>();
+  final CartController _cartController = Get.find<CartController>();
 
-  // ✅ Simplified state
   final RxBool _isPlacingOrder = false.obs;
   final RxString _notes = ''.obs;
   final RxString _deliveryAddress = 'Institut Teknologi Del'.obs;
@@ -25,12 +24,10 @@ class CheckoutController extends GetxController {
   String get errorMessage => _errorMessage.value;
   bool get hasError => _hasError.value;
 
-  // ✅ Direct access to cart (no duplicate data)
   List<CartItemModel> get cartItems => _cartController.cartItems;
   int get storeId => _cartController.currentStoreId;
   String get storeName => _cartController.currentStoreName;
   double get subtotal => _cartController.subtotal;
-  double get serviceCharge => _cartController.serviceCharge;
   double get total => _cartController.total;
   bool get isEmpty => _cartController.isEmpty;
   bool get canPlaceOrder => !isEmpty && !isLoading && !hasError;
@@ -46,7 +43,6 @@ class CheckoutController extends GetxController {
     _clearError();
   }
 
-  // ✅ MAIN OPTIMIZED METHOD: Simplified error handling
   Future<void> placeOrder() async {
     if (!_validateOrder()) return;
 
@@ -55,21 +51,23 @@ class CheckoutController extends GetxController {
 
     try {
       final orderData = _prepareOrderData();
+      print('CheckoutController: Placing order with data: $orderData');
+
       final result = await _orderRepository.createOrder(orderData);
 
       if (result.isSuccess && result.data != null) {
         await _handleOrderSuccess(result.data!);
       } else {
-        _handleOrderFailure(result.message);
+        _handleOrderFailure(result.errorMessage);
       }
     } catch (e) {
+      print('CheckoutController: Exception: $e');
       _handleOrderError(e);
     } finally {
       _setLoading(false);
     }
   }
 
-  // ✅ SIMPLIFIED: Essential validation only
   bool _validateOrder() {
     _clearError();
 
@@ -93,13 +91,22 @@ class CheckoutController extends GetxController {
   }
 
   Map<String, dynamic> _prepareOrderData() {
+    // ✅ FIXED: Backend expects store_id not storeId
     final orderData = <String, dynamic>{
-      'storeId': storeId,
+      'store_id': storeId, // ✅ Backend field name
       'items': cartItems.map((item) => item.toApiJson()).toList(),
     };
 
+    // ✅ Optional notes can be added to individual items via toApiJson()
     if (notes.isNotEmpty) {
-      orderData['notes'] = notes;
+      // Add global notes to first item if exists
+      if (orderData['items'].isNotEmpty) {
+        final firstItem = orderData['items'][0] as Map<String, dynamic>;
+        final existingNotes = firstItem['notes'] as String?;
+        firstItem['notes'] = existingNotes != null
+            ? '$existingNotes. Additional: $notes'
+            : notes;
+      }
     }
 
     return orderData;
@@ -110,7 +117,7 @@ class CheckoutController extends GetxController {
 
     Get.snackbar(
       'Order Placed! 🎉',
-      'Your order ${order.code} is being processed',
+      'Your order #${order.id} is being processed',
       snackPosition: SnackPosition.BOTTOM,
       backgroundColor: Colors.green,
       colorText: Colors.white,
@@ -119,9 +126,10 @@ class CheckoutController extends GetxController {
 
     await Future.delayed(const Duration(milliseconds: 300));
 
+    // Navigation arguments
     Get.offNamed('/order_tracking', arguments: {
       'orderId': order.id,
-      'orderCode': order.code,
+      'order': order, // Pass full order object
     });
   }
 
@@ -136,8 +144,8 @@ class CheckoutController extends GetxController {
     _showErrorSnackbar('Connection Error', 'Please check your connection');
   }
 
-  // ✅ Helper methods
   void _setLoading(bool loading) => _isPlacingOrder.value = loading;
+
   void _setError(String message) {
     _hasError.value = true;
     _errorMessage.value = message;
@@ -161,8 +169,9 @@ class CheckoutController extends GetxController {
 
   Future<void> retryOrder() => placeOrder();
 
-  // Formatting getters
-  String get formattedSubtotal => _cartController.formattedSubtotal;
-  String get formattedServiceCharge => _cartController.formattedServiceCharge;
-  String get formattedTotal => _cartController.formattedTotal;
+  String get formattedSubtotal =>
+      'Rp ${subtotal.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
+
+  String get formattedTotal =>
+      'Rp ${total.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
 }
