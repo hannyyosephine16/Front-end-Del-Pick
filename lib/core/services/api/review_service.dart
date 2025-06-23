@@ -8,31 +8,15 @@ class ReviewApiService {
 
   ReviewApiService(this._apiService);
 
-  Future<Response> createOrderReview(Map<String, dynamic> data) async {
-    return await _apiService.post(ApiEndpoints.createReview, data: data);
-  }
-
-  Future<Response> getOrderReviews(int orderId) async {
-    return await _apiService.get('${ApiEndpoints.reviews}/order/$orderId');
-  }
-
-  Future<Response> getStoreReviews(
-    int storeId, {
-    Map<String, dynamic>? queryParams,
-  }) async {
-    return await _apiService.get(
-      '${ApiEndpoints.reviews}/store/$storeId',
-      queryParameters: queryParams,
+  // ✅ FIXED: Create review sesuai backend POST /orders/:id/review
+  Future<Response> createOrderReview(
+      int orderId, Map<String, dynamic> data) async {
+    return await _apiService.post(
+      ApiEndpoints.createOrderReview(orderId),
+      data: data,
     );
   }
 
-  Future<Response> getDriverReviews(
-    int driverId, {
-    Map<String, dynamic>? queryParams,
-  }) async {
-    return await _apiService.get(
-      '${ApiEndpoints.reviews}/driver/$driverId',
-      queryParameters: queryParams,
-    );
-  }
+// ✅ Backend tidak memiliki endpoint khusus untuk get reviews
+// Reviews diambil melalui order detail atau store/driver detail
 }

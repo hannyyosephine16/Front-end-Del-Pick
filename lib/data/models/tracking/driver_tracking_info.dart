@@ -1,17 +1,18 @@
+// lib/data/models/tracking/driver_tracking_info.dart - FIXED
 class DriverTrackingInfo {
   final int id;
   final String name;
   final String? phone;
-  final String? vehicleType;
-  final String? vehicleNumber;
+  final String? licenseNumber; // ✅ FIXED: Backend field name
+  final String? vehiclePlate; // ✅ FIXED: Backend field name
   final double? rating;
 
   DriverTrackingInfo({
     required this.id,
     required this.name,
     this.phone,
-    this.vehicleType,
-    this.vehicleNumber,
+    this.licenseNumber,
+    this.vehiclePlate,
     this.rating,
   });
 
@@ -20,8 +21,8 @@ class DriverTrackingInfo {
       id: json['id'] as int,
       name: json['name'] as String,
       phone: json['phone'] as String?,
-      vehicleType: json['vehicleType'] as String?,
-      vehicleNumber: json['vehicleNumber'] as String?,
+      licenseNumber: json['license_number'] as String?, // ✅ FIXED
+      vehiclePlate: json['vehicle_plate'] as String?, // ✅ FIXED
       rating: (json['rating'] as num?)?.toDouble(),
     );
   }
@@ -31,8 +32,8 @@ class DriverTrackingInfo {
       'id': id,
       'name': name,
       'phone': phone,
-      'vehicleType': vehicleType,
-      'vehicleNumber': vehicleNumber,
+      'license_number': licenseNumber, // ✅ FIXED
+      'vehicle_plate': vehiclePlate, // ✅ FIXED
       'rating': rating,
     };
   }
@@ -41,6 +42,6 @@ class DriverTrackingInfo {
 
   @override
   String toString() {
-    return 'DriverTrackingInfo{id: $id, name: $name, vehicle: $vehicleNumber}';
+    return 'DriverTrackingInfo{id: $id, name: $name, vehicle: $vehiclePlate}';
   }
 }

@@ -1,4 +1,4 @@
-// lib/core/services/api/auth_service.dart
+// lib/core/services/api/auth_service.dart - FIXED VERSION
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
@@ -20,8 +20,14 @@ class AuthApiService {
     return await _apiService.get(ApiEndpoints.profile);
   }
 
+  // ✅ FIXED: Use correct endpoint for profile update
   Future<Response> updateProfile(Map<String, dynamic> data) async {
-    return await _apiService.put(ApiEndpoints.updateProfile, data: data);
+    return await _apiService.put(ApiEndpoints.profile, data: data);
+  }
+
+  // ✅ ADDED: Missing updateFcmToken method
+  Future<Response> updateFcmToken(Map<String, dynamic> data) async {
+    return await _apiService.put(ApiEndpoints.updateFcmToken, data: data);
   }
 
   Future<Response> forgotPassword(Map<String, dynamic> data) async {
@@ -30,6 +36,14 @@ class AuthApiService {
 
   Future<Response> resetPassword(Map<String, dynamic> data) async {
     return await _apiService.post(ApiEndpoints.resetPassword, data: data);
+  }
+
+  Future<Response> verifyEmail(String token) async {
+    return await _apiService.post('${ApiEndpoints.verifyEmail}/$token');
+  }
+
+  Future<Response> resendVerification(Map<String, dynamic> data) async {
+    return await _apiService.post(ApiEndpoints.resendVerification, data: data);
   }
 
   Future<Response> logout() async {

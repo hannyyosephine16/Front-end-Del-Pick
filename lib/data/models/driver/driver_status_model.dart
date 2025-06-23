@@ -1,8 +1,7 @@
-// lib/data/models/driver/driver_status_model.dart
+// lib/data/models/driver/driver_status_model.dart - FIXED VERSION
 import 'package:del_pick/core/constants/driver_status_constants.dart';
 import 'driver_location_model.dart';
 
-/// Model untuk driver status dengan business logic
 class DriverStatusModel {
   final String status;
   final List<String> validTransitions;
@@ -24,11 +23,11 @@ class DriverStatusModel {
 
   factory DriverStatusModel.fromJson(Map<String, dynamic> json) {
     return DriverStatusModel(
-      status: json['current'] as String,
-      validTransitions: (json['canTransitionTo'] as List<dynamic>?)
-              ?.map((e) => e as String)
-              .toList() ??
-          [],
+      status: json['status'] as String? ?? DriverStatusConstants.driverInactive,
+      validTransitions:
+          DriverStatusConstants.getAvailableDriverStatusTransitions(
+        json['status'] as String? ?? DriverStatusConstants.driverInactive,
+      ),
       hasActiveOrders: json['hasActiveOrders'] as bool? ?? false,
       activeOrderCount: json['activeOrderCount'] as int? ?? 0,
       lastUpdated: json['lastUpdated'] != null
@@ -47,8 +46,8 @@ class DriverStatusModel {
 
   Map<String, dynamic> toJson() {
     return {
-      'current': status,
-      'canTransitionTo': validTransitions,
+      'status': status,
+      'validTransitions': validTransitions,
       'hasActiveOrders': hasActiveOrders,
       'activeOrderCount': activeOrderCount,
       'lastUpdated': lastUpdated.toIso8601String(),
@@ -57,18 +56,18 @@ class DriverStatusModel {
     };
   }
 
-  // Status checks
-  bool get isActive => status == DriverStatusConstants.active;
-  bool get isInactive => status == DriverStatusConstants.inactive;
-  bool get isBusy => status == DriverStatusConstants.busy;
-  bool get isOffline => status == DriverStatusConstants.offline;
+  // Status checks (sesuai backend)
+  bool get isActive => status == DriverStatusConstants.driverActive;
+  bool get isInactive => status == DriverStatusConstants.driverInactive;
+  bool get isBusy => status == DriverStatusConstants.driverBusy;
 
   // Transition checks
-  bool get canGoOnline =>
-      validTransitions.contains(DriverStatusConstants.active);
-  bool get canGoOffline =>
-      validTransitions.contains(DriverStatusConstants.inactive);
-  bool get canBeBusy => validTransitions.contains(DriverStatusConstants.busy);
+  bool get canGoOnline => DriverStatusConstants.canTransitionDriverStatus(
+      status, DriverStatusConstants.driverActive);
+  bool get canGoOffline => DriverStatusConstants.canTransitionDriverStatus(
+      status, DriverStatusConstants.driverInactive);
+  bool get canBeBusy => DriverStatusConstants.canTransitionDriverStatus(
+      status, DriverStatusConstants.driverBusy);
 
   // Business logic checks
   bool get canToggleStatus => !isBusy && activeOrderCount == 0;
@@ -111,7 +110,9 @@ class DriverStatusModel {
   }) {
     return DriverStatusModel(
       status: status ?? this.status,
-      validTransitions: validTransitions ?? this.validTransitions,
+      validTransitions: validTransitions ??
+          DriverStatusConstants.getAvailableDriverStatusTransitions(
+              status ?? this.status),
       hasActiveOrders: hasActiveOrders ?? this.hasActiveOrders,
       activeOrderCount: activeOrderCount ?? this.activeOrderCount,
       lastUpdated: lastUpdated ?? this.lastUpdated,

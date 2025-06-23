@@ -1,4 +1,4 @@
-// lib/core/services/api/customer_service.dart
+// lib/core/services/api/customer_service.dart -> service ini sebenarnya digunakan oleh admin
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
@@ -8,19 +8,19 @@ class CustomerApiService {
 
   CustomerApiService(this._apiService);
 
-  Future<Response> getCustomers({Map<String, dynamic>? queryParams}) async {
+  Future<Response> getAllCustomers({Map<String, dynamic>? queryParams}) async {
     return await _apiService.get(
-      ApiEndpoints.customers,
+      ApiEndpoints.getAllCustomers,
       queryParameters: queryParams,
     );
   }
 
-  Future<Response> getCustomerDetail(int customerId) async {
-    return await _apiService.get('${ApiEndpoints.customers}/$customerId');
+  Future<Response> getCustomerById(int customerId) async {
+    return await _apiService.get(ApiEndpoints.getCustomerById(customerId));
   }
 
   Future<Response> createCustomer(Map<String, dynamic> data) async {
-    return await _apiService.post(ApiEndpoints.customers, data: data);
+    return await _apiService.post(ApiEndpoints.createCustomer, data: data);
   }
 
   Future<Response> updateCustomer(
@@ -28,12 +28,12 @@ class CustomerApiService {
     Map<String, dynamic> data,
   ) async {
     return await _apiService.put(
-      '${ApiEndpoints.customers}/$customerId',
+      ApiEndpoints.updateCustomer(customerId),
       data: data,
     );
   }
 
   Future<Response> deleteCustomer(int customerId) async {
-    return await _apiService.delete('${ApiEndpoints.customers}/$customerId');
+    return await _apiService.delete(ApiEndpoints.deleteCustomer(customerId));
   }
 }

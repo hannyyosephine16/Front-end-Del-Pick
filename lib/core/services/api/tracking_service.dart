@@ -4,95 +4,98 @@ import 'package:get/get.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
 import 'package:del_pick/core/utils/result.dart';
-import 'package:del_pick/data/models/tracking/tracking_data_model.dart';
 
 class TrackingService extends GetxService {
   final ApiService _apiService = Get.find<ApiService>();
 
-  /// Get tracking data for a specific order
-  // Future<Result<TrackingData>> getTrackingData(int orderId) async {
-  //   try {
-  //     final response =
-  //         await _apiService.get(ApiEndpoints.getTrackingData(orderId));
-  //
-  //     if (response.statusCode == 200) {
-  //       final trackingData = TrackingData.fromJson(response.data['data']);
-  //       return Result.success(trackingData);
-  //     } else {
-  //       return Result.failure(
-  //         response.data['message'] ?? 'Failed to get tracking data',
-  //       );
-  //     }
-  //   } catch (e) {
-  //     return Result.failure('An error occurred: $e');
-  //   }
-  // }
-  Future<Map<String, dynamic>?> getTrackingData(int orderId) async {
+  // ✅ FIXED: Get tracking data - sesuai backend GET /orders/:id/tracking
+  Future<Result<Map<String, dynamic>>> getTrackingData(int orderId) async {
     try {
       final response =
-          await _apiService.get(ApiEndpoints.getTrackingData(orderId));
+          await _apiService.get(ApiEndpoints.getOrderTracking(orderId));
+
       if (response.statusCode == 200) {
-        return response.data['data'];
+        return Result.success(response.data['data']);
+      } else {
+        return Result.failure(
+            response.data['message'] ?? 'Failed to get tracking data');
       }
     } catch (e) {
-      print('Error getting tracking data: $e');
+      return Result.failure('An error occurred: $e');
     }
-    return null;
   }
 
-  /// Start delivery (for driver)
+  // ✅ FIXED: Start delivery - sesuai backend POST /orders/:id/tracking/start
   Future<Result<Map<String, dynamic>>> startDelivery(int orderId) async {
     try {
       final response =
-          await _apiService.put(ApiEndpoints.startDelivery(orderId));
+          await _apiService.post(ApiEndpoints.startDelivery(orderId));
 
       if (response.statusCode == 200) {
         return Result.success(response.data['data']);
       } else {
         return Result.failure(
-          response.data['message'] ?? 'Failed to start delivery',
-        );
+            response.data['message'] ?? 'Failed to start delivery');
       }
     } catch (e) {
       return Result.failure('An error occurred: $e');
     }
   }
 
-  /// Complete delivery (for driver)
+  // ✅ FIXED: Complete delivery - sesuai backend POST /orders/:id/tracking/complete
   Future<Result<Map<String, dynamic>>> completeDelivery(int orderId) async {
     try {
       final response =
-          await _apiService.put(ApiEndpoints.completeDelivery(orderId));
+          await _apiService.post(ApiEndpoints.completeDelivery(orderId));
 
       if (response.statusCode == 200) {
         return Result.success(response.data['data']);
       } else {
         return Result.failure(
-          response.data['message'] ?? 'Failed to complete delivery',
-        );
+            response.data['message'] ?? 'Failed to complete delivery');
       }
     } catch (e) {
       return Result.failure('An error occurred: $e');
     }
   }
 
-  /// Update driver location (needs new endpoint in backend)
-  Future<Result<void>> updateDriverLocation(
+  // ✅ FIXED: Update driver location - sesuai backend PUT /orders/:id/tracking/location
+  Future<Result<Map<String, dynamic>>> updateDriverLocation(
+    int orderId,
     double latitude,
     double longitude,
   ) async {
     try {
-      final response = await _apiService.post('/driver/location', data: {
-        'latitude': latitude,
-        'longitude': longitude,
-      });
+      final response = await _apiService.put(
+        ApiEndpoints.updateTrackingDriverLocation(orderId),
+        data: {
+          'latitude': latitude,
+          'longitude': longitude,
+        },
+      );
 
       if (response.statusCode == 200) {
-        return Result.success(null);
+        return Result.success(response.data['data']);
       } else {
         return Result.failure(
-          response.data['message'] ?? 'Failed to update location',
-        );
+            response.data['message'] ?? 'Failed to update location');
+      }
+    } catch (e) {
+      return Result.failure('An error occurred: $e');
+    }
+  }
+
+  // ✅ ADDED: Get tracking history - sesuai backend GET /orders/:id/tracking/history
+  Future<Result<Map<String, dynamic>>> getTrackingHistory(int orderId) async {
+    try {
+      final response =
+          await _apiService.get(ApiEndpoints.getTrackingHistory(orderId));
+
+      if (response.statusCode == 200) {
+        return Result.success(response.data['data']);
+      } else {
+        return Result.failure(
+            response.data['message'] ?? 'Failed to get tracking history');
       }
     } catch (e) {
       return Result.failure('An error occurred: $e');

@@ -8,24 +8,21 @@ class OrderApiService {
 
   OrderApiService(this._apiService);
 
+  // ✅ FIXED: Create order - sesuai backend POST /orders
   Future<Response> createOrder(Map<String, dynamic> data) async {
-    return await _apiService.post(ApiEndpoints.orders, data: data);
+    return await _apiService.post(ApiEndpoints.createOrder, data: data);
   }
 
-  Future<Response> getOrders({Map<String, dynamic>? queryParams}) async {
+  // ✅ FIXED: Get customer orders - sesuai backend GET /orders/customer
+  Future<Response> getCustomerOrders(
+      {Map<String, dynamic>? queryParams}) async {
     return await _apiService.get(
-      ApiEndpoints.orders,
+      ApiEndpoints.customerOrders,
       queryParameters: queryParams,
     );
   }
 
-  Future<Response> getUserOrders({Map<String, dynamic>? queryParams}) async {
-    return await _apiService.get(
-      ApiEndpoints.userOrders,
-      queryParameters: queryParams,
-    );
-  }
-
+  // ✅ FIXED: Get store orders - sesuai backend GET /orders/store
   Future<Response> getStoreOrders({Map<String, dynamic>? queryParams}) async {
     return await _apiService.get(
       ApiEndpoints.storeOrders,
@@ -33,26 +30,61 @@ class OrderApiService {
     );
   }
 
+  // ✅ FIXED: Get order detail - sesuai backend GET /orders/:id
   Future<Response> getOrderDetail(int orderId) async {
-    return await _apiService.get('${ApiEndpoints.orders}/$orderId');
+    return await _apiService.get(ApiEndpoints.getOrderById(orderId));
   }
 
-  Future<Response> updateOrderStatus(Map<String, dynamic> data) async {
-    return await _apiService.put(ApiEndpoints.updateOrderStatus, data: data);
-  }
-
-  Future<Response> processOrder(int orderId, Map<String, dynamic> data) async {
-    return await _apiService.put(
-      '${ApiEndpoints.orders}/$orderId/process',
+  // ✅ FIXED: Update order status - sesuai backend PATCH /orders/:id/status
+  Future<Response> updateOrderStatus(
+      int orderId, Map<String, dynamic> data) async {
+    return await _apiService.patch(
+      ApiEndpoints.updateOrderStatus(orderId),
       data: data,
     );
   }
 
-  Future<Response> cancelOrder(int orderId) async {
-    return await _apiService.put('${ApiEndpoints.orders}/$orderId/cancel');
+  // ✅ FIXED: Process order by store - sesuai backend POST /orders/:id/process
+  Future<Response> processOrder(int orderId, Map<String, dynamic> data) async {
+    return await _apiService.post(
+      ApiEndpoints.processOrder(orderId),
+      data: data,
+    );
   }
 
-  Future<Response> createReview(Map<String, dynamic> data) async {
-    return await _apiService.post(ApiEndpoints.createReview, data: data);
+  // ✅ REMOVED: Cancel order - backend tidak ada endpoint khusus cancel
+  // Gunakan updateOrderStatus dengan status 'cancelled'
+
+  // ✅ FIXED: Create review - sesuai backend POST /orders/:id/review
+  Future<Response> createReview(int orderId, Map<String, dynamic> data) async {
+    return await _apiService.post(
+      ApiEndpoints.createOrderReview(orderId),
+      data: data,
+    );
+  }
+
+  // ✅ ADDED: Tracking endpoints sesuai backend
+  Future<Response> getOrderTracking(int orderId) async {
+    return await _apiService.get(ApiEndpoints.getOrderTracking(orderId));
+  }
+
+  Future<Response> startDelivery(int orderId) async {
+    return await _apiService.post(ApiEndpoints.startDelivery(orderId));
+  }
+
+  Future<Response> completeDelivery(int orderId) async {
+    return await _apiService.post(ApiEndpoints.completeDelivery(orderId));
+  }
+
+  Future<Response> updateDriverLocation(
+      int orderId, Map<String, dynamic> data) async {
+    return await _apiService.put(
+      ApiEndpoints.updateTrackingDriverLocation(orderId),
+      data: data,
+    );
+  }
+
+  Future<Response> getTrackingHistory(int orderId) async {
+    return await _apiService.get(ApiEndpoints.getTrackingHistory(orderId));
   }
 }

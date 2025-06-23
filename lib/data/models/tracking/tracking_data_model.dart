@@ -1,60 +1,69 @@
-// lib/data/models/tracking/tracking_data_model.dart
-import 'package:del_pick/data/models/driver/driver_model.dart';
-
-class TrackingData {
+// lib/data/models/tracking/tracking_data_model.dart - FIXED
+class TrackingDataModel {
   final int orderId;
-  final String status;
-  final LocationData? storeLocation;
-  final LocationData? driverLocation;
-  final String deliveryAddress;
+  final String orderStatus;
+  final String deliveryStatus;
+  final LocationDataModel? storeLocation;
+  final LocationDataModel? driverLocation;
+  final DateTime? estimatedPickupTime;
+  final DateTime? actualPickupTime;
   final DateTime? estimatedDeliveryTime;
-  final DriverModel? driver;
+  final DateTime? actualDeliveryTime;
+  final List<TrackingUpdateModel>? trackingUpdates;
+  final DriverInfoModel? driver;
   final String? message;
 
-  TrackingData({
+  TrackingDataModel({
     required this.orderId,
-    required this.status,
+    required this.orderStatus,
+    required this.deliveryStatus,
     this.storeLocation,
     this.driverLocation,
-    required this.deliveryAddress,
+    this.estimatedPickupTime,
+    this.actualPickupTime,
     this.estimatedDeliveryTime,
+    this.actualDeliveryTime,
+    this.trackingUpdates,
     this.driver,
     this.message,
   });
 
-  factory TrackingData.fromJson(Map<String, dynamic> json) {
-    return TrackingData(
-      orderId: json['orderId'] as int,
-      status: json['status'] as String,
-      storeLocation: json['storeLocation'] != null
-          ? LocationData.fromJson(json['storeLocation'] as Map<String, dynamic>)
+  factory TrackingDataModel.fromJson(Map<String, dynamic> json) {
+    return TrackingDataModel(
+      orderId: json['order_id'] as int,
+      orderStatus: json['order_status'] as String,
+      deliveryStatus: json['delivery_status'] as String,
+      storeLocation: json['store_location'] != null
+          ? LocationDataModel.fromJson(
+              json['store_location'] as Map<String, dynamic>)
           : null,
-      driverLocation: json['driverLocation'] != null
-          ? LocationData.fromJson(
-              json['driverLocation'] as Map<String, dynamic>)
+      driverLocation: json['driver_location'] != null
+          ? LocationDataModel.fromJson(
+              json['driver_location'] as Map<String, dynamic>)
           : null,
-      deliveryAddress: json['deliveryAddress'] as String,
-      estimatedDeliveryTime: json['estimatedDeliveryTime'] != null
-          ? DateTime.parse(json['estimatedDeliveryTime'] as String)
+      estimatedPickupTime: json['estimated_pickup_time'] != null
+          ? DateTime.parse(json['estimated_pickup_time'] as String)
+          : null,
+      actualPickupTime: json['actual_pickup_time'] != null
+          ? DateTime.parse(json['actual_pickup_time'] as String)
+          : null,
+      estimatedDeliveryTime: json['estimated_delivery_time'] != null
+          ? DateTime.parse(json['estimated_delivery_time'] as String)
+          : null,
+      actualDeliveryTime: json['actual_delivery_time'] != null
+          ? DateTime.parse(json['actual_delivery_time'] as String)
+          : null,
+      trackingUpdates: json['tracking_updates'] != null
+          ? (json['tracking_updates'] as List)
+              .map((update) =>
+                  TrackingUpdateModel.fromJson(update as Map<String, dynamic>))
+              .toList()
           : null,
       driver: json['driver'] != null
-          ? DriverModel.fromJson(json['driver'] as Map<String, dynamic>)
+          ? DriverInfoModel.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
       message: json['message'] as String?,
     );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'orderId': orderId,
-      'status': status,
-      'storeLocation': storeLocation?.toJson(),
-      'driverLocation': driverLocation?.toJson(),
-      'deliveryAddress': deliveryAddress,
-      'estimatedDeliveryTime': estimatedDeliveryTime?.toIso8601String(),
-      'driver': driver?.toJson(),
-      'message': message,
-    };
   }
 
   bool get hasDriver => driver != null;
@@ -62,17 +71,17 @@ class TrackingData {
   bool get hasStoreLocation => storeLocation != null;
 }
 
-class LocationData {
+class LocationDataModel {
   final double latitude;
   final double longitude;
 
-  LocationData({
+  LocationDataModel({
     required this.latitude,
     required this.longitude,
   });
 
-  factory LocationData.fromJson(Map<String, dynamic> json) {
-    return LocationData(
+  factory LocationDataModel.fromJson(Map<String, dynamic> json) {
+    return LocationDataModel(
       latitude: (json['latitude'] as num).toDouble(),
       longitude: (json['longitude'] as num).toDouble(),
     );
@@ -83,5 +92,50 @@ class LocationData {
       'latitude': latitude,
       'longitude': longitude,
     };
+  }
+}
+
+class TrackingUpdateModel {
+  final DateTime timestamp;
+  final String status;
+  final String message;
+  final LocationDataModel? location;
+
+  TrackingUpdateModel({
+    required this.timestamp,
+    required this.status,
+    required this.message,
+    this.location,
+  });
+
+  factory TrackingUpdateModel.fromJson(Map<String, dynamic> json) {
+    return TrackingUpdateModel(
+      timestamp: DateTime.parse(json['timestamp'] as String),
+      status: json['status'] as String,
+      message: json['message'] as String,
+      location: json['location'] != null
+          ? LocationDataModel.fromJson(json['location'] as Map<String, dynamic>)
+          : null,
+    );
+  }
+}
+
+class DriverInfoModel {
+  final int id;
+  final String name;
+  final String? phone;
+
+  DriverInfoModel({
+    required this.id,
+    required this.name,
+    this.phone,
+  });
+
+  factory DriverInfoModel.fromJson(Map<String, dynamic> json) {
+    return DriverInfoModel(
+      id: json['id'] as int,
+      name: json['name'] as String,
+      phone: json['phone'] as String?,
+    );
   }
 }

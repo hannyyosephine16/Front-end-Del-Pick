@@ -1,40 +1,21 @@
+// lib/data/datasources/remote/auth_remote_datasource.dart - FIXED
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
-
-import '../../../core/errors/exceptions.dart';
-import '../../../core/utils/validators.dart';
+import 'package:del_pick/core/errors/exceptions.dart';
+import 'package:del_pick/core/utils/validators.dart';
 
 class AuthRemoteDataSource {
   final ApiService _apiService;
 
   AuthRemoteDataSource(this._apiService);
 
-  // Future<Map<String, dynamic>> login({
-  //   required String email,
-  //   required String password,
-  // }) async {
-  //   try {
-  //     final response = await _apiService.post(
-  //       ApiEndpoints.login,
-  //       data: {'email': email, 'password': password},
-  //     );
-  //
-  //     if (response.statusCode == 200) {
-  //       return response.data['data'];
-  //     } else {
-  //       throw Exception(response.data['message'] ?? 'Login failed');
-  //     }
-  //   } on DioException catch (e) {
-  //     throw Exception(e.response?.data['message'] ?? 'Network error');
-  //   }
-  // }
+  // ✅ FIXED: Login sesuai backend response format
   Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     try {
-      // ✅ One liner validation
       Validators.validateLoginData(email, password);
 
       final response = await _apiService.post(
@@ -48,31 +29,54 @@ class AuthRemoteDataSource {
     }
   }
 
-  Future<Map<String, dynamic>> getProfile() async {
+  // ✅ FIXED: Register sesuai backend
+  Future<Map<String, dynamic>> register({
+    required String name,
+    required String email,
+    required String phone,
+    required String password,
+    required String role,
+  }) async {
     try {
-      final response = await _apiService.get(ApiEndpoints.profile);
+      final response = await _apiService.post(
+        ApiEndpoints.register,
+        data: {
+          'name': name,
+          'email': email,
+          'phone': phone,
+          'password': password,
+          'role': role,
+        },
+      );
 
-      if (response.statusCode == 200) {
-        return response.data['data'];
-      } else {
-        throw Exception(response.data['message'] ?? 'Failed to get profile');
-      }
+      return _handleResponse(response);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      throw _handleDioException(e);
     }
   }
 
+  // ✅ FIXED: Get profile sesuai backend
+  Future<Map<String, dynamic>> getProfile() async {
+    try {
+      final response = await _apiService.get(ApiEndpoints.profile);
+      return _handleResponse(response);
+    } on DioException catch (e) {
+      throw _handleDioException(e);
+    }
+  }
+
+  // ✅ FIXED: Update profile sesuai backend
   Future<Map<String, dynamic>> updateProfile({
     String? name,
     String? email,
-    String? password,
+    String? phone,
     String? avatar,
   }) async {
     try {
       final Map<String, dynamic> data = {};
       if (name != null) data['name'] = name;
       if (email != null) data['email'] = email;
-      if (password != null) data['password'] = password;
+      if (phone != null) data['phone'] = phone;
       if (avatar != null) data['avatar'] = avatar;
 
       final response = await _apiService.put(
@@ -80,16 +84,13 @@ class AuthRemoteDataSource {
         data: data,
       );
 
-      if (response.statusCode == 200) {
-        return response.data['data'];
-      } else {
-        throw Exception(response.data['message'] ?? 'Update failed');
-      }
+      return _handleResponse(response);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      throw _handleDioException(e);
     }
   }
 
+  // ✅ FIXED: Forgot password sesuai backend
   Future<void> forgotPassword(String email) async {
     try {
       final response = await _apiService.post(
@@ -97,69 +98,77 @@ class AuthRemoteDataSource {
         data: {'email': email},
       );
 
-      if (response.statusCode != 200) {
-        throw Exception(
-          response.data['message'] ?? 'Failed to send reset email',
-        );
-      }
+      _handleResponse(response);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      throw _handleDioException(e);
     }
   }
 
+  // ✅ FIXED: Reset password sesuai backend
   Future<void> resetPassword({
     required String token,
-    required String newPassword,
+    required String password, // ✅ FIXED: backend expects 'password'
   }) async {
     try {
       final response = await _apiService.post(
-        ApiEndpoints.resetPassword,
-        data: {'token': token, 'newPassword': newPassword},
+        '${ApiEndpoints.resetPassword}/$token', // ✅ FIXED: token in URL
+        data: {'password': password},
       );
 
-      if (response.statusCode != 200) {
-        throw Exception(response.data['message'] ?? 'Failed to reset password');
-      }
+      _handleResponse(response);
     } on DioException catch (e) {
-      throw Exception(e.response?.data['message'] ?? 'Network error');
+      throw _handleDioException(e);
     }
   }
 
+  // ✅ FIXED: Logout sesuai backend
   Future<void> logout() async {
     try {
       await _apiService.post(ApiEndpoints.logout);
     } on DioException catch (e) {
-      // Logout can fail but we should still clear local data
-      throw Exception(e.response?.data['message'] ?? 'Logout failed');
+      throw _handleDioException(e);
     }
+  }
+
+  // ✅ FIXED: Handle response sesuai backend format
+  Map<String, dynamic> _handleAuthResponse(Response response) {
+    if (response.statusCode == 200) {
+      final data = response.data as Map<String, dynamic>;
+      return data['data'] ?? data;
+    }
+    throw AuthException(response.data['message'] ?? 'Authentication failed');
+  }
+
+  Map<String, dynamic> _handleResponse(Response response) {
+    if (response.statusCode == 200 || response.statusCode == 201) {
+      final data = response.data as Map<String, dynamic>;
+      return data['data'] ?? data;
+    }
+    throw ServerException(
+      response.statusCode ?? 500,
+      response.data['message'] ?? 'Request failed',
+    );
   }
 
   AppException _handleDioException(DioException e) {
     switch (e.response?.statusCode) {
       case 400:
         return ValidationException(
-            e.response?.data['message'] ?? 'Invalid request data');
+          e.response?.data['message'] ?? 'Invalid request data',
+        );
       case 401:
-        // Cek apakah ini invalid credentials atau unauthorized
         final message =
             e.response?.data['message']?.toString().toLowerCase() ?? '';
-        if (message.contains('invalid') ||
-            message.contains('password') ||
-            message.contains('email')) {
+        if (message.contains('password') || message.contains('salah')) {
           return const InvalidCredentialsException();
         }
         return const UnauthorizedException();
       case 403:
-        // Cek apakah ini account not verified
-        final message =
-            e.response?.data['message']?.toString().toLowerCase() ?? '';
-        if (message.contains('verify') || message.contains('activation')) {
-          return const AccountNotVerifiedException();
-        }
         return const ForbiddenException();
       case 404:
         return NotFoundException(
-            e.response?.data['message'] ?? 'Resource not found');
+          e.response?.data['message'] ?? 'Resource not found',
+        );
       case 429:
         return const TooManyRequestsException();
       case 500:
@@ -177,16 +186,5 @@ class AuthRemoteDataSource {
         }
         return NetworkException(e.message ?? 'Unknown network error');
     }
-  }
-
-  bool _isValidEmail(String email) {
-    return RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(email);
-  }
-
-  Map<String, dynamic> _handleAuthResponse(Response response) {
-    if (response.statusCode == 200 && response.data['success'] == true) {
-      return response.data['data'];
-    }
-    throw AuthException(response.data['message'] ?? 'Authentication failed');
   }
 }

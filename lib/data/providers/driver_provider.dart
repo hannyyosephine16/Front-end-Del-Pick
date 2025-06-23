@@ -1,3 +1,4 @@
+// lib/data/providers/driver_provider.dart - FIXED
 import 'package:del_pick/data/datasources/remote/driver_remote_datasource.dart';
 import 'package:del_pick/core/utils/result.dart';
 
@@ -6,185 +7,118 @@ class DriverProvider {
 
   DriverProvider({required this.remoteDataSource});
 
-  /// Update driver status - ENDPOINT: PUT /drivers/status
+  // ✅ FIXED: Get all drivers
+  Future<Result<Map<String, dynamic>>> getAllDrivers({
+    Map<String, dynamic>? params,
+  }) async {
+    try {
+      final response = await remoteDataSource.getAllDrivers(params: params);
+      return Result.success(response.data);
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  // ✅ FIXED: Get driver by ID
+  Future<Result<Map<String, dynamic>>> getDriverById(int driverId) async {
+    try {
+      final response = await remoteDataSource.getDriverById(driverId);
+      return Result.success(response.data);
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  // ✅ FIXED: Update driver status - PATCH /drivers/:id/status (admin only)
   Future<Result<Map<String, dynamic>>> updateDriverStatus(
+    int driverId,
     Map<String, dynamic> data,
   ) async {
     try {
-      final response = await remoteDataSource.updateDriverStatus(data);
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        // Handle business rule errors if any
-        final errorData = response.data;
-        if (errorData != null && errorData.containsKey('businessRule')) {
-          return Result.failure(
-            errorData['message'] ?? 'Business rule violation',
-          );
-        }
-        return Result.failure(
-          response.data['message'] ?? 'Failed to update driver status',
-        );
-      }
+      final response =
+          await remoteDataSource.updateDriverStatus(driverId, data);
+      return Result.success(response.data);
     } catch (e) {
       return Result.failure(e.toString());
     }
   }
 
-  /// Get driver profile - ENDPOINT: GET /auth/profile
-  /// NOTE: Swagger tidak punya /drivers/status-info, gunakan /auth/profile
+  // ✅ FIXED: Update driver location - PATCH /drivers/:id/location (driver only)
+  Future<Result<Map<String, dynamic>>> updateDriverLocation(
+    int driverId,
+    double latitude,
+    double longitude,
+  ) async {
+    try {
+      final data = {
+        'latitude': latitude,
+        'longitude': longitude,
+      };
+      final response =
+          await remoteDataSource.updateDriverLocation(driverId, data);
+      return Result.success(response.data);
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  // ✅ FIXED: Get driver profile - GET /auth/profile
   Future<Result<Map<String, dynamic>>> getDriverProfile() async {
     try {
       final response = await remoteDataSource.getDriverProfile();
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Failed to get driver profile',
-        );
-      }
+      return Result.success(response.data);
     } catch (e) {
       return Result.failure(e.toString());
     }
   }
 
-  /// Update driver profile - ENDPOINT: PUT /drivers/update
+  // ✅ FIXED: Update driver profile - PUT /auth/profile
   Future<Result<Map<String, dynamic>>> updateDriverProfile(
     Map<String, dynamic> data,
   ) async {
     try {
       final response = await remoteDataSource.updateDriverProfile(data);
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Failed to update driver profile',
-        );
-      }
+      return Result.success(response.data);
     } catch (e) {
       return Result.failure(e.toString());
     }
   }
 
-  /// Update driver location - ENDPOINT: PUT /drivers/location
-  Future<Result<Map<String, dynamic>>> updateDriverLocation(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final response = await remoteDataSource.updateDriverLocation(data);
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Failed to update driver location',
-        );
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  /// Get driver location - ENDPOINT: GET /drivers/{driverId}/location
-  Future<Result<Map<String, dynamic>>> getDriverLocation(int driverId) async {
-    try {
-      final response = await remoteDataSource.getDriverLocation(driverId);
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Failed to get driver location',
-        );
-      }
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
-  /// Get driver requests - ENDPOINT: GET /driver-requests
+  // ✅ FIXED: Get driver requests - GET /driver-requests (driver only)
   Future<Result<Map<String, dynamic>>> getDriverRequests({
     Map<String, dynamic>? params,
   }) async {
     try {
       final response = await remoteDataSource.getDriverRequests(params: params);
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Failed to fetch driver requests',
-        );
-      }
+      return Result.success(response.data);
     } catch (e) {
       return Result.failure(e.toString());
     }
   }
 
-  /// Get driver request by ID - ENDPOINT: GET /driver-requests/{requestId}
+  // ✅ FIXED: Get driver request by ID - GET /driver-requests/:id (driver only)
   Future<Result<Map<String, dynamic>>> getDriverRequestById(
-    int requestId,
-  ) async {
+      int requestId) async {
     try {
       final response = await remoteDataSource.getDriverRequestById(requestId);
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Driver request not found',
-        );
-      }
+      return Result.success(response.data);
     } catch (e) {
       return Result.failure(e.toString());
     }
   }
 
-  /// Respond to driver request - ENDPOINT: PUT /driver-requests/{requestId}
+  // ✅ FIXED: Respond to driver request - POST /driver-requests/:id/respond (driver only)
   Future<Result<Map<String, dynamic>>> respondToDriverRequest(
     int requestId,
-    Map<String, dynamic> data,
+    String action, // 'accept' or 'reject'
   ) async {
     try {
-      final response = await remoteDataSource.respondToDriverRequest(
-        requestId,
-        data,
-      );
-
-      if (response.statusCode == 200) {
-        return Result.success(response.data);
-      } else {
-        return Result.failure(
-          response.data['message'] ?? 'Failed to respond to driver request',
-        );
-      }
+      final data = {'action': action};
+      final response =
+          await remoteDataSource.respondToDriverRequest(requestId, data);
+      return Result.success(response.data);
     } catch (e) {
       return Result.failure(e.toString());
     }
-  }
-
-  /// Get driver status info - DEPRECATED, gunakan getDriverProfile()
-  @Deprecated(
-      'Use getDriverProfile() instead. Endpoint /drivers/status-info does not exist.')
-  Future<Result<Map<String, dynamic>>> getDriverStatusInfo() async {
-    // Redirect to getDriverProfile and transform response
-    return await getDriverProfile();
-  }
-
-  /// Get active drivers count - DEPRECATED, tidak ada di swagger
-  @Deprecated('Endpoint /drivers/active-count does not exist in backend.')
-  Future<Result<Map<String, dynamic>>> getActiveDriversCount() async {
-    return Result.failure(
-        'Endpoint not available. Use getAllDrivers() and filter in client.');
-  }
-
-  /// Get driver status summary - DEPRECATED, tidak ada di swagger
-  @Deprecated('Endpoint /drivers/status-summary does not exist in backend.')
-  Future<Result<Map<String, dynamic>>> getDriverStatusSummary() async {
-    return Result.failure(
-        'Endpoint not available. Use getAllDrivers() and calculate in client.');
   }
 }
