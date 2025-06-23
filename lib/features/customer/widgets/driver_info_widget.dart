@@ -1,9 +1,10 @@
 // lib/features/customer/widgets/driver_info_widget.dart
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
-
+import 'package:del_pick/core/constants/app_constants.dart';
 import '../../../data/models/driver/driver_model.dart';
 
 class DriverInfoWidget extends StatelessWidget {
@@ -97,13 +98,14 @@ class DriverInfoWidget extends StatelessWidget {
           width: 2,
         ),
       ),
-      child: driver.avatar != null
+      child: driver.avatar != null && driver.avatar!.isNotEmpty
           ? ClipRRect(
               borderRadius: BorderRadius.circular(30),
-              child: Image.network(
-                driver.avatar!,
+              child: CachedNetworkImage(
+                imageUrl: driver.avatar!,
                 fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) =>
+                placeholder: (context, url) => _buildDefaultAvatar(),
+                errorWidget: (context, error, stackTrace) =>
                     _buildDefaultAvatar(),
               ),
             )
@@ -112,7 +114,7 @@ class DriverInfoWidget extends StatelessWidget {
   }
 
   Widget _buildDefaultAvatar() {
-    return Icon(
+    return const Icon(
       Icons.person,
       size: 30,
       color: AppColors.primary,
@@ -182,16 +184,37 @@ class DriverInfoWidget extends StatelessWidget {
   }
 
   Widget _buildDriverStatus() {
+    Color statusColor;
+    String statusText;
+
+    switch (driver.status) {
+      case 'active':
+        statusColor = AppColors.success;
+        statusText = 'Driver is on the way to deliver your order';
+        break;
+      case 'busy':
+        statusColor = AppColors.warning;
+        statusText = 'Driver is currently delivering your order';
+        break;
+      case 'inactive':
+        statusColor = AppColors.error;
+        statusText = 'Driver is offline';
+        break;
+      default:
+        statusColor = AppColors.textSecondary;
+        statusText = 'Driver status unknown';
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppDimensions.paddingMD,
         vertical: AppDimensions.paddingSM,
       ),
       decoration: BoxDecoration(
-        color: AppColors.success.withOpacity(0.1),
+        color: statusColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
         border: Border.all(
-          color: AppColors.success.withOpacity(0.3),
+          color: statusColor.withOpacity(0.3),
         ),
       ),
       child: Row(
@@ -199,17 +222,17 @@ class DriverInfoWidget extends StatelessWidget {
           Container(
             width: 8,
             height: 8,
-            decoration: const BoxDecoration(
-              color: AppColors.success,
+            decoration: BoxDecoration(
+              color: statusColor,
               shape: BoxShape.circle,
             ),
           ),
           const SizedBox(width: AppDimensions.spacingSM),
           Expanded(
             child: Text(
-              'Driver is on the way to deliver your order',
+              statusText,
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.success,
+                color: statusColor,
                 fontWeight: FontWeight.w500,
               ),
             ),

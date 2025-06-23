@@ -86,6 +86,10 @@ class AppConstants {
   // IMAGE UPLOAD (sesuai backend)
   static const int maxImageSizeMB = 5;
   static const List<String> allowedImageFormats = ['jpg', 'jpeg', 'png'];
+  // Images
+  static const String defaultImageUrl = 'assets/images/default_food.png';
+  static const String defaultAvatarUrl = 'assets/images/default_avatar.png';
+  static const String logoUrl = 'assets/images/logo.png';
 
   // PAGINATION (sesuai backend)
   static const int defaultPageSize = 10;

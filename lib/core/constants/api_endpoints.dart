@@ -203,4 +203,21 @@ class ApiEndpoints {
       String endpoint, Map<String, dynamic> params) {
     return getFullUrl(_buildUrlWithParams(endpoint, params));
   }
+
+  static String buildQueryString(Map<String, dynamic>? params) {
+    if (params == null || params.isEmpty) return '';
+
+    final query = params.entries
+        .where((entry) => entry.value != null)
+        .map((entry) =>
+            '${entry.key}=${Uri.encodeComponent(entry.value.toString())}')
+        .join('&');
+
+    return query.isNotEmpty ? '?$query' : '';
+  }
+
+  /// Build endpoint with query parameters
+  static String withParams(String endpoint, Map<String, dynamic>? params) {
+    return endpoint + buildQueryString(params);
+  }
 }
