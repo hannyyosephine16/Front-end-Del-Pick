@@ -25,13 +25,15 @@ class AuthController extends GetxController {
   bool get isLoggedIn => _isLoggedIn.value;
   UserModel? get currentUser => _currentUser.value;
   String get userRole => _userRole.value;
-
   Map<String, dynamic>? get rawUserData => _rawUserData.value;
+
+  // Role checkers
   bool get isCustomer => userRole == AppConstants.roleCustomer;
   bool get isDriver => userRole == AppConstants.roleDriver;
   bool get isStore => userRole == AppConstants.roleStore;
   bool get isAdmin => userRole == AppConstants.roleAdmin;
 
+  // Driver and Store data getters
   Map<String, dynamic>? get driverData {
     if (rawUserData != null && rawUserData!.containsKey('driver')) {
       return rawUserData!['driver'] as Map<String, dynamic>?;
@@ -69,7 +71,7 @@ class AuthController extends GetxController {
           _isLoggedIn.value = true;
           _userRole.value = role;
 
-          // Try to get fresh user data
+          // Load user profile and raw data
           await _loadUserProfile();
         } else {
           await _clearAuthData();
@@ -87,31 +89,44 @@ class AuthController extends GetxController {
       final result = await _authRepository.getProfile();
 
       if (result.isSuccess && result.data != null) {
-        // Store the user model
         _currentUser.value = result.data;
         _userRole.value = result.data!.role;
 
-        //  Try to get raw data from storage if needed
-        if (_rawUserData.value == null) {
-          final rawData =
-              _storageService.readJson(StorageConstants.userRole + '_raw');
-          if (rawData != null) {
-            _rawUserData.value = rawData;
-            print('Raw user data loaded from storage');
-          }
+        // Load raw data from storage
+        final rawDataKey =
+            '${StorageConstants.userRole}_${result.data!.role}_raw';
+        final rawData = _storageService.readJson(rawDataKey);
+        if (rawData != null) {
+          _rawUserData.value = rawData;
         }
       } else {
-        await _clearAuthData();
+        // Try to use cached data
+        final userData = _storageService.readJson(StorageConstants.userId);
+        if (userData != null) {
+          try {
+            _currentUser.value = UserModel.fromJson(userData);
+            final rawDataKey =
+                '${StorageConstants.userRole}_${_currentUser.value!.role}_raw';
+            final rawData = _storageService.readJson(rawDataKey);
+            if (rawData != null) {
+              _rawUserData.value = rawData;
+            }
+          } catch (e) {
+            await _clearAuthData();
+          }
+        } else {
+          await _clearAuthData();
+        }
       }
     } catch (e) {
-      // Try to use cached data
+      // Try cached data as fallback
       final userData = _storageService.readJson(StorageConstants.userId);
-      final rawData =
-          _storageService.readJson(StorageConstants.userRole + '_raw');
-
       if (userData != null) {
         try {
           _currentUser.value = UserModel.fromJson(userData);
+          final rawDataKey =
+              '${StorageConstants.userRole}_${_currentUser.value!.role}_raw';
+          final rawData = _storageService.readJson(rawDataKey);
           if (rawData != null) {
             _rawUserData.value = rawData;
           }
@@ -121,30 +136,6 @@ class AuthController extends GetxController {
       }
     }
   }
-
-  // Future<void> _loadUserProfile() async {
-  //   try {
-  //     final result = await _authRepository.getProfile();
-  //
-  //     if (result.isSuccess && result.data != null) {
-  //       _currentUser.value = result.data;
-  //       _userRole.value = result.data!.role;
-  //     } else {
-  //       // If profile fetch fails, clear auth data
-  //       await _clearAuthData();
-  //     }
-  //   } catch (e) {
-  //     // If error occurs, try to use cached user data
-  //     final userData = _storageService.readJson(StorageConstants.userId);
-  //     if (userData != null) {
-  //       try {
-  //         _currentUser.value = UserModel.fromJson(userData);
-  //       } catch (e) {
-  //         await _clearAuthData();
-  //       }
-  //     }
-  //   }
-  // }
 
   Future<bool> login({required String email, required String password}) async {
     try {
@@ -158,39 +149,35 @@ class AuthController extends GetxController {
       if (result.isSuccess && result.data != null) {
         final data = result.data!;
 
-        //  Handle user data with embedded driver/store data
+        // Extract user data
         Map<String, dynamic> userData = Map<String, dynamic>.from(data['user']);
 
-        // Merge separate driver/store data into user data
+        // Merge driver/store data if exists
         if (data.containsKey('driver') && data['driver'] != null) {
           userData['driver'] = data['driver'];
-          print('Driver data merged: ${data['driver']}');
         }
 
         if (data.containsKey('store') && data['store'] != null) {
           userData['store'] = data['store'];
-          print('Store data merged: ${data['store']}');
         }
 
         // Store raw user data
         _rawUserData.value = userData;
 
-        // Create UserModel from basic user data (without driver/store)
+        // Create UserModel from basic user data
         final basicUserData = Map<String, dynamic>.from(userData);
         basicUserData.remove('driver');
         basicUserData.remove('store');
 
         final user = UserModel.fromJson(basicUserData);
-
         _currentUser.value = user;
         _userRole.value = user.role;
         _isLoggedIn.value = true;
 
-        // Save raw data to storage for persistence
-        await _storageService.writeJson(
-            StorageConstants.userRole + '_raw', userData);
+        // Save to storage
+        await _saveUserDataToStorage(user, userData, data['token']);
 
-        // Navigate based on user role
+        // Navigate based on role
         _navigateBasedOnRole(user.role);
 
         Get.snackbar(
@@ -209,7 +196,6 @@ class AuthController extends GetxController {
         return false;
       }
     } catch (e) {
-      print('Login error: $e');
       Get.snackbar(
         'Error',
         'An error occurred during login',
@@ -221,57 +207,10 @@ class AuthController extends GetxController {
     }
   }
 
-  // Future<bool> login({required String email, required String password}) async {
-  //   try {
-  //     _isLoading.value = true;
-  //
-  //     final result = await _authRepository.login(
-  //       email: email,
-  //       password: password,
-  //     );
-  //
-  //     if (result.isSuccess && result.data != null) {
-  //       final data = result.data!;
-  //       final user = UserModel.fromJson(data['user']);
-  //
-  //       _currentUser.value = user;
-  //       _userRole.value = user.role;
-  //       _isLoggedIn.value = true;
-  //
-  //       // Navigate based on user role
-  //       _navigateBasedOnRole(user.role);
-  //
-  //       Get.snackbar(
-  //         'Success',
-  //         'Login successful',
-  //         snackPosition: SnackPosition.TOP,
-  //       );
-  //
-  //       return true;
-  //     } else {
-  //       Get.snackbar(
-  //         'Error',
-  //         result.message ?? 'Login failed',
-  //         snackPosition: SnackPosition.TOP,
-  //       );
-  //       return false;
-  //     }
-  //   } catch (e) {
-  //     Get.snackbar(
-  //       'Error',
-  //       'An error occurred during login',
-  //       snackPosition: SnackPosition.TOP,
-  //     );
-  //     return false;
-  //   } finally {
-  //     _isLoading.value = false;
-  //   }
-  // }
-
   Future<bool> updateProfile({
     String? name,
     String? email,
-    String? password,
+    String? phone,
     String? avatar,
   }) async {
     try {
@@ -280,12 +219,30 @@ class AuthController extends GetxController {
       final result = await _authRepository.updateProfile(
         name: name,
         email: email,
-        password: password,
+        phone: phone,
         avatar: avatar,
       );
 
       if (result.isSuccess && result.data != null) {
         _currentUser.value = result.data;
+
+        // Update storage
+        await _storageService.writeJson(
+            StorageConstants.userId, result.data!.toJson());
+        await _storageService.writeString(
+            StorageConstants.userName, result.data!.name);
+        await _storageService.writeString(
+            StorageConstants.userEmail, result.data!.email);
+
+        if (result.data!.phone != null) {
+          await _storageService.writeString(
+              StorageConstants.userPhone, result.data!.phone!);
+        }
+
+        if (result.data!.avatar != null) {
+          await _storageService.writeString(
+              StorageConstants.userAvatar, result.data!.avatar!);
+        }
 
         Get.snackbar(
           'Success',
@@ -311,6 +268,17 @@ class AuthController extends GetxController {
       return false;
     } finally {
       _isLoading.value = false;
+    }
+  }
+
+  Future<bool> updateFcmToken(String fcmToken) async {
+    try {
+      // Note: This would need to be implemented in AuthRepository
+      // For now, just store locally
+      await _storageService.writeString(StorageConstants.fcmToken, fcmToken);
+      return true;
+    } catch (e) {
+      return false;
     }
   }
 
@@ -356,7 +324,7 @@ class AuthController extends GetxController {
 
       final result = await _authRepository.resetPassword(
         token: token,
-        newPassword: newPassword,
+        password: newPassword, // ✅ FIXED: Use 'password' parameter name
       );
 
       if (result.isSuccess) {
@@ -366,7 +334,6 @@ class AuthController extends GetxController {
           snackPosition: SnackPosition.TOP,
         );
 
-        // Navigate to login
         Get.offAllNamed(Routes.LOGIN);
         return true;
       } else {
@@ -393,7 +360,7 @@ class AuthController extends GetxController {
     try {
       _isLoading.value = true;
 
-      // Call API logout (optional, continue even if it fails)
+      // Call API logout
       await _authRepository.logout();
 
       // Clear local data
@@ -405,7 +372,6 @@ class AuthController extends GetxController {
         snackPosition: SnackPosition.TOP,
       );
 
-      // Navigate to login
       Get.offAllNamed(Routes.LOGIN);
     } catch (e) {
       // Still clear local data even if API call fails
@@ -416,12 +382,39 @@ class AuthController extends GetxController {
     }
   }
 
+  Future<void> _saveUserDataToStorage(
+      UserModel user, Map<String, dynamic> rawData, String token) async {
+    // Save basic auth data
+    await _storageService.writeString(StorageConstants.authToken, token);
+    await _storageService.writeJson(StorageConstants.userId, user.toJson());
+    await _storageService.writeString(StorageConstants.userRole, user.role);
+    await _storageService.writeString(StorageConstants.userEmail, user.email);
+    await _storageService.writeString(StorageConstants.userName, user.name);
+    await _storageService.writeBool(StorageConstants.isLoggedIn, true);
+
+    // Save optional fields
+    if (user.phone != null) {
+      await _storageService.writeString(
+          StorageConstants.userPhone, user.phone!);
+    }
+
+    if (user.avatar != null) {
+      await _storageService.writeString(
+          StorageConstants.userAvatar, user.avatar!);
+    }
+
+    // Save raw data with role-specific key
+    final rawDataKey = '${StorageConstants.userRole}_${user.role}_raw';
+    await _storageService.writeJson(rawDataKey, rawData);
+  }
+
   Future<void> _clearAuthData() async {
     _currentUser.value = null;
     _userRole.value = '';
     _isLoggedIn.value = false;
+    _rawUserData.value = null;
 
-    // Clear storage
+    // Clear all auth-related storage
     await _storageService.remove(StorageConstants.authToken);
     await _storageService.remove(StorageConstants.refreshToken);
     await _storageService.remove(StorageConstants.userId);
@@ -430,8 +423,13 @@ class AuthController extends GetxController {
     await _storageService.remove(StorageConstants.userName);
     await _storageService.remove(StorageConstants.userPhone);
     await _storageService.remove(StorageConstants.userAvatar);
-    await _storageService.remove(StorageConstants.userRole + '_raw');
+    await _storageService.remove(StorageConstants.fcmToken);
     await _storageService.writeBool(StorageConstants.isLoggedIn, false);
+
+    // Clear role-specific raw data
+    for (final role in AppConstants.validRoles) {
+      await _storageService.remove('${StorageConstants.userRole}_${role}_raw');
+    }
   }
 
   void _navigateBasedOnRole(String role) {
@@ -454,19 +452,18 @@ class AuthController extends GetxController {
     _currentUser.value = user;
     _userRole.value = user.role;
 
-    // Update local storage with new user data
-    final storageService = Get.find<StorageService>();
-    storageService.writeJson(StorageConstants.userId, user.toJson());
-    storageService.writeString(StorageConstants.userRole, user.role);
-    storageService.writeString(StorageConstants.userEmail, user.email);
-    storageService.writeString(StorageConstants.userName, user.name);
+    // Update storage
+    _storageService.writeJson(StorageConstants.userId, user.toJson());
+    _storageService.writeString(StorageConstants.userRole, user.role);
+    _storageService.writeString(StorageConstants.userEmail, user.email);
+    _storageService.writeString(StorageConstants.userName, user.name);
 
     if (user.phone != null) {
-      storageService.writeString(StorageConstants.userPhone, user.phone!);
+      _storageService.writeString(StorageConstants.userPhone, user.phone!);
     }
 
     if (user.avatar != null) {
-      storageService.writeString(StorageConstants.userAvatar, user.avatar!);
+      _storageService.writeString(StorageConstants.userAvatar, user.avatar!);
     }
   }
 
@@ -476,7 +473,7 @@ class AuthController extends GetxController {
   String? get userAvatar => currentUser?.avatar;
   String? get userPhone => currentUser?.phone;
 
-  // Check if user can perform certain actions
+  // Permission check methods
   bool canAccessCustomerFeatures() => isCustomer;
   bool canAccessDriverFeatures() => isDriver;
   bool canAccessStoreFeatures() => isStore;

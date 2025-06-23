@@ -39,7 +39,7 @@ class ForgetPasswordController extends GetxController {
 
       final result = await _authRepository.resetPassword(
         token: token,
-        newPassword: newPassword,
+        password: newPassword, // ✅ FIXED: Use 'password' parameter
       );
 
       if (result.isSuccess) {
