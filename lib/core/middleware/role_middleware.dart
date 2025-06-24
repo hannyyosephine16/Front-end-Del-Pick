@@ -1,3 +1,4 @@
+// lib/core/middleware/role_middleware.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/core/services/local/storage_service.dart';
@@ -8,7 +9,7 @@ class RoleMiddleware extends GetMiddleware {
   final List<String> allowedRoles;
   final String? redirectRoute;
 
-  // ✅ CACHE untuk menghindari storage reads berulang
+  // Cache untuk performa
   static String? _cachedUserRole;
   static bool? _cachedIsLoggedIn;
   static DateTime? _cacheExpiry;
@@ -18,23 +19,32 @@ class RoleMiddleware extends GetMiddleware {
 
   @override
   RouteSettings? redirect(String? route) {
+    // ✅ PENTING: Skip middleware untuk route auth agar tidak loop
+    if (route == Routes.LOGIN ||
+        route == Routes.REGISTER ||
+        route == Routes.FORGOT_PASSWORD ||
+        route == Routes.RESET_PASSWORD ||
+        route == Routes.SPLASH) {
+      return null; // Biarkan akses route tersebut
+    }
+
     try {
       final storageService = Get.find<StorageService>();
 
-      // ✅ Use cached values if available and not expired
+      // Use cached values if available and not expired
       final now = DateTime.now();
       if (_cacheExpiry == null || now.isAfter(_cacheExpiry!)) {
         _refreshCache(storageService);
         _cacheExpiry = now.add(_cacheTimeout);
       }
 
-      // ✅ Check authentication first
+      // Check authentication first
       if (!(_cachedIsLoggedIn ?? false)) {
         clearCache();
         return const RouteSettings(name: Routes.LOGIN);
       }
 
-      // ✅ Check role permission
+      // Check role permission
       if (_cachedUserRole == null || !allowedRoles.contains(_cachedUserRole)) {
         _showAccessDeniedMessage();
         final redirectTo =
@@ -44,12 +54,11 @@ class RoleMiddleware extends GetMiddleware {
 
       return null; // Allow access
     } catch (e) {
-      // ✅ Fallback on error
+      // Fallback on error
       return const RouteSettings(name: Routes.LOGIN);
     }
   }
 
-  /// ✅ Refresh cache from storage
   void _refreshCache(StorageService storageService) {
     _cachedUserRole = storageService.readString(StorageConstants.userRole);
     _cachedIsLoggedIn = storageService.readBoolWithDefault(
@@ -58,14 +67,12 @@ class RoleMiddleware extends GetMiddleware {
     );
   }
 
-  /// ✅ Clear cache (call on logout)
   static void clearCache() {
     _cachedUserRole = null;
     _cachedIsLoggedIn = null;
     _cacheExpiry = null;
   }
 
-  /// ✅ Show access denied message
   void _showAccessDeniedMessage() {
     Get.snackbar(
       'Access Denied',
@@ -79,7 +86,6 @@ class RoleMiddleware extends GetMiddleware {
     );
   }
 
-  /// ✅ Get default route - hanya 3 role
   String _getDefaultRouteForRole(String? userRole) {
     switch (userRole) {
       case 'customer':
@@ -94,25 +100,34 @@ class RoleMiddleware extends GetMiddleware {
   }
 }
 
-/// ✅ Middleware for customer-only routes
+/// ✅ Middleware untuk customer-only routes
 class CustomerOnlyMiddleware extends RoleMiddleware {
   CustomerOnlyMiddleware() : super(allowedRoles: ['customer']);
 }
 
-/// ✅ Middleware for driver-only routes
+/// ✅ Middleware untuk driver-only routes
 class DriverOnlyMiddleware extends RoleMiddleware {
   DriverOnlyMiddleware() : super(allowedRoles: ['driver']);
 }
 
-/// ✅ Middleware for store-only routes
+/// ✅ Middleware untuk store-only routes
 class StoreOnlyMiddleware extends RoleMiddleware {
   StoreOnlyMiddleware() : super(allowedRoles: ['store']);
 }
 
-/// ✅ Middleware for authenticated users (any role)
+/// ✅ PERBAIKAN: AuthMiddleware yang aman dari loop
 class AuthMiddleware extends GetMiddleware {
   @override
   RouteSettings? redirect(String? route) {
+    // ✅ PENTING: Skip middleware untuk route auth agar tidak loop
+    if (route == Routes.LOGIN ||
+        route == Routes.REGISTER ||
+        route == Routes.FORGOT_PASSWORD ||
+        route == Routes.RESET_PASSWORD ||
+        route == Routes.SPLASH) {
+      return null; // Biarkan akses route tersebut
+    }
+
     if (!RoleHelper.isAuthenticated()) {
       RoleMiddleware.clearCache();
       return const RouteSettings(name: Routes.LOGIN);
@@ -121,7 +136,7 @@ class AuthMiddleware extends GetMiddleware {
   }
 }
 
-/// ✅ Middleware for guest users (not logged in)
+/// ✅ Middleware untuk guest users (belum login)
 class GuestMiddleware extends GetMiddleware {
   @override
   RouteSettings? redirect(String? route) {
@@ -132,29 +147,26 @@ class GuestMiddleware extends GetMiddleware {
   }
 }
 
-/// ✅ Helper class - simplified untuk 3 role saja
+/// ✅ Helper class
 class RoleHelper {
   static final StorageService _storageService = Get.find<StorageService>();
 
-  // ✅ Cache untuk performa
+  // Cache untuk performa
   static String? _cachedRole;
   static bool? _cachedAuth;
   static DateTime? _lastCacheUpdate;
   static const Duration _cacheTimeout = Duration(seconds: 30);
 
-  /// ✅ Get cached or fresh role
   static String? getCurrentRole() {
     _refreshCacheIfNeeded();
     return _cachedRole;
   }
 
-  /// ✅ Check authentication with cache
   static bool isAuthenticated() {
     _refreshCacheIfNeeded();
     return _cachedAuth ?? false;
   }
 
-  /// ✅ Refresh cache if expired
   static void _refreshCacheIfNeeded() {
     final now = DateTime.now();
     if (_lastCacheUpdate == null ||
@@ -168,7 +180,6 @@ class RoleHelper {
     }
   }
 
-  /// ✅ Clear cache on logout
   static void clearCache() {
     _cachedRole = null;
     _cachedAuth = null;
@@ -176,23 +187,19 @@ class RoleHelper {
     RoleMiddleware.clearCache();
   }
 
-  /// ✅ Check specific role
   static bool hasRole(String role) {
     return getCurrentRole() == role;
   }
 
-  /// ✅ Check multiple roles
   static bool hasAnyRole(List<String> roles) {
     final userRole = getCurrentRole();
     return userRole != null && roles.contains(userRole);
   }
 
-  /// ✅ Role-specific checks - hanya 3 role
   static bool isCustomer() => hasRole('customer');
   static bool isDriver() => hasRole('driver');
   static bool isStore() => hasRole('store');
 
-  /// ✅ Home route - hanya 3 role
   static String getHomeRoute() {
     final userRole = getCurrentRole();
     switch (userRole) {
@@ -207,16 +214,13 @@ class RoleHelper {
     }
   }
 
-  /// ✅ Check if user can access resource
   static bool canAccess(List<String> requiredRoles) {
     if (!isAuthenticated()) return false;
     return hasAnyRole(requiredRoles);
   }
 
-  /// ✅ Valid roles untuk validasi
   static const List<String> validRoles = ['customer', 'driver', 'store'];
 
-  /// ✅ Check if role is valid
   static bool isValidRole(String? role) {
     return role != null && validRoles.contains(role);
   }

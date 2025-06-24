@@ -5,6 +5,7 @@ import 'package:del_pick/features/shared/screens/main_navigation_screen.dart';
 import 'package:del_pick/features/shared/screens/no_internet_screen.dart';
 import 'package:del_pick/features/shared/screens/maintenance_screen.dart';
 import 'package:del_pick/features/shared/screens/error_screen.dart';
+import 'package:del_pick/features/shared/controllers/splash_controller.dart';
 
 // Auth imports
 import 'package:del_pick/features/auth/screens/login_screen.dart';
@@ -64,56 +65,126 @@ class AppPages {
   static const INITIAL = Routes.SPLASH;
 
   static final routes = [
-    // Shared routes
-    GetPage(name: Routes.SPLASH, page: () => const SplashScreen()),
-    GetPage(name: Routes.ONBOARDING, page: () => const OnboardingScreen()),
+    // // Shared routes
+    // // GetPage(name: Routes.SPLASH, page: () => const SplashScreen()),
+    // // Splash Screen
+    // GetPage(
+    //   name: Routes.SPLASH,
+    //   page: () => const SplashScreen(),
+    //   binding: BindingsBuilder(() {
+    //     Get.lazyPut<SplashController>(() => SplashController());
+    //   }),
+    // ),
+    // GetPage(name: Routes.ONBOARDING, page: () => const OnboardingScreen()),
+    // GetPage(
+    //   name: Routes.MAIN_NAVIGATION,
+    //   page: () => const MainNavigationScreen(),
+    // ),
+    // GetPage(name: Routes.NO_INTERNET, page: () => const NoInternetScreen()),
+    // GetPage(name: Routes.MAINTENANCE, page: () => const MaintenanceScreen()),
+    // GetPage(name: Routes.ERROR, page: () => const ErrorScreen()),
+    //
+    // // Auth routes
+    // GetPage(
+    //   name: Routes.LOGIN,
+    //   page: () => const LoginScreen(),
+    //   binding: AuthBinding(),
+    // ),
+    // GetPage(
+    //   name: Routes.FORGOT_PASSWORD,
+    //   page: () => const ForgotPasswordScreen(),
+    //   binding: AuthBinding(),
+    //   // middlewares: [AuthMiddleware()],
+    // ),
+    // GetPage(
+    //   name: Routes.RESET_PASSWORD,
+    //   page: () => const ResetPasswordScreen(),
+    //   binding: AuthBinding(),
+    //   middlewares: [AuthMiddleware()],
+    // ),
+    // GetPage(
+    //   name: Routes.PROFILE,
+    //   page: () => const ProfileScreen(),
+    //   binding: AuthBinding(),
+    //   middlewares: [AuthMiddleware()],
+    // ),
+    // GetPage(
+    //   name: Routes.EDIT_PROFILE,
+    //   page: () => const EditProfileScreen(),
+    //   binding: AuthBinding(),
+    //   middlewares: [AuthMiddleware()],
+    // ),
+    // ✅ SPLASH - Tanpa middleware
     GetPage(
-      name: Routes.MAIN_NAVIGATION,
-      page: () => const MainNavigationScreen(),
+      name: Routes.SPLASH,
+      page: () => const SplashScreen(),
     ),
-    GetPage(name: Routes.NO_INTERNET, page: () => const NoInternetScreen()),
-    GetPage(name: Routes.MAINTENANCE, page: () => const MaintenanceScreen()),
-    GetPage(name: Routes.ERROR, page: () => const ErrorScreen()),
 
-    // Auth routes
+    // ✅ AUTH ROUTES - Gunakan GuestMiddleware (redirect ke home jika sudah login)
     GetPage(
       name: Routes.LOGIN,
       page: () => const LoginScreen(),
       binding: AuthBinding(),
-      // middlewares: [AuthMiddleware()],
+      middlewares: [GuestMiddleware()], // ✅ Redirect ke home jika sudah login
+    ),
+    GetPage(
+      name: Routes.REGISTER,
+      page: () => const RegisterScreen(),
+      binding: AuthBinding(),
+      middlewares: [GuestMiddleware()],
     ),
     GetPage(
       name: Routes.FORGOT_PASSWORD,
       page: () => const ForgotPasswordScreen(),
       binding: AuthBinding(),
-      // middlewares: [AuthMiddleware()],
+      middlewares: [GuestMiddleware()],
     ),
+
+    // ✅ PROTECTED ROUTES - Gunakan AuthMiddleware + RoleMiddleware
     GetPage(
       name: Routes.RESET_PASSWORD,
       page: () => const ResetPasswordScreen(),
       binding: AuthBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware()], // ✅ Butuh auth tapi tidak spesifik role
     ),
     GetPage(
       name: Routes.PROFILE,
       page: () => const ProfileScreen(),
       binding: AuthBinding(),
-      middlewares: [AuthMiddleware()],
-    ),
-    GetPage(
-      name: Routes.EDIT_PROFILE,
-      page: () => const EditProfileScreen(),
-      binding: AuthBinding(),
-      middlewares: [AuthMiddleware()],
+      middlewares: [AuthMiddleware()], // ✅ Semua role bisa akses
     ),
 
-    // Customer routes
+    // ✅ CUSTOMER ROUTES
     GetPage(
       name: Routes.CUSTOMER_HOME,
       page: () => const CustomerHomeScreen(),
       binding: CustomerBinding(),
-      middlewares: [CustomerOnlyMiddleware()],
+      middlewares: [CustomerOnlyMiddleware()], // ✅ Hanya customer
     ),
+
+    // ✅ DRIVER ROUTES
+    GetPage(
+      name: Routes.DRIVER_MAIN,
+      page: () => const DriverMainScreen(),
+      binding: DriverBinding(),
+      middlewares: [DriverOnlyMiddleware()], // ✅ Hanya driver
+    ),
+
+    // ✅ STORE ROUTES
+    GetPage(
+      name: Routes.STORE_DASHBOARD,
+      page: () => const StoreDashboardScreen(),
+      binding: StoreBinding(),
+      middlewares: [StoreOnlyMiddleware()], // ✅ Hanya store
+    ),
+
+    // Customer routes
+    // GetPage(
+    //   name: Routes.CUSTOMER_HOME,
+    //   page: () => const CustomerHomeScreen(),
+    //   binding: CustomerBinding(),
+    //   middlewares: [CustomerOnlyMiddleware()],
+    // ),
     GetPage(
       name: Routes.STORE_LIST,
       page: () => StoreListScreen(),
@@ -181,12 +252,12 @@ class AppPages {
     ),
 
     // Store routes
-    GetPage(
-      name: Routes.STORE_DASHBOARD,
-      page: () => const StoreDashboardScreen(),
-      binding: StoreBinding(),
-      middlewares: [StoreOnlyMiddleware()],
-    ),
+    // GetPage(
+    //   name: Routes.STORE_DASHBOARD,
+    //   page: () => const StoreDashboardScreen(),
+    //   binding: StoreBinding(),
+    //   middlewares: [StoreOnlyMiddleware()],
+    // ),
     GetPage(
       name: Routes.STORE_ANALYTICS,
       page: () => const StoreAnalyticsScreen(),
@@ -242,11 +313,12 @@ class AppPages {
       page: () => const DriverMainScreen(),
       binding: DriverBinding(),
     ),
-    GetPage(
-      name: Routes.DRIVER_HOME,
-      page: () => const DriverHomeScreen(),
-      binding: DriverBinding(),
-    ),
+
+    // GetPage(
+    //   name: Routes.DRIVER_HOME,
+    //   page: () => const DriverHomeScreen(),
+    //   binding: DriverBinding(),
+    // ),
     // GetPage(
     //   name: Routes.DRIVER_REQUESTS,
     //   page: () => const DriverRequestsScreen(),
