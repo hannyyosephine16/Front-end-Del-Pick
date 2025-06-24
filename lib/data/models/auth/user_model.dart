@@ -1,3 +1,5 @@
+import 'package:del_pick/core/utils/parsing_helper.dart';
+
 class UserModel {
   final int id;
   final String name;
@@ -6,8 +8,6 @@ class UserModel {
   final String role;
   final String? avatar;
   final String? fcmToken;
-  // final bool isActive;
-  final DateTime? emailVerifiedAt;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -19,37 +19,25 @@ class UserModel {
     required this.role,
     this.avatar,
     this.fcmToken,
-    // this.isActive = true,
-    this.emailVerifiedAt,
     this.createdAt,
     this.updatedAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      email: json['email'] as String,
+      id: ParsingHelper.parseIntWithDefault(json['id'], 0),
+      name: json['name'] as String? ?? '',
+      email: json['email'] as String? ?? '',
       phone: json['phone'] as String?,
-      role: json['role'] as String,
+      role: json['role'] as String? ?? 'customer',
       avatar: json['avatar'] as String?,
-      // isActive: json['is_active'] as bool? ?? json['isActive'] as bool? ?? true,
       fcmToken: json['fcm_token'] as String?,
-      emailVerifiedAt: json['email_verified_at'] != null
-          ? DateTime.parse(json['email_verified_at'] as String)
-          : json['emailVerifiedAt'] != null
-              ? DateTime.parse(json['emailVerifiedAt'] as String)
-              : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
-          : json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'] as String)
-              : null,
+          ? DateTime.tryParse(json['created_at'] as String)
+          : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
-          : json['updatedAt'] != null
-              ? DateTime.parse(json['updatedAt'] as String)
-              : null,
+          ? DateTime.tryParse(json['updated_at'] as String)
+          : null,
     );
   }
 
@@ -62,8 +50,6 @@ class UserModel {
       'role': role,
       'avatar': avatar,
       'fcm_token': fcmToken,
-      // 'is_active': isActive,
-      'email_verified_at': emailVerifiedAt?.toIso8601String(),
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -76,9 +62,7 @@ class UserModel {
     String? phone,
     String? role,
     String? avatar,
-    // bool? isActive,
     String? fcmToken,
-    DateTime? emailVerifiedAt,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -89,9 +73,7 @@ class UserModel {
       phone: phone ?? this.phone,
       role: role ?? this.role,
       avatar: avatar ?? this.avatar,
-      // isActive: isActive ?? this.isActive,
       fcmToken: fcmToken ?? this.fcmToken,
-      emailVerifiedAt: emailVerifiedAt ?? this.emailVerifiedAt,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -101,10 +83,8 @@ class UserModel {
   bool get isCustomer => role == 'customer';
   bool get isDriver => role == 'driver';
   bool get isStore => role == 'store';
-  bool get isAdmin => role == 'admin';
   bool get hasAvatar => avatar != null && avatar!.isNotEmpty;
   bool get hasFcmToken => fcmToken != null && fcmToken!.isNotEmpty;
-  bool get isEmailVerified => emailVerifiedAt != null;
 
   String get initials {
     final nameParts = name.split(' ');
@@ -125,8 +105,6 @@ class UserModel {
         return 'Driver';
       case 'store':
         return 'Store Owner';
-      case 'admin':
-        return 'Administrator';
       default:
         return role;
     }
@@ -135,7 +113,7 @@ class UserModel {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is UserModel && runtimeType == other.runtimeType && id == other.id;
+          other is UserModel && runtimeType == other.runtimeType && id == other.id;
 
   @override
   int get hashCode => id.hashCode;
@@ -145,3 +123,6 @@ class UserModel {
     return 'UserModel{id: $id, name: $name, email: $email, role: $role}';
   }
 }
+
+
+

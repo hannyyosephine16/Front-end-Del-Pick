@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../auth/user_model.dart';
 import '../menu/menu_item_model.dart';
+import 'package:del_pick/core/utils/parsing_helper.dart';
 
 class StoreModel {
   final int id;
@@ -47,23 +48,24 @@ class StoreModel {
     this.updatedAt,
   });
 
+  // ✅ FIXED: Safe parsing using ParsingHelper
   factory StoreModel.fromJson(Map<String, dynamic> json) {
     return StoreModel(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
-      name: json['name'] as String,
-      address: json['address'] as String,
+      id: ParsingHelper.parseIntWithDefault(json['id'], 0),
+      userId: ParsingHelper.parseIntWithDefault(json['user_id'], 0),
+      name: json['name'] as String? ?? '',
+      address: json['address'] as String? ?? '',
       description: json['description'] as String?,
       openTime: json['open_time'] as String?,
       closeTime: json['close_time'] as String?,
-      rating: (json['rating'] as num?)?.toDouble(),
-      totalProducts: json['total_products'] as int?,
+      rating: ParsingHelper.parseDouble(json['rating']),
+      totalProducts: ParsingHelper.parseInt(json['total_products']),
       imageUrl: json['image_url'] as String?,
       phone: json['phone'] as String?,
-      reviewCount: json['review_count'] as int?,
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
-      distance: (json['distance'] as num?)?.toDouble(),
+      reviewCount: ParsingHelper.parseInt(json['review_count']),
+      latitude: ParsingHelper.parseDouble(json['latitude']),
+      longitude: ParsingHelper.parseDouble(json['longitude']),
+      distance: ParsingHelper.parseDouble(json['distance']),
       status: json['status'] as String? ?? 'active',
       owner: json['owner'] != null
           ? UserModel.fromJson(json['owner'] as Map<String, dynamic>)
@@ -75,10 +77,10 @@ class StoreModel {
               .toList()
           : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'] as String)
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+          ? DateTime.tryParse(json['updated_at'] as String)
           : null,
     );
   }
@@ -108,7 +110,6 @@ class StoreModel {
     };
   }
 
-  // ✅ ADDED: copyWith method that was missing
   StoreModel copyWith({
     int? id,
     int? userId,

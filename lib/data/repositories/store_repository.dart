@@ -3,9 +3,8 @@
 import 'package:del_pick/data/providers/store_provider.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/core/utils/result.dart';
-
 import '../../core/errors/error_handler.dart';
-import '../models/base/base_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 
 class StoreRepository {
   final StoreProvider _storeProvider;

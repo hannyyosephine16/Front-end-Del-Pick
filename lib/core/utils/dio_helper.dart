@@ -6,6 +6,7 @@ import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/errors/failures.dart';
 import '../../data/models/base/base_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 
 class DioHelper {
   /// Create default Dio configuration

@@ -1,7 +1,7 @@
-// lib/data/models/driver/driver_request_model.dart - FIXED VERSION
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
 import 'package:del_pick/core/constants/driver_status_constants.dart';
+import 'package:del_pick/core/utils/parsing_helper.dart';
 
 class DriverRequestModel {
   final int id;
@@ -28,17 +28,18 @@ class DriverRequestModel {
     this.updatedAt,
   });
 
+  // ✅ FIXED: Safe parsing using ParsingHelper
   factory DriverRequestModel.fromJson(Map<String, dynamic> json) {
     return DriverRequestModel(
-      id: json['id'] as int,
-      orderId: json['order_id'] as int,
-      driverId: json['driver_id'] as int,
-      status: json['status'] as String,
+      id: ParsingHelper.parseIntWithDefault(json['id'], 0),
+      orderId: ParsingHelper.parseIntWithDefault(json['order_id'], 0),
+      driverId: ParsingHelper.parseIntWithDefault(json['driver_id'], 0),
+      status: json['status'] as String? ?? 'pending',
       estimatedPickupTime: json['estimated_pickup_time'] != null
-          ? DateTime.parse(json['estimated_pickup_time'] as String)
+          ? DateTime.tryParse(json['estimated_pickup_time'] as String)
           : null,
       estimatedDeliveryTime: json['estimated_delivery_time'] != null
-          ? DateTime.parse(json['estimated_delivery_time'] as String)
+          ? DateTime.tryParse(json['estimated_delivery_time'] as String)
           : null,
       order: json['order'] != null
           ? OrderModel.fromJson(json['order'] as Map<String, dynamic>)
@@ -47,10 +48,10 @@ class DriverRequestModel {
           ? DriverModel.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'] as String)
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.parse(json['updated_at'] as String)
+          ? DateTime.tryParse(json['updated_at'] as String)
           : null,
     );
   }
@@ -89,7 +90,7 @@ class DriverRequestModel {
       status: status ?? this.status,
       estimatedPickupTime: estimatedPickupTime ?? this.estimatedPickupTime,
       estimatedDeliveryTime:
-          estimatedDeliveryTime ?? this.estimatedDeliveryTime,
+      estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       order: order ?? this.order,
       driver: driver ?? this.driver,
       createdAt: createdAt ?? this.createdAt,
@@ -98,11 +99,11 @@ class DriverRequestModel {
   }
 
   // Status checks (sesuai backend)
-  bool get isPending => status == DriverStatusConstants.requestPending;
-  bool get isAccepted => status == DriverStatusConstants.requestAccepted;
-  bool get isRejected => status == DriverStatusConstants.requestRejected;
-  bool get isExpired => status == DriverStatusConstants.requestExpired;
-  bool get isCompleted => status == DriverStatusConstants.requestCompleted;
+  bool get isPending => status == 'pending';
+  bool get isAccepted => status == 'accepted';
+  bool get isRejected => status == 'rejected';
+  bool get isExpired => status == 'expired';
+  bool get isCompleted => status == 'completed';
 
   bool get isActive => isPending || isAccepted;
   bool get canRespond => isPending;
@@ -110,7 +111,20 @@ class DriverRequestModel {
   bool get canReject => isPending;
 
   String get statusDisplayName {
-    return DriverStatusConstants.getRequestStatusName(status);
+    switch (status) {
+      case 'pending':
+        return 'Menunggu';
+      case 'accepted':
+        return 'Diterima';
+      case 'rejected':
+        return 'Ditolak';
+      case 'expired':
+        return 'Kedaluwarsa';
+      case 'completed':
+        return 'Selesai';
+      default:
+        return status;
+    }
   }
 
   String get orderCode => 'ORD-${orderId.toString().padLeft(6, '0')}';
@@ -143,35 +157,12 @@ class DriverRequestModel {
     }
   }
 
-  Duration? get timeRemaining {
-    if (createdAt == null) return null;
-    final timeout = DriverStatusConstants.getRequestTimeout(status);
-    final deadline = createdAt!.add(timeout);
-    final now = DateTime.now();
-
-    if (now.isAfter(deadline)) return null;
-    return deadline.difference(now);
-  }
-
-  String get timeRemainingString {
-    final remaining = timeRemaining;
-    if (remaining == null) return 'Kedaluwarsa';
-
-    if (remaining.inMinutes < 1) {
-      return 'Kurang dari 1 menit';
-    } else if (remaining.inMinutes < 60) {
-      return '${remaining.inMinutes} menit lagi';
-    } else {
-      return '${remaining.inHours} jam ${remaining.inMinutes % 60} menit lagi';
-    }
-  }
-
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is DriverRequestModel &&
-          runtimeType == other.runtimeType &&
-          id == other.id;
+          other is DriverRequestModel &&
+              runtimeType == other.runtimeType &&
+              id == other.id;
 
   @override
   int get hashCode => id.hashCode;

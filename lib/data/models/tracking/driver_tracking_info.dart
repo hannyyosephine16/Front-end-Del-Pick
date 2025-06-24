@@ -1,4 +1,5 @@
-// lib/data/models/tracking/driver_tracking_info.dart - FIXED
+import 'package:del_pick/core/utils/parsing_helper.dart';
+
 class DriverTrackingInfo {
   final int id;
   final String name;
@@ -16,14 +17,15 @@ class DriverTrackingInfo {
     this.rating,
   });
 
+  // ✅ FIXED: Safe parsing and correct field names
   factory DriverTrackingInfo.fromJson(Map<String, dynamic> json) {
     return DriverTrackingInfo(
-      id: json['id'] as int,
-      name: json['name'] as String,
+      id: ParsingHelper.parseIntWithDefault(json['id'], 0),
+      name: json['name'] as String? ?? '',
       phone: json['phone'] as String?,
       licenseNumber: json['license_number'] as String?, // ✅ FIXED
       vehiclePlate: json['vehicle_plate'] as String?, // ✅ FIXED
-      rating: (json['rating'] as num?)?.toDouble(),
+      rating: ParsingHelper.parseDouble(json['rating']),
     );
   }
 

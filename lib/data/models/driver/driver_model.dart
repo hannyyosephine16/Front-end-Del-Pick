@@ -1,5 +1,5 @@
-// lib/data/models/driver/driver_model.dart - FIXED VERSION
 import 'package:del_pick/data/models/auth/user_model.dart';
+import 'package:del_pick/core/utils/parsing_helper.dart';
 
 class DriverModel {
   final int id;
@@ -30,7 +30,45 @@ class DriverModel {
     required this.updatedAt,
   });
 
-  // ✅ ADD copyWith method
+  // ✅ FIXED: Safe parsing using ParsingHelper
+  factory DriverModel.fromJson(Map<String, dynamic> json) {
+    return DriverModel(
+      id: ParsingHelper.parseIntWithDefault(json['id'], 0),
+      userId: ParsingHelper.parseIntWithDefault(json['user_id'], 0),
+      licenseNumber: json['license_number'] as String? ?? '',
+      vehiclePlate: json['vehicle_plate'] as String? ?? '',
+      status: json['status'] as String? ?? 'inactive',
+      rating: ParsingHelper.parseDoubleWithDefault(json['rating'], 5.0),
+      reviewsCount: ParsingHelper.parseIntWithDefault(json['reviews_count'], 0),
+      latitude: ParsingHelper.parseDouble(json['latitude']),
+      longitude: ParsingHelper.parseDouble(json['longitude']),
+      user: json['user'] != null
+          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
+          : null,
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(),
+      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
+          DateTime.now(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'user_id': userId,
+      'license_number': licenseNumber,
+      'vehicle_plate': vehiclePlate,
+      'status': status,
+      'rating': rating,
+      'reviews_count': reviewsCount,
+      'latitude': latitude,
+      'longitude': longitude,
+      'user': user?.toJson(),
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
+    };
+  }
+
   DriverModel copyWith({
     int? id,
     int? userId,
@@ -61,45 +99,8 @@ class DriverModel {
     );
   }
 
-  // ✅ ADD vehicleNumber getter untuk compatibility
+  // Aliases for compatibility
   String get vehicleNumber => vehiclePlate;
-
-  factory DriverModel.fromJson(Map<String, dynamic> json) {
-    return DriverModel(
-      id: json['id'] as int,
-      userId: json['user_id'] as int,
-      licenseNumber: json['license_number'] as String,
-      vehiclePlate: json['vehicle_plate'] as String,
-      status: json['status'] as String,
-      rating: (json['rating'] as num).toDouble(),
-      reviewsCount: json['reviews_count'] as int,
-      latitude: (json['latitude'] as num?)?.toDouble(),
-      longitude: (json['longitude'] as num?)?.toDouble(),
-      user: json['user'] != null
-          ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
-          : null,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
-    );
-  }
-
-  Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'user_id': userId,
-      'license_number': licenseNumber,
-      'vehicle_plate': vehiclePlate,
-      'status': status,
-      'rating': rating,
-      'reviews_count': reviewsCount,
-      'latitude': latitude,
-      'longitude': longitude,
-      'user': user?.toJson(),
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
-    };
-  }
-
   String get name => user?.name ?? 'Unknown Driver';
   String get phone => user?.phone ?? '';
   String get email => user?.email ?? '';
@@ -107,11 +108,9 @@ class DriverModel {
   bool get isActive => status == 'active';
   bool get isBusy => status == 'busy';
   bool get isInactive => status == 'inactive';
-
   bool get hasLocation => latitude != null && longitude != null;
 
   String get formattedRating => rating.toStringAsFixed(1);
-
   String get statusDisplayName {
     switch (status) {
       case 'active':

@@ -1,3 +1,5 @@
+import 'package:del_pick/core/utils/parsing_helper.dart';
+
 class CartItemModel {
   final int? id;
   final int menuItemId;
@@ -21,20 +23,23 @@ class CartItemModel {
     this.createdAt,
   });
 
+  // ✅ FIXED: Safe parsing using ParsingHelper
   factory CartItemModel.fromJson(Map<String, dynamic> json) {
     return CartItemModel(
-      id: json['id'] as int?,
-      menuItemId: json['menu_item_id'] as int? ?? json['menuItemId'] as int,
-      storeId: json['store_id'] as int? ?? json['storeId'] as int,
-      name: json['name'] as String,
-      price: (json['price'] as num).toDouble(),
-      quantity: json['quantity'] as int,
+      id: ParsingHelper.parseInt(json['id']),
+      menuItemId: ParsingHelper.parseIntWithDefault(
+          json['menu_item_id'] ?? json['menuItemId'], 0),
+      storeId: ParsingHelper.parseIntWithDefault(
+          json['store_id'] ?? json['storeId'], 0),
+      name: json['name'] as String? ?? '',
+      price: ParsingHelper.parseDoubleWithDefault(json['price'], 0.0),
+      quantity: ParsingHelper.parseIntWithDefault(json['quantity'], 1),
       imageUrl: json['image_url'] as String? ?? json['imageUrl'] as String?,
       notes: json['notes'] as String?,
       createdAt: json['created_at'] != null
-          ? DateTime.parse(json['created_at'] as String)
+          ? DateTime.tryParse(json['created_at'] as String)
           : json['createdAt'] != null
-              ? DateTime.parse(json['createdAt'] as String)
+              ? DateTime.tryParse(json['createdAt'] as String)
               : null,
     );
   }
@@ -53,7 +58,7 @@ class CartItemModel {
     };
   }
 
-  // ✅ FIXED: Backend expects this exact format for place order API
+  // ✅ Backend expects this exact format for place order API
   Map<String, dynamic> toApiJson() {
     return {
       'menu_item_id': menuItemId, // ✅ Backend expects menu_item_id

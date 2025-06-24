@@ -1,3 +1,5 @@
+import 'package:del_pick/core/utils/parsing_helper.dart';
+
 class MenuItemModel {
   final int id;
   final String name;
@@ -23,21 +25,23 @@ class MenuItemModel {
     required this.updatedAt,
   });
 
+  // ✅ FIXED: Safe parsing using ParsingHelper
   factory MenuItemModel.fromJson(Map<String, dynamic> json) {
     return MenuItemModel(
-      id: json['id'] as int,
-      name: json['name'] as String,
-      price: (json['price'] as num).toDouble(),
+      id: ParsingHelper.parseIntWithDefault(json['id'], 0),
+      name: json['name'] as String? ?? '',
+      price: ParsingHelper.parseDoubleWithDefault(json['price'], 0.0),
       description: json['description'] as String?,
       imageUrl: json['image_url'] as String?, // ✅ Backend: image_url
-      storeId: json['store_id'] as int, // ✅ Backend: store_id
-      category: json['category'] as String,
+      storeId: ParsingHelper.parseIntWithDefault(
+          json['store_id'], 0), // ✅ Backend: store_id
+      category: json['category'] as String? ?? '',
       isAvailable:
           json['is_available'] as bool? ?? true, // ✅ Backend: is_available
-      createdAt:
-          DateTime.parse(json['created_at'] as String), // ✅ Backend: created_at
-      updatedAt:
-          DateTime.parse(json['updated_at'] as String), // ✅ Backend: updated_at
+      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+          DateTime.now(), // ✅ Backend: created_at
+      updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
+          DateTime.now(), // ✅ Backend: updated_at
     );
   }
 

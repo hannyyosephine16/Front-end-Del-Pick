@@ -5,7 +5,7 @@ import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
-import 'package:del_pick/data/models/base/base_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/app_constants.dart';

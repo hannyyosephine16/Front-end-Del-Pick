@@ -1,7 +1,7 @@
-// lib/data/models/tracking/tracking_info_model.dart - FIXED
 import 'package:del_pick/data/models/tracking/location_model.dart';
 import 'package:del_pick/data/models/tracking/tracking_data_model.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
+import 'package:del_pick/core/utils/parsing_helper.dart';
 
 class TrackingInfoModel {
   final int orderId;
@@ -9,8 +9,8 @@ class TrackingInfoModel {
   final String deliveryStatus;
   final LocationDataModel? storeLocation;
   final LocationDataModel? driverLocation;
-  final DateTime? estimatedPickupTime; //
-  final DateTime? actualPickupTime; //
+  final DateTime? estimatedPickupTime;
+  final DateTime? actualPickupTime;
   final DateTime? estimatedDeliveryTime;
   final DateTime? actualDeliveryTime;
   final List<dynamic>? trackingUpdates;
@@ -32,11 +32,14 @@ class TrackingInfoModel {
     this.message,
   });
 
+  // ✅ FIXED: Safe parsing and correct field names
   factory TrackingInfoModel.fromJson(Map<String, dynamic> json) {
     return TrackingInfoModel(
-      orderId: json['order_id'] as int, // ✅ FIXED
-      orderStatus: json['order_status'] as String, // ✅ FIXED
-      deliveryStatus: json['delivery_status'] as String, // ✅ FIXED
+      orderId:
+          ParsingHelper.parseIntWithDefault(json['order_id'], 0), // ✅ FIXED
+      orderStatus: json['order_status'] as String? ?? 'pending', // ✅ FIXED
+      deliveryStatus:
+          json['delivery_status'] as String? ?? 'pending', // ✅ FIXED
       storeLocation: json['store_location'] != null
           ? LocationDataModel.fromJson(
               json['store_location'] as Map<String, dynamic>)
@@ -46,16 +49,16 @@ class TrackingInfoModel {
               json['driver_location'] as Map<String, dynamic>)
           : null,
       estimatedPickupTime: json['estimated_pickup_time'] != null
-          ? DateTime.parse(json['estimated_pickup_time'] as String)
+          ? DateTime.tryParse(json['estimated_pickup_time'] as String)
           : null,
       actualPickupTime: json['actual_pickup_time'] != null
-          ? DateTime.parse(json['actual_pickup_time'] as String)
+          ? DateTime.tryParse(json['actual_pickup_time'] as String)
           : null,
       estimatedDeliveryTime: json['estimated_delivery_time'] != null
-          ? DateTime.parse(json['estimated_delivery_time'] as String)
+          ? DateTime.tryParse(json['estimated_delivery_time'] as String)
           : null,
       actualDeliveryTime: json['actual_delivery_time'] != null
-          ? DateTime.parse(json['actual_delivery_time'] as String)
+          ? DateTime.tryParse(json['actual_delivery_time'] as String)
           : null,
       trackingUpdates: json['tracking_updates'] as List<dynamic>?,
       driver: json['driver'] != null

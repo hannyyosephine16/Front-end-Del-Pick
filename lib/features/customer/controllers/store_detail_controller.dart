@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/menu/menu_item_model.dart';
-import 'package:del_pick/data/models/base/base_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/menu_repository.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
