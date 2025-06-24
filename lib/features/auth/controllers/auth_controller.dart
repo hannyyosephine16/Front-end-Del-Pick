@@ -53,7 +53,17 @@ class AuthController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _checkAuthStatus();
+    // _checkAuthStatus();
+    checkAuthStatus();
+    reloadUserProfile();
+  }
+
+  Future<void> checkAuthStatus() async {
+    await _checkAuthStatus();
+  }
+
+  Future<void> reloadUserProfile() async {
+    await _loadUserProfile();
   }
 
   Future<void> _checkAuthStatus() async {
@@ -238,75 +248,6 @@ class AuthController extends GetxController {
       _isLoading.value = false;
     }
   }
-  // Future<bool> login({required String email, required String password}) async {
-  //   try {
-  //     _isLoading.value = true;
-  //
-  //     final result = await _authRepository.login(
-  //       email: email,
-  //       password: password,
-  //     );
-  //
-  //     if (result.isSuccess && result.data != null) {
-  //       final data = result.data!;
-  //
-  //       // Extract user data
-  //       Map<String, dynamic> userData = Map<String, dynamic>.from(data['user']);
-  //
-  //       // Merge driver/store data if exists
-  //       if (data.containsKey('driver') && data['driver'] != null) {
-  //         userData['driver'] = data['driver'];
-  //       }
-  //
-  //       if (data.containsKey('store') && data['store'] != null) {
-  //         userData['store'] = data['store'];
-  //       }
-  //
-  //       // Store raw user data
-  //       _rawUserData.value = userData;
-  //
-  //       // Create UserModel from basic user data
-  //       final basicUserData = Map<String, dynamic>.from(userData);
-  //       basicUserData.remove('driver');
-  //       basicUserData.remove('store');
-  //
-  //       final user = UserModel.fromJson(basicUserData);
-  //       _currentUser.value = user;
-  //       _userRole.value = user.role;
-  //       _isLoggedIn.value = true;
-  //
-  //       // Save to storage
-  //       await _saveUserDataToStorage(user, userData, data['token']);
-  //
-  //       // Navigate based on role
-  //       _navigateBasedOnRole(user.role);
-  //
-  //       Get.snackbar(
-  //         'Success',
-  //         'Login successful',
-  //         snackPosition: SnackPosition.TOP,
-  //       );
-  //
-  //       return true;
-  //     } else {
-  //       Get.snackbar(
-  //         'Error',
-  //         result.message ?? 'Login failed',
-  //         snackPosition: SnackPosition.TOP,
-  //       );
-  //       return false;
-  //     }
-  //   } catch (e) {
-  //     Get.snackbar(
-  //       'Error',
-  //       'An error occurred during login',
-  //       snackPosition: SnackPosition.TOP,
-  //     );
-  //     return false;
-  //   } finally {
-  //     _isLoading.value = false;
-  //   }
-  // }
 
   Future<bool> updateProfile({
     String? name,
