@@ -6,9 +6,6 @@ class StoreStatusConstants {
   static const String active = 'active';
   static const String inactive = 'inactive';
   static const String closed = 'closed';
-  static const String maintenance = 'maintenance';
-  static const String suspended = 'suspended';
-
   // Menu item availability status
   static const String available = 'available';
   static const String unavailable = 'unavailable';
@@ -24,8 +21,6 @@ class StoreStatusConstants {
     active,
     inactive,
     closed,
-    maintenance,
-    suspended,
   ];
 
   static const List<String> allMenuItemStatuses = [
@@ -45,8 +40,6 @@ class StoreStatusConstants {
   static const List<String> nonOperationalStatuses = [
     inactive,
     closed,
-    maintenance,
-    suspended,
     closedTemporarily,
   ];
 
@@ -59,8 +52,8 @@ class StoreStatusConstants {
     active: 'Aktif',
     inactive: 'Tidak Aktif',
     closed: 'Tutup',
-    maintenance: 'Maintenance',
-    suspended: 'Ditangguhkan',
+    // maintenance: 'Maintenance',
+    // suspended: 'Ditangguhkan',
   };
 
   static const Map<String, String> menuItemStatusNames = {
@@ -80,8 +73,8 @@ class StoreStatusConstants {
     active: 'Toko aktif dan dapat menerima pesanan',
     inactive: 'Toko sedang tidak aktif',
     closed: 'Toko tutup dan tidak menerima pesanan',
-    maintenance: 'Toko sedang dalam maintenance',
-    suspended: 'Toko ditangguhkan oleh admin',
+    // maintenance: 'Toko sedang dalam maintenance',
+    // suspended: 'Toko ditangguhkan oleh admin',
   };
 
   static const Map<String, String> menuItemStatusDescriptions = {
@@ -101,8 +94,8 @@ class StoreStatusConstants {
     active: AppColors.storeOpen,
     inactive: AppColors.storeClosed,
     closed: AppColors.storeClosed,
-    maintenance: AppColors.storeBusy,
-    suspended: AppColors.error,
+    // maintenance: AppColors.storeBusy,
+    // suspended: AppColors.error,
   };
 
   static const Map<String, Color> menuItemStatusColors = {
@@ -122,8 +115,8 @@ class StoreStatusConstants {
     active: Icons.store,
     inactive: Icons.store_mall_directory_outlined,
     closed: Icons.lock,
-    maintenance: Icons.build,
-    suspended: Icons.block,
+    // maintenance: Icons.build,
+    // suspended: Icons.block,
   };
 
   static const Map<String, IconData> menuItemStatusIcons = {
@@ -143,9 +136,9 @@ class StoreStatusConstants {
     active: 1,
     busy: 2,
     inactive: 3,
-    maintenance: 4,
-    closed: 5,
-    suspended: 6,
+    // maintenance: 4,
+    closed: 4,
+    // suspended: 6,
   };
 
   static const Map<String, int> menuItemStatusPriority = {
@@ -292,13 +285,13 @@ class StoreStatusConstants {
     return [inactive, closed, closedTemporarily].contains(status);
   }
 
-  static bool shouldShowMaintenanceMessage(String status) {
-    return status == maintenance;
-  }
+  // static bool shouldShowMaintenanceMessage(String status) {
+  //   return status == maintenance;
+  // }
 
-  static bool shouldShowSuspendedMessage(String status) {
-    return status == suspended;
-  }
+  // static bool shouldShowSuspendedMessage(String status) {
+  //   return status == suspended;
+  // }
 
   static Duration getStatusUpdateInterval(String status) {
     switch (status) {

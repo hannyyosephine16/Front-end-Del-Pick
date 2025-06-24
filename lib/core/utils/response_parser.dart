@@ -35,26 +35,25 @@ class ResponseParser {
   }
 
   /// Parse data dan pagination dari berbagai format
+  /// Parse data dan pagination dari berbagai format backend
   static Map<String, dynamic> _parseDataAndPagination(
       Map<String, dynamic> responseData) {
     final result = <String, dynamic>{};
 
-    // Case 1: Pagination di root level (driverController, dll)
-    // Format: { message, data, totalItems, totalPages, currentPage }
-    if (responseData.containsKey('totalItems')) {
-      result['data'] = responseData['data'];
-      result['pagination'] = {
-        'totalItems': responseData['totalItems'],
-        'totalPages': responseData['totalPages'],
-        'currentPage': responseData['currentPage'],
-      };
-      return result;
-    }
-
-    // Case 2: Pagination dalam data object (customerController)
-    // Format: { message, data: { total_items, total_pages, current_page, customers } }
+    // Case 1: Orders format - { message, data: { totalItems, totalPages, currentPage, orders } }
     final dataObj = responseData['data'];
     if (dataObj is Map<String, dynamic>) {
+      // Check for nested pagination dengan orders/items key
+      if (dataObj.containsKey('totalItems') && dataObj.containsKey('orders')) {
+        result['pagination'] = {
+          'totalItems': dataObj['totalItems'],
+          'totalPages': dataObj['totalPages'],
+          'currentPage': dataObj['currentPage'],
+        };
+        result['data'] = dataObj['orders']; // Extract orders array
+        return result;
+      }
+
       // Check for snake_case pagination
       if (dataObj.containsKey('total_items')) {
         result['pagination'] = {
@@ -102,8 +101,20 @@ class ResponseParser {
       }
     }
 
-    // Case 3: Simple data without pagination
-    // Format: { message, data }
+    // Case 2: Pagination di root level (drivers, stores, dll)
+    // Format: { message, data, totalItems, totalPages, currentPage }
+    if (responseData.containsKey('totalItems')) {
+      result['data'] = responseData['data'];
+      result['pagination'] = {
+        'totalItems': responseData['totalItems'],
+        'totalPages': responseData['totalPages'],
+        'currentPage': responseData['currentPage'],
+      };
+      return result;
+    }
+
+    // Case 3: Simple data tanpa pagination
+    // Format: { message, data } atau { message, data: [...] }
     result['data'] = responseData['data'];
     return result;
   }

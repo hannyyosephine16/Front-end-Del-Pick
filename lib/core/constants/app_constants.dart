@@ -82,7 +82,6 @@ class AppConstants {
   static const String emailRegex = r'^[^\s@]+@[^\s@]+\.[^\s@]+$';
   static const String phoneRegex = r'^[0-9]{10,13}$'; // sesuai backend
   static const String passwordRegex = r'^.{6,}$'; // minimal 6 karakter
-
   // IMAGE UPLOAD (sesuai backend)
   static const int maxImageSizeMB = 5;
   static const List<String> allowedImageFormats = ['jpg', 'jpeg', 'png'];
