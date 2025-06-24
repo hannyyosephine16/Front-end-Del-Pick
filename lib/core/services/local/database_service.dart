@@ -23,15 +23,13 @@ class DatabaseService extends getx.GetxService {
     _database = await DatabaseConfig.database;
   }
 
-  // User operations
+  // -------------------- USER --------------------
   Future<int> insertUser(Map<String, dynamic> user) async {
-    final db = await DatabaseConfig.database;
-    return await db.insert(DatabaseConfig.userTable, user);
+    return await _database!.insert(DatabaseConfig.userTable, user);
   }
 
   Future<Map<String, dynamic>?> getUser(int id) async {
-    final db = await DatabaseConfig.database;
-    final results = await db.query(
+    final results = await _database!.query(
       DatabaseConfig.userTable,
       where: 'id = ?',
       whereArgs: [id],
@@ -40,8 +38,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> updateUser(int id, Map<String, dynamic> user) async {
-    final db = await DatabaseConfig.database;
-    return await db.update(
+    return await _database!.update(
       DatabaseConfig.userTable,
       user,
       where: 'id = ?',
@@ -50,28 +47,25 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> deleteUser(int id) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
+    return await _database!.delete(
       DatabaseConfig.userTable,
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  // Cart operations
+  // -------------------- CART --------------------
   Future<int> insertCartItem(Map<String, dynamic> cartItem) async {
-    final db = await DatabaseConfig.database;
-    return await db.insert(DatabaseConfig.cartTable, cartItem);
+    return await _database!.insert(DatabaseConfig.cartTable, cartItem);
   }
 
   Future<List<Map<String, dynamic>>> getCartItems() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(DatabaseConfig.cartTable, orderBy: 'created_at DESC');
+    return await _database!
+        .query(DatabaseConfig.cartTable, orderBy: 'created_at DESC');
   }
 
   Future<List<Map<String, dynamic>>> getCartItemsByStore(int storeId) async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
+    return await _database!.query(
       DatabaseConfig.cartTable,
       where: 'store_id = ?',
       whereArgs: [storeId],
@@ -80,8 +74,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> updateCartItem(int id, Map<String, dynamic> cartItem) async {
-    final db = await DatabaseConfig.database;
-    return await db.update(
+    return await _database!.update(
       DatabaseConfig.cartTable,
       cartItem,
       where: 'id = ?',
@@ -90,8 +83,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> updateCartItemQuantity(int id, int quantity) async {
-    final db = await DatabaseConfig.database;
-    return await db.update(
+    return await _database!.update(
       DatabaseConfig.cartTable,
       {'quantity': quantity},
       where: 'id = ?',
@@ -100,8 +92,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> deleteCartItem(int id) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
+    return await _database!.delete(
       DatabaseConfig.cartTable,
       where: 'id = ?',
       whereArgs: [id],
@@ -109,13 +100,11 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> clearCart() async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(DatabaseConfig.cartTable);
+    return await _database!.delete(DatabaseConfig.cartTable);
   }
 
   Future<int> clearCartByStore(int storeId) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
+    return await _database!.delete(
       DatabaseConfig.cartTable,
       where: 'store_id = ?',
       whereArgs: [storeId],
@@ -123,8 +112,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<Map<String, dynamic>?> getCartItemByMenuId(int menuItemId) async {
-    final db = await DatabaseConfig.database;
-    final results = await db.query(
+    final results = await _database!.query(
       DatabaseConfig.cartTable,
       where: 'menu_item_id = ?',
       whereArgs: [menuItemId],
@@ -133,30 +121,26 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<double> getCartTotal() async {
-    final db = await DatabaseConfig.database;
-    final result = await db.rawQuery(
+    final result = await _database!.rawQuery(
       'SELECT SUM(price * quantity) as total FROM ${DatabaseConfig.cartTable}',
     );
     return result.first['total'] as double? ?? 0.0;
   }
 
   Future<int> getCartItemCount() async {
-    final db = await DatabaseConfig.database;
-    final result = await db.rawQuery(
+    final result = await _database!.rawQuery(
       'SELECT SUM(quantity) as count FROM ${DatabaseConfig.cartTable}',
     );
     return result.first['count'] as int? ?? 0;
   }
 
-  // Favorites operations
+  // -------------------- FAVORITES --------------------
   Future<int> insertFavorite(Map<String, dynamic> favorite) async {
-    final db = await DatabaseConfig.database;
-    return await db.insert(DatabaseConfig.favoritesTable, favorite);
+    return await _database!.insert(DatabaseConfig.favoritesTable, favorite);
   }
 
   Future<List<Map<String, dynamic>>> getFavoriteStores() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
+    return await _database!.query(
       DatabaseConfig.favoritesTable,
       where: 'type = ?',
       whereArgs: ['store'],
@@ -165,8 +149,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<List<Map<String, dynamic>>> getFavoriteMenuItems() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
+    return await _database!.query(
       DatabaseConfig.favoritesTable,
       where: 'type = ?',
       whereArgs: ['menu_item'],
@@ -175,8 +158,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<bool> isFavoriteStore(int storeId) async {
-    final db = await DatabaseConfig.database;
-    final results = await db.query(
+    final results = await _database!.query(
       DatabaseConfig.favoritesTable,
       where: 'store_id = ? AND type = ?',
       whereArgs: [storeId, 'store'],
@@ -185,8 +167,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<bool> isFavoriteMenuItem(int menuItemId) async {
-    final db = await DatabaseConfig.database;
-    final results = await db.query(
+    final results = await _database!.query(
       DatabaseConfig.favoritesTable,
       where: 'menu_item_id = ? AND type = ?',
       whereArgs: [menuItemId, 'menu_item'],
@@ -195,8 +176,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> removeFavoriteStore(int storeId) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
+    return await _database!.delete(
       DatabaseConfig.favoritesTable,
       where: 'store_id = ? AND type = ?',
       whereArgs: [storeId, 'store'],
@@ -204,23 +184,20 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> removeFavoriteMenuItem(int menuItemId) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
+    return await _database!.delete(
       DatabaseConfig.favoritesTable,
       where: 'menu_item_id = ? AND type = ?',
       whereArgs: [menuItemId, 'menu_item'],
     );
   }
 
-  // Orders operations (for offline support)
+  // -------------------- ORDERS --------------------
   Future<int> insertOrder(Map<String, dynamic> order) async {
-    final db = await DatabaseConfig.database;
-    return await db.insert(DatabaseConfig.ordersTable, order);
+    return await _database!.insert(DatabaseConfig.ordersTable, order);
   }
 
   Future<List<Map<String, dynamic>>> getOfflineOrders() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
+    return await _database!.query(
       DatabaseConfig.ordersTable,
       where: 'synced = ?',
       whereArgs: [0],
@@ -229,16 +206,14 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<List<Map<String, dynamic>>> getAllOrders() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
+    return await _database!.query(
       DatabaseConfig.ordersTable,
       orderBy: 'created_at DESC',
     );
   }
 
   Future<int> markOrderAsSynced(int orderId, int serverId) async {
-    final db = await DatabaseConfig.database;
-    return await db.update(
+    return await _database!.update(
       DatabaseConfig.ordersTable,
       {'synced': 1, 'server_id': serverId},
       where: 'id = ?',
@@ -247,89 +222,28 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> deleteOrder(int id) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
+    return await _database!.delete(
       DatabaseConfig.ordersTable,
       where: 'id = ?',
       whereArgs: [id],
     );
   }
 
-  // Addresses operations
-  Future<int> insertAddress(Map<String, dynamic> address) async {
-    final db = await DatabaseConfig.database;
-    return await db.insert(DatabaseConfig.addressesTable, address);
-  }
-
-  Future<List<Map<String, dynamic>>> getAddresses() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
-      DatabaseConfig.addressesTable,
-      orderBy: 'is_default DESC, created_at DESC',
-    );
-  }
-
-  Future<Map<String, dynamic>?> getDefaultAddress() async {
-    final db = await DatabaseConfig.database;
-    final results = await db.query(
-      DatabaseConfig.addressesTable,
-      where: 'is_default = ?',
-      whereArgs: [1],
-    );
-    return results.isNotEmpty ? results.first : null;
-  }
-
-  Future<int> updateAddress(int id, Map<String, dynamic> address) async {
-    final db = await DatabaseConfig.database;
-    return await db.update(
-      DatabaseConfig.addressesTable,
-      address,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> setDefaultAddress(int id) async {
-    final db = await DatabaseConfig.database;
-
-    // First, unset all default addresses
-    await db.update(DatabaseConfig.addressesTable, {'is_default': 0});
-
-    // Then set the selected address as default
-    return await db.update(
-      DatabaseConfig.addressesTable,
-      {'is_default': 1},
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  Future<int> deleteAddress(int id) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
-      DatabaseConfig.addressesTable,
-      where: 'id = ?',
-      whereArgs: [id],
-    );
-  }
-
-  // Notifications operations
+  // -------------------- NOTIFICATIONS --------------------
   Future<int> insertNotification(Map<String, dynamic> notification) async {
-    final db = await DatabaseConfig.database;
-    return await db.insert(DatabaseConfig.notificationsTable, notification);
+    return await _database!
+        .insert(DatabaseConfig.notificationsTable, notification);
   }
 
   Future<List<Map<String, dynamic>>> getNotifications() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
+    return await _database!.query(
       DatabaseConfig.notificationsTable,
       orderBy: 'created_at DESC',
     );
   }
 
   Future<List<Map<String, dynamic>>> getUnreadNotifications() async {
-    final db = await DatabaseConfig.database;
-    return await db.query(
+    return await _database!.query(
       DatabaseConfig.notificationsTable,
       where: 'is_read = ?',
       whereArgs: [0],
@@ -338,8 +252,7 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> markNotificationAsRead(int id) async {
-    final db = await DatabaseConfig.database;
-    return await db.update(
+    return await _database!.update(
       DatabaseConfig.notificationsTable,
       {'is_read': 1},
       where: 'id = ?',
@@ -348,13 +261,12 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> markAllNotificationsAsRead() async {
-    final db = await DatabaseConfig.database;
-    return await db.update(DatabaseConfig.notificationsTable, {'is_read': 1});
+    return await _database!
+        .update(DatabaseConfig.notificationsTable, {'is_read': 1});
   }
 
   Future<int> deleteNotification(int id) async {
-    final db = await DatabaseConfig.database;
-    return await db.delete(
+    return await _database!.delete(
       DatabaseConfig.notificationsTable,
       where: 'id = ?',
       whereArgs: [id],
@@ -362,34 +274,28 @@ class DatabaseService extends getx.GetxService {
   }
 
   Future<int> getUnreadNotificationCount() async {
-    final db = await DatabaseConfig.database;
-    final result = await db.rawQuery(
+    final result = await _database!.rawQuery(
       'SELECT COUNT(*) as count FROM ${DatabaseConfig.notificationsTable} WHERE is_read = 0',
     );
     return result.first['count'] as int? ?? 0;
   }
 
-  // Utility operations
+  // -------------------- UTILITIES --------------------
   Future<void> clearAllData() async {
     await DatabaseConfig.clearDatabase();
   }
 
   Future<Map<String, int>> getDatabaseStats() async {
-    final db = await DatabaseConfig.database;
-
-    final cartCount = await db.rawQuery(
+    final cartCount = await _database!.rawQuery(
       'SELECT COUNT(*) as count FROM ${DatabaseConfig.cartTable}',
     );
-    final favoritesCount = await db.rawQuery(
+    final favoritesCount = await _database!.rawQuery(
       'SELECT COUNT(*) as count FROM ${DatabaseConfig.favoritesTable}',
     );
-    final ordersCount = await db.rawQuery(
+    final ordersCount = await _database!.rawQuery(
       'SELECT COUNT(*) as count FROM ${DatabaseConfig.ordersTable}',
     );
-    final addressesCount = await db.rawQuery(
-      'SELECT COUNT(*) as count FROM ${DatabaseConfig.addressesTable}',
-    );
-    final notificationsCount = await db.rawQuery(
+    final notificationsCount = await _database!.rawQuery(
       'SELECT COUNT(*) as count FROM ${DatabaseConfig.notificationsTable}',
     );
 
@@ -397,7 +303,6 @@ class DatabaseService extends getx.GetxService {
       'cartItems': cartCount.first['count'] as int,
       'favorites': favoritesCount.first['count'] as int,
       'orders': ordersCount.first['count'] as int,
-      'addresses': addressesCount.first['count'] as int,
       'notifications': notificationsCount.first['count'] as int,
     };
   }

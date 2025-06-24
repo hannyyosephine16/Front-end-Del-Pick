@@ -3,7 +3,7 @@ import 'package:del_pick/app/app.dart';
 
 class ApiEndpoints {
   /// Base URLs
-  static const String baseUrl = EnvironmentConfig.baseUrl;
+  static const String baseUrl = EnvironmentConfig.productionUrl;
 
   /// Base paths
   static const String auth = '/auth';

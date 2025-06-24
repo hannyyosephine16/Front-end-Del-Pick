@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:del_pick/app/config/storage_config.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:get/get.dart' as getx;
 
@@ -366,5 +367,23 @@ class StorageService extends getx.GetxService {
   /// Listen to all storage changes
   void listenToAll(Function() callback) {
     _box.listen(callback);
+  }
+
+  // Tambahkan di StorageService
+  Future<void> saveLoginSession(
+      String token, Map<String, dynamic> user, String role) async {
+    await writeString(StorageKeys.authToken, token);
+    await writeJson(StorageKeys.authUser, user);
+    await writeString(StorageKeys.authUserRole, role);
+    await writeBool(StorageKeys.isLoggedIn, true);
+  }
+
+  Future<void> clearLoginSession() async {
+    await removeBatch([
+      StorageKeys.authToken,
+      StorageKeys.authUser,
+      StorageKeys.authUserRole,
+      StorageKeys.isLoggedIn,
+    ]);
   }
 }

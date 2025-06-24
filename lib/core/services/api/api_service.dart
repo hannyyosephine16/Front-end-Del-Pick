@@ -33,7 +33,7 @@ class ApiService extends getx.GetxService {
   void _initializeDio() {
     _dio = Dio(
       BaseOptions(
-        baseUrl: EnvironmentConfig.baseUrl,
+        baseUrl: EnvironmentConfig.productionUrl,
         connectTimeout: Duration(seconds: AppConstants.connectionTimeout),
         receiveTimeout: Duration(seconds: AppConstants.apiTimeout),
         sendTimeout: Duration(seconds: AppConstants.apiTimeout),

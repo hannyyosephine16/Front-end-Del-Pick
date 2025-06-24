@@ -1,45 +1,3 @@
-// import 'package:flutter/material.dart';
-// import 'package:get/get.dart';
-// import 'package:del_pick/app/config/app_config.dart';
-// import 'package:del_pick/app/themes/app_theme.dart';
-// import 'package:del_pick/app/routes/app_pages.dart';
-// import 'package:del_pick/app/bindings/initial_binding.dart';
-//
-// void main() async {
-//   WidgetsFlutterBinding.ensureInitialized();
-//
-//   // Initialize app configuration
-//   await AppConfig.initialize();
-//
-//   runApp(MyApp());
-// }
-//
-// class MyApp extends StatelessWidget {
-//   @override
-//   Widget build(BuildContext context) {
-//     return GetMaterialApp(
-//       title: 'DelPick',
-//       debugShowCheckedModeBanner: false,
-//
-//       // Theme
-//       theme: AppTheme.lightTheme,
-//       darkTheme: AppTheme.darkTheme,
-//       themeMode: ThemeMode.system,
-//
-//       // Routes
-//       initialRoute: AppPages.INITIAL,
-//       getPages: AppPages.routes,
-//
-//       // Initial Binding
-//       initialBinding: InitialBinding(),
-//
-//       // Locale
-//       locale: const Locale('id', 'ID'),
-//       fallbackLocale: const Locale('en', 'US'),
-//     );
-//   }
-// }
-// lib/main.dart - FIXED ERRORS
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -55,13 +13,13 @@ void main() async {
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // ✅ OPTIMIZED: Configure system UI untuk better performance
+    // OPTIMIZED: Configure system UI untuk better performance
     await _configureSystemUI();
 
-    // ✅ OPTIMIZED: Setup global error handling sebelum app initialization
+    // OPTIMIZED: Setup global error handling sebelum app initialization
     _setupErrorHandling();
 
-    // ✅ OPTIMIZED: Initialize app configuration dengan timeout protection
+    // OPTIMIZED: Initialize app configuration dengan timeout protection
     await _initializeAppWithTimeout();
 
     // ✅ OPTIMIZED: Run optimized app
@@ -144,6 +102,9 @@ void _setupErrorHandling() {
 // ✅ OPTIMIZED: Initialize app dengan timeout protection
 Future<void> _initializeAppWithTimeout() async {
   try {
+    final storageService = Get.put(StorageService());
+    await storageService.onInit();
+
     await Future.any([
       AppConfig.initialize(),
       Future.delayed(const Duration(seconds: 30))
