@@ -1,46 +1,33 @@
 // lib/data/providers/store_provider.dart - FIXED VERSION
+import 'package:del_pick/data/datasources/remote/store_remote_datasource.dart';
 import 'package:dio/dio.dart';
-import 'package:del_pick/core/services/api/api_service.dart';
-import 'package:del_pick/core/constants/api_endpoints.dart';
-import 'package:get/get.dart' as getx;
 
 class StoreProvider {
-  final ApiService _apiService = getx.Get.find<ApiService>();
+  final StoreRemoteDataSource _remoteDataSource;
 
+  StoreProvider({
+    required StoreRemoteDataSource remoteDataSource,
+  }) : _remoteDataSource = remoteDataSource;
+
+  // ✅ Get all stores - Backend: GET /stores
   Future<Response> getAllStores({Map<String, dynamic>? params}) async {
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: params,
-    );
+    return await _remoteDataSource.getAllStores(params: params);
   }
 
-  Future<Response> getStoreById(int storeId) async {
-    return await _apiService.get(ApiEndpoints.getStoreById(storeId));
-  }
-
-  Future<Response> getStoreDetail(int storeId) async {
-    return await _apiService.get(ApiEndpoints.getStoreById(storeId));
-  }
-
+  // ✅ Get nearby stores - Backend: GET /stores with lat/lng params
   Future<Response> getNearbyStores({
     required double latitude,
     required double longitude,
-    double? radius,
     Map<String, dynamic>? params,
   }) async {
-    final queryParams = <String, dynamic>{
-      'latitude': latitude,
-      'longitude': longitude,
-      if (radius != null) 'radius': radius,
-      ...?params,
-    };
-
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
+    return await _remoteDataSource.getNearbyStores(
+      latitude: latitude,
+      longitude: longitude,
+      params: params,
     );
   }
 
+  // ✅ Search stores with filters
   Future<Response> searchStores({
     String? search,
     String? sortBy,
@@ -62,82 +49,128 @@ class StoreProvider {
     if (latitude != null) params['latitude'] = latitude;
     if (longitude != null) params['longitude'] = longitude;
 
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: params,
+    return await _remoteDataSource.getAllStores(params: params);
+  }
+
+  // ✅ Get store by ID - Backend: GET /stores/:id
+  Future<Response> getStoreById(int storeId) async {
+    // Note: Backend mungkin belum ada endpoint ini, bisa dikembangkan
+    return await _remoteDataSource.getAllStores(
+      params: {'id': storeId},
     );
   }
 
+  // ✅ Get stores sorted by rating
   Future<Response> getStoresSortedByRating({
     String sortOrder = 'DESC',
     Map<String, dynamic>? params,
   }) async {
-    final queryParams = <String, dynamic>{
+    final queryParams = {
       'sortBy': 'rating',
       'sortOrder': sortOrder,
       ...?params,
     };
 
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
-    );
+    return await _remoteDataSource.getAllStores(params: queryParams);
   }
 
+  // ✅ Get stores sorted by distance
   Future<Response> getStoresSortedByDistance({
     required double latitude,
     required double longitude,
     String sortOrder = 'ASC',
     Map<String, dynamic>? params,
   }) async {
-    final queryParams = <String, dynamic>{
-      'latitude': latitude,
-      'longitude': longitude,
+    final queryParams = {
       'sortBy': 'distance',
       'sortOrder': sortOrder,
+      'latitude': latitude,
+      'longitude': longitude,
       ...?params,
     };
 
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
+    return await _remoteDataSource.getNearbyStores(
+      latitude: latitude,
+      longitude: longitude,
+      params: queryParams,
     );
   }
 
+  // ✅ Get stores by status (active/inactive)
   Future<Response> getStoresByStatus({
     required String status,
     Map<String, dynamic>? params,
   }) async {
-    final queryParams = <String, dynamic>{
+    final queryParams = {
       'status': status,
       ...?params,
     };
 
-    return await _apiService.get(
-      ApiEndpoints.getAllStores,
-      queryParameters: queryParams,
+    return await _remoteDataSource.getAllStores(params: queryParams);
+  }
+
+  // ✅ Get active stores only
+  Future<Response> getActiveStores({
+    Map<String, dynamic>? params,
+  }) async {
+    return await getStoresByStatus(
+      status: 'active',
+      params: params,
     );
   }
 
-  Future<Response> getStoreOrders({Map<String, dynamic>? params}) async {
-    return await _apiService.get(
-      ApiEndpoints.storeOrders,
-      queryParameters: params,
-    );
+  // ✅ Get stores with menu items (for restaurant listing)
+  Future<Response> getStoresWithMenus({
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = {
+      'include': 'menu_items',
+      ...?params,
+    };
+
+    return await _remoteDataSource.getAllStores(params: queryParams);
   }
 
-  Future<Response> processOrder(int orderId, Map<String, dynamic> data) async {
-    return await _apiService.post(
-      ApiEndpoints.processOrder(orderId),
-      data: data,
-    );
+  // ✅ Get popular stores (sorted by rating and review count)
+  Future<Response> getPopularStores({
+    int limit = 10,
+    double? latitude,
+    double? longitude,
+  }) async {
+    final params = <String, dynamic>{
+      'sortBy': 'rating,review_count',
+      'sortOrder': 'DESC',
+      'limit': limit,
+      'status': 'active',
+    };
+
+    if (latitude != null && longitude != null) {
+      params['latitude'] = latitude;
+      params['longitude'] = longitude;
+    }
+
+    return await _remoteDataSource.getAllStores(params: params);
   }
 
-  Future<Response> updateOrderStatus(
-      int orderId, Map<String, dynamic> data) async {
-    return await _apiService.patch(
-      ApiEndpoints.updateOrderStatus(orderId),
-      data: data,
+  // ✅ Get stores within radius
+  Future<Response> getStoresWithinRadius({
+    required double latitude,
+    required double longitude,
+    required double radiusKm,
+    Map<String, dynamic>? params,
+  }) async {
+    final queryParams = {
+      'latitude': latitude,
+      'longitude': longitude,
+      'radius': radiusKm,
+      'status': 'active', // Only active stores
+      ...?params,
+    };
+
+    return await _remoteDataSource.getNearbyStores(
+      latitude: latitude,
+      longitude: longitude,
+      params: queryParams,
     );
   }
 }

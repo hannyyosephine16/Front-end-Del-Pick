@@ -1,57 +1,49 @@
-// lib/data/providers/auth_provider.dart - UPDATED untuk Result class existing
+// lib/data/providers/auth_provider.dart - FIXED VERSION
 import 'package:del_pick/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
+import 'package:del_pick/data/models/auth/login_response_model.dart';
 import 'package:del_pick/core/utils/result.dart';
 import 'package:del_pick/core/errors/exceptions.dart';
 
 class AuthProvider {
-  final AuthRemoteDataSource remoteDataSource;
-  final AuthLocalDataSource localDataSource;
+  final AuthRemoteDataSource _remoteDataSource;
+  final AuthLocalDataSource _localDataSource;
 
   AuthProvider({
-    required this.remoteDataSource,
-    required this.localDataSource,
-  });
+    required AuthRemoteDataSource remoteDataSource,
+    required AuthLocalDataSource localDataSource,
+  })  : _remoteDataSource = remoteDataSource,
+        _localDataSource = localDataSource;
 
+  // ✅ Login - Returns backend login response structure
   Future<Result<Map<String, dynamic>>> login({
     required String email,
     required String password,
   }) async {
     try {
-      // Call remote API
-      final response = await remoteDataSource.login(
+      // Call remote datasource
+      final loginData = await _remoteDataSource.login(
         email: email,
         password: password,
       );
 
-      // Save to local storage
-      if (response['token'] != null) {
-        await localDataSource.saveAuthToken(response['token']);
+      // Save token and user data locally
+      final token = loginData['token'] as String;
+      final userData = loginData['user'] as Map<String, dynamic>;
 
-        // ✅ PENTING: Save user data juga
-        if (response['user'] != null) {
-          await localDataSource.saveUser(response['user']);
-        }
-      }
+      await _localDataSource.saveAuthToken(token);
+      await _localDataSource.saveUser(userData);
 
-      return Result.success(response, 'Login berhasil');
-    } on InvalidCredentialsException catch (e) {
-      return Result.failure('Email atau password salah');
-    } on ValidationException catch (e) {
+      return Result.success(loginData);
+    } on AppException catch (e) {
       return Result.failure(e.message);
-    } on NetworkException catch (e) {
-      return Result.failure('Tidak ada koneksi internet');
-    } on TimeoutException catch (e) {
-      return Result.failure('Koneksi timeout. Silakan coba lagi');
-    } on ServerException catch (e) {
-      return Result.failure('Server bermasalah. Silakan coba lagi nanti');
     } catch (e) {
-      print('❌ Login provider error: $e');
-      return Result.failure('Terjadi kesalahan yang tidak terduga');
+      return Result.failure('Login failed: ${e.toString()}');
     }
   }
 
+  // ✅ Register - Returns backend response
   Future<Result<Map<String, dynamic>>> register({
     required String name,
     required String email,
@@ -60,7 +52,7 @@ class AuthProvider {
     required String role,
   }) async {
     try {
-      final response = await remoteDataSource.register(
+      final registerData = await _remoteDataSource.register(
         name: name,
         email: email,
         phone: phone,
@@ -68,50 +60,32 @@ class AuthProvider {
         role: role,
       );
 
-      return Result.success(response, 'Registrasi berhasil');
-    } on ValidationException catch (e) {
+      return Result.success(registerData);
+    } on AppException catch (e) {
       return Result.failure(e.message);
-    } on AlreadyExistsException catch (e) {
-      return Result.failure('Email sudah terdaftar');
-    } on NetworkException catch (e) {
-      return Result.failure('Tidak ada koneksi internet');
-    } on ServerException catch (e) {
-      return Result.failure('Server bermasalah. Silakan coba lagi nanti');
     } catch (e) {
-      print('❌ Register provider error: $e');
-      return Result.failure('Terjadi kesalahan yang tidak terduga');
+      return Result.failure('Registration failed: ${e.toString()}');
     }
   }
 
+  // ✅ Get Profile - Returns UserModel
   Future<Result<UserModel>> getProfile() async {
     try {
-      final response = await remoteDataSource.getProfile();
-      final user = UserModel.fromJson(response);
+      final profileData = await _remoteDataSource.getProfile();
+      final user = UserModel.fromJson(profileData);
 
       // Update local storage
-      await localDataSource.saveUser(response);
+      await _localDataSource.saveUser(profileData);
 
-      return Result.success(user, 'Profil berhasil diambil');
-    } on NetworkException catch (e) {
-      // Try to get cached user
-      final cachedUser = await localDataSource.getUser();
-      if (cachedUser != null) {
-        final user = UserModel.fromJson(cachedUser);
-        return Result.success(user, 'Data dari cache');
-      }
-      return Result.failure('Tidak ada koneksi internet');
-    } on UnauthorizedException catch (e) {
-      // Token expired, clear local data
-      await localDataSource.clearAuthData();
-      return Result.failure('Sesi berakhir. Silakan login kembali');
-    } on ServerException catch (e) {
-      return Result.failure('Server bermasalah');
+      return Result.success(user);
+    } on AppException catch (e) {
+      return Result.failure(e.message);
     } catch (e) {
-      print('❌ Get profile provider error: $e');
-      return Result.failure('Gagal mengambil data profil');
+      return Result.failure('Failed to get profile: ${e.toString()}');
     }
   }
 
+  // ✅ Update Profile - Returns UserModel
   Future<Result<UserModel>> updateProfile({
     String? name,
     String? email,
@@ -119,121 +93,126 @@ class AuthProvider {
     String? avatar,
   }) async {
     try {
-      final response = await remoteDataSource.updateProfile(
+      final updatedData = await _remoteDataSource.updateProfile(
         name: name,
         email: email,
         phone: phone,
         avatar: avatar,
       );
 
-      final user = UserModel.fromJson(response);
-      await localDataSource.saveUser(response);
+      final user = UserModel.fromJson(updatedData);
 
-      return Result.success(user, 'Profil berhasil diperbarui');
-    } on ValidationException catch (e) {
+      // Update local storage
+      await _localDataSource.saveUser(updatedData);
+
+      return Result.success(user);
+    } on AppException catch (e) {
       return Result.failure(e.message);
-    } on NetworkException catch (e) {
-      return Result.failure('Tidak ada koneksi internet');
-    } on ServerException catch (e) {
-      return Result.failure('Server bermasalah');
     } catch (e) {
-      print('❌ Update profile provider error: $e');
-      return Result.failure('Gagal memperbarui profil');
+      return Result.failure('Failed to update profile: ${e.toString()}');
     }
   }
 
+  // ✅ Update FCM Token
+  Future<Result<void>> updateFcmToken(String fcmToken) async {
+    try {
+      await _remoteDataSource.updateFcmToken(fcmToken);
+      return Result.success(null);
+    } on AppException catch (e) {
+      return Result.failure(e.message);
+    } catch (e) {
+      return Result.failure('Failed to update FCM token: ${e.toString()}');
+    }
+  }
+
+  // ✅ Forgot Password
   Future<Result<void>> forgotPassword(String email) async {
     try {
-      await remoteDataSource.forgotPassword(email);
-      return Result.success(null, 'Link reset password telah dikirim ke email');
-    } on ValidationException catch (e) {
+      await _remoteDataSource.forgotPassword(email);
+      return Result.success(null);
+    } on AppException catch (e) {
       return Result.failure(e.message);
-    } on NotFoundException catch (e) {
-      return Result.failure('Email tidak terdaftar');
-    } on NetworkException catch (e) {
-      return Result.failure('Tidak ada koneksi internet');
-    } on ServerException catch (e) {
-      return Result.failure('Server bermasalah');
     } catch (e) {
-      print('❌ Forgot password provider error: $e');
-      return Result.failure('Gagal mengirim link reset password');
+      return Result.failure('Failed to send password reset: ${e.toString()}');
     }
   }
 
+  // ✅ Reset Password
   Future<Result<void>> resetPassword({
     required String token,
     required String password,
   }) async {
     try {
-      await remoteDataSource.resetPassword(token: token, password: password);
-      return Result.success(null, 'Password berhasil direset');
-    } on ValidationException catch (e) {
+      await _remoteDataSource.resetPassword(
+        token: token,
+        password: password,
+      );
+      return Result.success(null);
+    } on AppException catch (e) {
       return Result.failure(e.message);
-    } on UnauthorizedException catch (e) {
-      return Result.failure('Token reset tidak valid atau sudah expired');
-    } on NetworkException catch (e) {
-      return Result.failure('Tidak ada koneksi internet');
-    } on ServerException catch (e) {
-      return Result.failure('Server bermasalah');
     } catch (e) {
-      print('❌ Reset password provider error: $e');
-      return Result.failure('Gagal reset password');
+      return Result.failure('Failed to reset password: ${e.toString()}');
     }
   }
 
+  // ✅ Logout
   Future<Result<void>> logout() async {
     try {
-      // Call API logout first (best effort)
-      try {
-        await remoteDataSource.logout();
-      } catch (e) {
-        print('⚠️ API logout failed, but continuing with local logout: $e');
-      }
+      // Call remote logout (clear server session if needed)
+      await _remoteDataSource.logout();
 
-      // Always clear local data
-      await localDataSource.clearAuthData();
+      // Clear local data
+      await _localDataSource.clearAuthData();
 
-      return Result.success(null, 'Logout berhasil');
+      return Result.success(null);
+    } on AppException catch (e) {
+      // Even if remote logout fails, clear local data
+      await _localDataSource.clearAuthData();
+      return Result.failure(e.message);
     } catch (e) {
-      print('❌ Logout provider error: $e');
-      // Even if error, still try to clear local data
-      try {
-        await localDataSource.clearAuthData();
-      } catch (clearError) {
-        print('❌ Failed to clear local data: $clearError');
-      }
-      return Result.success(null, 'Logout berhasil');
+      // Even if remote logout fails, clear local data
+      await _localDataSource.clearAuthData();
+      return Result.failure('Logout failed: ${e.toString()}');
     }
   }
 
+  // ✅ Check if user is logged in
   Future<bool> isLoggedIn() async {
     try {
-      return await localDataSource.hasValidToken();
+      return await _localDataSource.hasValidToken();
     } catch (e) {
-      print('❌ Check login status error: $e');
       return false;
     }
   }
 
+  // ✅ Get current user from local storage
   Future<UserModel?> getCurrentUser() async {
     try {
-      final userData = await localDataSource.getUser();
+      final userData = await _localDataSource.getUser();
       if (userData != null) {
         return UserModel.fromJson(userData);
       }
       return null;
     } catch (e) {
-      print('❌ Get current user error: $e');
       return null;
     }
   }
 
+  // ✅ Get auth token
   Future<String?> getAuthToken() async {
     try {
-      return await localDataSource.getAuthToken();
+      return await _localDataSource.getAuthToken();
     } catch (e) {
-      print('❌ Get auth token error: $e');
       return null;
+    }
+  }
+
+  // ✅ Clear all auth data (for emergency logout)
+  Future<void> clearAllAuthData() async {
+    try {
+      await _localDataSource.clearAuthData();
+    } catch (e) {
+      // Silent fail for cleanup
     }
   }
 }
