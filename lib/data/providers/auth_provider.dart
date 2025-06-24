@@ -1,8 +1,9 @@
-// lib/data/providers/auth_provider.dart - FIXED
+// lib/data/providers/auth_provider.dart
 import 'package:del_pick/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/core/utils/result.dart';
+import 'package:del_pick/core/errors/exceptions.dart';
 
 class AuthProvider {
   final AuthRemoteDataSource remoteDataSource;
@@ -13,30 +14,35 @@ class AuthProvider {
     required this.localDataSource,
   });
 
-  // Login sesuai backend response
   Future<Result<Map<String, dynamic>>> login({
     required String email,
     required String password,
   }) async {
     try {
-      final result = await remoteDataSource.login(
+      // Call remote API
+      final response = await remoteDataSource.login(
         email: email,
         password: password,
       );
 
-      // Backend returns { token, user }
-      if (result['token'] != null && result['user'] != null) {
-        await localDataSource.saveAuthToken(result['token']);
-        await localDataSource.saveUser(UserModel.fromJson(result['user']));
+      // Save to local storage
+      if (response['token'] != null) {
+        await localDataSource.saveAuthToken(response['token']);
+        await localDataSource.saveUser(response['user']);
       }
 
-      return Result.success(result);
+      return Result.success(response);
+    } on NetworkException catch (e) {
+      return Result.failure(e.message);
+    } on ServerException catch (e) {
+      return Result.failure(e.message);
+    } on ValidationException catch (e) {
+      return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('An unexpected error occurred: $e');
     }
   }
 
-  // Register method
   Future<Result<Map<String, dynamic>>> register({
     required String name,
     required String email,
@@ -45,7 +51,7 @@ class AuthProvider {
     required String role,
   }) async {
     try {
-      final result = await remoteDataSource.register(
+      final response = await remoteDataSource.register(
         name: name,
         email: email,
         phone: phone,
@@ -53,33 +59,38 @@ class AuthProvider {
         role: role,
       );
 
-      return Result.success(result);
+      return Result.success(response);
+    } on NetworkException catch (e) {
+      return Result.failure(e.message);
+    } on ServerException catch (e) {
+      return Result.failure(e.message);
+    } on ValidationException catch (e) {
+      return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('An unexpected error occurred: $e');
     }
   }
 
-  //Get profile
   Future<Result<UserModel>> getProfile() async {
     try {
-      final result = await remoteDataSource.getProfile();
-      final user = UserModel.fromJson(result);
-
-      await localDataSource.saveUser(user);
+      final response = await remoteDataSource.getProfile();
+      final user = UserModel.fromJson(response);
+      await localDataSource.saveUser(response);
       return Result.success(user);
+    } on NetworkException catch (e) {
+      // Try to get cached user
+      final cachedUser = await localDataSource.getUser();
+      if (cachedUser != null) {
+        return Result.success(UserModel.fromJson(cachedUser));
+      }
+      return Result.failure(e.message);
+    } on ServerException catch (e) {
+      return Result.failure(e.message);
     } catch (e) {
-      try {
-        final localUser = await localDataSource.getUser();
-        if (localUser != null) {
-          return Result.success(localUser);
-        }
-      } catch (_) {}
-
-      return Result.failure(e.toString());
+      return Result.failure('An unexpected error occurred: $e');
     }
   }
 
-  //Update profile
   Future<Result<UserModel>> updateProfile({
     String? name,
     String? email,
@@ -87,19 +98,24 @@ class AuthProvider {
     String? avatar,
   }) async {
     try {
-      final result = await remoteDataSource.updateProfile(
+      final response = await remoteDataSource.updateProfile(
         name: name,
         email: email,
         phone: phone,
         avatar: avatar,
       );
 
-      final user = UserModel.fromJson(result);
-      await localDataSource.saveUser(user);
-
+      final user = UserModel.fromJson(response);
+      await localDataSource.saveUser(response);
       return Result.success(user);
+    } on NetworkException catch (e) {
+      return Result.failure(e.message);
+    } on ServerException catch (e) {
+      return Result.failure(e.message);
+    } on ValidationException catch (e) {
+      return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('An unexpected error occurred: $e');
     }
   }
 
@@ -107,24 +123,32 @@ class AuthProvider {
     try {
       await remoteDataSource.forgotPassword(email);
       return Result.success(null);
+    } on NetworkException catch (e) {
+      return Result.failure(e.message);
+    } on ServerException catch (e) {
+      return Result.failure(e.message);
+    } on ValidationException catch (e) {
+      return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('An unexpected error occurred: $e');
     }
   }
 
-  //Reset password parameter
   Future<Result<void>> resetPassword({
     required String token,
     required String password,
   }) async {
     try {
-      await remoteDataSource.resetPassword(
-        token: token,
-        password: password,
-      );
+      await remoteDataSource.resetPassword(token: token, password: password);
       return Result.success(null);
+    } on NetworkException catch (e) {
+      return Result.failure(e.message);
+    } on ServerException catch (e) {
+      return Result.failure(e.message);
+    } on ValidationException catch (e) {
+      return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('An unexpected error occurred: $e');
     }
   }
 
@@ -134,18 +158,23 @@ class AuthProvider {
       await localDataSource.clearAuthData();
       return Result.success(null);
     } catch (e) {
+      // Clear local data even if API call fails
       await localDataSource.clearAuthData();
-      return Result.failure(e.toString());
+      return Result.success(null);
     }
   }
 
-  // ✅ ADDED: Helper methods
   Future<bool> isLoggedIn() async {
-    return await localDataSource.hasValidToken();
+    final token = await localDataSource.getAuthToken();
+    return token != null && token.isNotEmpty;
   }
 
   Future<UserModel?> getCurrentUser() async {
-    return await localDataSource.getUser();
+    final userData = await localDataSource.getUser();
+    if (userData != null) {
+      return UserModel.fromJson(userData);
+    }
+    return null;
   }
 
   Future<String?> getAuthToken() async {

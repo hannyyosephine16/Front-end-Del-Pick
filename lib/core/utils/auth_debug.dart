@@ -1,6 +1,7 @@
-// lib/core/utils/auth_debug.dart - UNTUK ApiService ANDA
+// lib/core/utils/auth_debug.dart - FIXED VERSION
 import 'package:get/get.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
+import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:flutter/foundation.dart';
 
@@ -19,8 +20,8 @@ class AuthDebug {
 
       print('\n🔐 === AUTH DEBUG INFO ===');
 
-      // Check login status
-      final isLoggedIn = await authDataSource.isLoggedIn();
+      // Check login status using hasValidToken
+      final isLoggedIn = await authDataSource.hasValidToken();
       print('Is Logged In: $isLoggedIn');
 
       // Check auth token
@@ -50,20 +51,25 @@ class AuthDebug {
         print('Token Status: ❌ NULL OR EMPTY');
       }
 
-      // Check user data
-      final user = await authDataSource.getUser();
-      if (user != null) {
+      // Check user data - getUser returns Map<String, dynamic>
+      final userData = await authDataSource.getUser();
+      if (userData != null) {
         print('User Status: ✅ Available');
-        print('User ID: ${user.id}');
-        print('User Name: ${user.name}');
-        print('User Email: ${user.email}');
-        print('User Role: ${user.role}');
+        print('User ID: ${userData['id']}');
+        print('User Name: ${userData['name']}');
+        print('User Email: ${userData['email']}');
+        print('User Role: ${userData['role']}');
 
-        // Validate role for driver app
-        if (user.role == 'driver') {
+        // Validate role for different apps
+        final userRole = userData['role'];
+        if (userRole == 'driver') {
           print('Role Check: ✅ Valid driver role');
+        } else if (userRole == 'customer') {
+          print('Role Check: ✅ Valid customer role');
+        } else if (userRole == 'store') {
+          print('Role Check: ✅ Valid store role');
         } else {
-          print('Role Check: ⚠️ WARNING - Not a driver role (${user.role})');
+          print('Role Check: ⚠️ WARNING - Unknown role ($userRole)');
         }
       } else {
         print('User Status: ❌ NULL');
@@ -119,8 +125,8 @@ class AuthDebug {
           print('Status: ${response.statusCode}');
           print('Response data available: ${response.data != null}');
 
-          if (response.data != null && response.data['user'] != null) {
-            final userData = response.data['user'];
+          if (response.data != null && response.data['data'] != null) {
+            final userData = response.data['data'];
             print('User from API: ${userData['name']} (${userData['role']})');
           }
         } else {
@@ -193,8 +199,8 @@ class AuthDebug {
       final authDataSource = Get.find<AuthLocalDataSource>();
       final apiService = Get.find<ApiService>();
 
-      // Clear dari local storage (implement method ini di AuthLocalDataSource jika belum ada)
-      // await authDataSource.clearAuthData();
+      // Clear dari local storage
+      await authDataSource.clearAuthData();
 
       // Clear dari ApiService
       apiService.clearAuthToken();
@@ -208,15 +214,15 @@ class AuthDebug {
     }
   }
 
-  /// Validate auth setup untuk driver
-  static Future<bool> validateDriverAuth() async {
+  /// Validate auth setup untuk semua role
+  static Future<bool> validateAuth({String? expectedRole}) async {
     try {
-      print('\n✅ === DRIVER AUTH VALIDATION ===');
+      print('\n✅ === AUTH VALIDATION ===');
 
       final authDataSource = Get.find<AuthLocalDataSource>();
 
       // Check if logged in
-      final isLoggedIn = await authDataSource.isLoggedIn();
+      final isLoggedIn = await authDataSource.hasValidToken();
       if (!isLoggedIn) {
         print('❌ Not logged in');
         return false;
@@ -229,15 +235,16 @@ class AuthDebug {
         return false;
       }
 
-      // Check user role
-      final user = await authDataSource.getUser();
-      if (user == null) {
+      // Check user data
+      final userData = await authDataSource.getUser();
+      if (userData == null) {
         print('❌ No user data');
         return false;
       }
 
-      if (user.role != 'driver') {
-        print('❌ Invalid role: ${user.role} (expected: driver)');
+      final userRole = userData['role'];
+      if (expectedRole != null && userRole != expectedRole) {
+        print('❌ Invalid role: $userRole (expected: $expectedRole)');
         return false;
       }
 
@@ -253,15 +260,31 @@ class AuthDebug {
         }
       }
 
-      print('✅ Driver auth validation passed');
+      print('✅ Auth validation passed');
+      print('User: ${userData['name']} (${userData['role']})');
       print('=== END VALIDATION ===\n');
       return true;
     } catch (e) {
       print('\n❌ === VALIDATION ERROR ===');
-      print('Error validating driver auth: $e');
+      print('Error validating auth: $e');
       print('=== END VALIDATION ===\n');
       return false;
     }
+  }
+
+  /// Specific validation for driver
+  static Future<bool> validateDriverAuth() async {
+    return validateAuth(expectedRole: 'driver');
+  }
+
+  /// Specific validation for customer
+  static Future<bool> validateCustomerAuth() async {
+    return validateAuth(expectedRole: 'customer');
+  }
+
+  /// Specific validation for store
+  static Future<bool> validateStoreAuth() async {
+    return validateAuth(expectedRole: 'store');
   }
 
   /// Get current API headers for debugging
@@ -299,5 +322,83 @@ class AuthDebug {
       print('Error getting API headers: $e');
       print('=== END HEADERS DEBUG ===\n');
     }
+  }
+
+  /// Test login with credentials
+  static Future<void> testLogin(String email, String password) async {
+    try {
+      print('\n🧪 === LOGIN TEST ===');
+      print('Testing login with email: $email');
+
+      if (!Get.isRegistered<ApiService>()) {
+        print('❌ ApiService not registered');
+        return;
+      }
+
+      final apiService = Get.find<ApiService>();
+
+      final response = await apiService.post('/auth/login', data: {
+        'email': email,
+        'password': password,
+      });
+
+      print('Response Status: ${response.statusCode}');
+      print('Response Data: ${response.data}');
+
+      if (response.statusCode == 200) {
+        final data = response.data['data'];
+        if (data != null && data['token'] != null && data['user'] != null) {
+          print('✅ Login test successful');
+          print('Token received: ${data['token'].substring(0, 20)}...');
+          print('User: ${data['user']['name']} (${data['user']['role']})');
+        } else {
+          print('❌ Login test failed - invalid response structure');
+        }
+      } else {
+        print('❌ Login test failed');
+      }
+
+      print('=== END LOGIN TEST ===\n');
+    } catch (e) {
+      print('\n❌ === LOGIN TEST ERROR ===');
+      print('Error testing login: $e');
+      print('=== END LOGIN TEST ===\n');
+    }
+  }
+
+  /// Print GetX registration status
+  static void printGetXStatus() {
+    print('\n📋 === GETX REGISTRATION STATUS ===');
+
+    final services = [
+      'ApiService',
+      'AuthLocalDataSource',
+      'AuthRemoteDataSource',
+      'AuthProvider',
+      'AuthRepository',
+      'AuthController',
+    ];
+
+    for (final service in services) {
+      try {
+        switch (service) {
+          case 'ApiService':
+            final isRegistered = Get.isRegistered<ApiService>();
+            print('$service: ${isRegistered ? '✅' : '❌'}');
+            break;
+          case 'AuthLocalDataSource':
+            final isRegistered = Get.isRegistered<AuthLocalDataSource>();
+            print('$service: ${isRegistered ? '✅' : '❌'}');
+            break;
+          // Add other services as needed
+          default:
+            print('$service: ⚠️ Check manually');
+        }
+      } catch (e) {
+        print('$service: ❌ Error checking');
+      }
+    }
+
+    print('=== END GETX STATUS ===\n');
   }
 }
