@@ -16,26 +16,25 @@ class AuthProvider {
   })  : _remoteDataSource = remoteDataSource,
         _localDataSource = localDataSource;
 
-  // ✅ Login - Returns backend login response structure
-  Future<Result<Map<String, dynamic>>> login({
+  // ✅ Login - Sesuai backend response format
+  Future<Result<LoginResponseModel>> login({
     required String email,
     required String password,
   }) async {
     try {
-      // Call remote datasource
       final loginData = await _remoteDataSource.login(
         email: email,
         password: password,
       );
 
+      // Parse login response model
+      final loginResponse = LoginResponseModel.fromJson(loginData);
+
       // Save token and user data locally
-      final token = loginData['token'] as String;
-      final userData = loginData['user'] as Map<String, dynamic>;
+      await _localDataSource.saveAuthToken(loginResponse.token);
+      await _localDataSource.saveUser(loginResponse.user);
 
-      await _localDataSource.saveAuthToken(token);
-      await _localDataSource.saveUser(userData);
-
-      return Result.success(loginData);
+      return Result.success(loginResponse);
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
@@ -43,8 +42,8 @@ class AuthProvider {
     }
   }
 
-  // ✅ Register - Returns backend response
-  Future<Result<Map<String, dynamic>>> register({
+  // ✅ Register - Sesuai backend response
+  Future<Result<UserModel>> register({
     required String name,
     required String email,
     required String phone,
@@ -60,7 +59,8 @@ class AuthProvider {
         role: role,
       );
 
-      return Result.success(registerData);
+      final user = UserModel.fromJson(registerData);
+      return Result.success(user);
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
@@ -75,7 +75,7 @@ class AuthProvider {
       final user = UserModel.fromJson(profileData);
 
       // Update local storage
-      await _localDataSource.saveUser(profileData);
+      await _localDataSource.saveUser(user);
 
       return Result.success(user);
     } on AppException catch (e) {
@@ -103,7 +103,7 @@ class AuthProvider {
       final user = UserModel.fromJson(updatedData);
 
       // Update local storage
-      await _localDataSource.saveUser(updatedData);
+      await _localDataSource.saveUser(user);
 
       return Result.success(user);
     } on AppException catch (e) {
@@ -117,6 +117,10 @@ class AuthProvider {
   Future<Result<void>> updateFcmToken(String fcmToken) async {
     try {
       await _remoteDataSource.updateFcmToken(fcmToken);
+
+      // Update local storage FCM token
+      await _localDataSource.updateUserProfile(fcmToken: fcmToken);
+
       return Result.success(null);
     } on AppException catch (e) {
       return Result.failure(e.message);
@@ -188,11 +192,7 @@ class AuthProvider {
   // ✅ Get current user from local storage
   Future<UserModel?> getCurrentUser() async {
     try {
-      final userData = await _localDataSource.getUser();
-      if (userData != null) {
-        return UserModel.fromJson(userData);
-      }
-      return null;
+      return await _localDataSource.getUser();
     } catch (e) {
       return null;
     }

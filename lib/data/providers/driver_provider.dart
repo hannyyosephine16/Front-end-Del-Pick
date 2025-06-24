@@ -1,5 +1,9 @@
 // lib/data/providers/driver_provider.dart - FIXED VERSION
 import 'package:del_pick/data/datasources/remote/driver_remote_datasource.dart';
+import 'package:del_pick/data/models/driver/driver_model.dart';
+import 'package:del_pick/data/models/driver/driver_request_model.dart';
+import 'package:del_pick/data/models/auth/user_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 import 'package:del_pick/core/utils/result.dart';
 import 'package:del_pick/core/errors/exceptions.dart';
 import 'package:dio/dio.dart';
@@ -12,20 +16,20 @@ class DriverProvider {
   }) : _remoteDataSource = remoteDataSource;
 
   // ✅ Update driver status - Backend: PATCH /drivers/:id/status
-  Future<Result<Map<String, dynamic>>> updateDriverStatus(
+  Future<Result<DriverModel>> updateDriverStatus(
     int driverId,
-    Map<String, dynamic> data,
+    String status,
   ) async {
     try {
+      final data = {'status': status};
       final response =
           await _remoteDataSource.updateDriverStatus(driverId, data);
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        return Result.success(
-          responseData['data'] as Map<String, dynamic>? ?? responseData,
-          responseData['message'] as String?,
-        );
+        final driverData = responseData['data'] as Map<String, dynamic>;
+        final driver = DriverModel.fromJson(driverData);
+        return Result.success(driver);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message =
@@ -56,10 +60,8 @@ class DriverProvider {
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        return Result.success(
-          responseData['data'] as Map<String, dynamic>? ?? responseData,
-          responseData['message'] as String?,
-        );
+        final locationData = responseData['data'] as Map<String, dynamic>;
+        return Result.success(locationData);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message =
@@ -74,16 +76,15 @@ class DriverProvider {
   }
 
   // ✅ Get driver profile - Backend: GET /auth/profile (for driver user)
-  Future<Result<Map<String, dynamic>>> getDriverProfile() async {
+  Future<Result<UserModel>> getDriverProfile() async {
     try {
       final response = await _remoteDataSource.getDriverProfile();
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        return Result.success(
-          responseData['data'] as Map<String, dynamic>? ?? responseData,
-          responseData['message'] as String?,
-        );
+        final userData = responseData['data'] as Map<String, dynamic>;
+        final user = UserModel.fromJson(userData);
+        return Result.success(user);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message =
@@ -98,7 +99,7 @@ class DriverProvider {
   }
 
   // ✅ Update driver profile - Backend: PUT /auth/profile
-  Future<Result<Map<String, dynamic>>> updateDriverProfile(
+  Future<Result<UserModel>> updateDriverProfile(
     Map<String, dynamic> data,
   ) async {
     try {
@@ -106,10 +107,9 @@ class DriverProvider {
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        return Result.success(
-          responseData['data'] as Map<String, dynamic>? ?? responseData,
-          responseData['message'] as String?,
-        );
+        final userData = responseData['data'] as Map<String, dynamic>;
+        final user = UserModel.fromJson(userData);
+        return Result.success(user);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message =
@@ -124,16 +124,26 @@ class DriverProvider {
   }
 
   // ✅ Get driver requests - Backend: GET /driver-requests
-  Future<Result<Map<String, dynamic>>> getDriverRequests({
-    Map<String, dynamic>? params,
+  Future<Result<PaginatedResponse<DriverRequestModel>>> getDriverRequests({
+    int? page,
+    int? limit,
+    String? status,
   }) async {
     try {
+      final params = <String, dynamic>{};
+      if (page != null) params['page'] = page;
+      if (limit != null) params['limit'] = limit;
+      if (status != null) params['status'] = status;
+
       final response =
           await _remoteDataSource.getDriverRequests(params: params);
 
       if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-        return Result.success(responseData);
+        final paginatedResponse = PaginatedResponse.fromResponse(
+          response,
+          (json) => DriverRequestModel.fromJson(json),
+        );
+        return Result.success(paginatedResponse);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message = responseData?['message'] as String? ??
@@ -148,14 +158,15 @@ class DriverProvider {
   }
 
   // ✅ Get driver request by ID - Backend: GET /driver-requests/:id
-  Future<Result<Map<String, dynamic>>> getDriverRequestById(
-      int requestId) async {
+  Future<Result<DriverRequestModel>> getDriverRequestById(int requestId) async {
     try {
       final response = await _remoteDataSource.getDriverRequestById(requestId);
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        return Result.success(responseData);
+        final requestData = responseData['data'] as Map<String, dynamic>;
+        final driverRequest = DriverRequestModel.fromJson(requestData);
+        return Result.success(driverRequest);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message =
@@ -170,9 +181,9 @@ class DriverProvider {
   }
 
   // ✅ Respond to driver request - Backend: POST /driver-requests/:id/respond
-  Future<Result<Map<String, dynamic>>> respondToDriverRequest(
+  Future<Result<DriverRequestModel>> respondToDriverRequest(
     int requestId,
-    String action,
+    String action, // 'accept' or 'reject'
   ) async {
     try {
       final data = {'action': action};
@@ -181,10 +192,9 @@ class DriverProvider {
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        return Result.success(
-          responseData['data'] as Map<String, dynamic>? ?? responseData,
-          responseData['message'] as String?,
-        );
+        final requestData = responseData['data'] as Map<String, dynamic>;
+        final driverRequest = DriverRequestModel.fromJson(requestData);
+        return Result.success(driverRequest);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message = responseData?['message'] as String? ??
@@ -199,15 +209,27 @@ class DriverProvider {
   }
 
   // ✅ Get all drivers (for admin) - Backend: GET /drivers
-  Future<Result<Map<String, dynamic>>> getAllDrivers({
-    Map<String, dynamic>? params,
+  Future<Result<PaginatedResponse<DriverModel>>> getAllDrivers({
+    int? page,
+    int? limit,
+    String? status,
+    String? search,
   }) async {
     try {
+      final params = <String, dynamic>{};
+      if (page != null) params['page'] = page;
+      if (limit != null) params['limit'] = limit;
+      if (status != null) params['status'] = status;
+      if (search != null) params['search'] = search;
+
       final response = await _remoteDataSource.getAllDrivers(params: params);
 
       if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-        return Result.success(responseData);
+        final paginatedResponse = PaginatedResponse.fromResponse(
+          response,
+          (json) => DriverModel.fromJson(json),
+        );
+        return Result.success(paginatedResponse);
       } else {
         final responseData = response.data as Map<String, dynamic>?;
         final message =
@@ -221,35 +243,8 @@ class DriverProvider {
     }
   }
 
-  // ✅ Create driver (for admin) - Backend: POST /drivers
-  Future<Result<Map<String, dynamic>>> createDriver(
-    Map<String, dynamic> data,
-  ) async {
-    try {
-      final response = await _remoteDataSource.createDriver(data);
-
-      if (response.statusCode == 201 || response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-        return Result.success(
-          responseData['data'] as Map<String, dynamic>? ?? responseData,
-          responseData['message'] as String?,
-        );
-      } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message =
-            responseData?['message'] as String? ?? 'Failed to create driver';
-        return Result.failure(message);
-      }
-    } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to create driver');
-    } catch (e) {
-      return Result.failure('Unexpected error: ${e.toString()}');
-    }
-  }
-
   // ✅ Handle Dio errors with proper backend error parsing
-  Result<Map<String, dynamic>> _handleDioError(
-      DioException e, String defaultMessage) {
+  Result<T> _handleDioError<T>(DioException e, String defaultMessage) {
     final statusCode = e.response?.statusCode;
     final responseData = e.response?.data as Map<String, dynamic>?;
 
