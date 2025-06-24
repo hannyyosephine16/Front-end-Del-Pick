@@ -2,7 +2,7 @@
 
 import 'package:del_pick/data/providers/menu_provider.dart';
 import 'package:del_pick/data/models/menu/menu_item_model.dart';
-import 'package:del_pick/data/models/base/base_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 import 'package:del_pick/core/utils/result.dart';
 
 class MenuRepository {

@@ -2,7 +2,7 @@
 import 'package:dio/dio.dart';
 import 'package:del_pick/data/providers/order_provider.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
-import 'package:del_pick/data/models/base/base_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 import 'package:del_pick/core/utils/result.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/errors/exceptions.dart';
