@@ -1,4 +1,4 @@
-// lib/data/repositories/order_repository.dart - COMPLETE FIXED VERSION
+// lib/data/repositories/order_repository.dart - BACKEND COMPATIBLE VERSION
 import 'package:del_pick/data/datasources/remote/order_remote_datasource.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/base/paginated_response.dart';
@@ -11,7 +11,7 @@ class OrderRepository {
 
   OrderRepository(this._remoteDataSource);
 
-  // ✅ CORE ORDER METHODS
+  // ✅ CORE ORDER METHODS - Backend Compatible
 
   Future<Result<OrderModel>> createOrder(Map<String, dynamic> data) async {
     try {
@@ -38,7 +38,37 @@ class OrderRepository {
     }
   }
 
-  // ✅ GET CUSTOMER ORDERS - Backend Compatible
+  // ✅ GET ORDER DETAIL - Match backend endpoint: GET /orders/:id
+  Future<Result<OrderModel>> getOrderDetail(int orderId) async {
+    try {
+      final response = await _remoteDataSource.getOrderById(orderId);
+
+      if (response.statusCode == 200) {
+        final responseData = response.data as Map<String, dynamic>;
+
+        if (responseData.containsKey('data') && responseData['data'] != null) {
+          final order =
+              OrderModel.fromJson(responseData['data'] as Map<String, dynamic>);
+          return Result.success(order);
+        } else {
+          return Result.failure(responseData['message'] ?? 'Order not found');
+        }
+      } else {
+        return Result.failure(_extractErrorMessage(response));
+      }
+    } on DioException catch (e) {
+      return Result.failure(_handleDioError(e));
+    } catch (e) {
+      return Result.failure(e.toString());
+    }
+  }
+
+  // ✅ ALIAS METHOD - For backward compatibility
+  Future<Result<OrderModel>> getOrderById(int orderId) async {
+    return getOrderDetail(orderId);
+  }
+
+  // ✅ GET CUSTOMER ORDERS - Backend: GET /orders/customer
   Future<Result<PaginatedResponse<OrderModel>>> getCustomerOrders({
     Map<String, dynamic>? params,
   }) async {
@@ -80,7 +110,7 @@ class OrderRepository {
     }
   }
 
-  // ✅ GET STORE ORDERS - Backend Compatible
+  // ✅ GET STORE ORDERS - Backend: GET /orders/store
   Future<Result<PaginatedResponse<OrderModel>>> getStoreOrders({
     Map<String, dynamic>? params,
   }) async {
@@ -122,7 +152,7 @@ class OrderRepository {
     }
   }
 
-  // ✅ WRAPPER METHOD for getUserOrders (Extension compatibility)
+  // ✅ WRAPPER METHOD for getUserOrders (Backward compatibility)
   Future<Result<OrderListResponse>> getUserOrders({
     int page = 1,
     int limit = 10,
@@ -159,30 +189,7 @@ class OrderRepository {
     }
   }
 
-  Future<Result<OrderModel>> getOrderById(int orderId) async {
-    try {
-      final response = await _remoteDataSource.getOrderById(orderId);
-
-      if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-
-        if (responseData.containsKey('data') && responseData['data'] != null) {
-          final order =
-              OrderModel.fromJson(responseData['data'] as Map<String, dynamic>);
-          return Result.success(order);
-        } else {
-          return Result.failure(responseData['message'] ?? 'Order not found');
-        }
-      } else {
-        return Result.failure(_extractErrorMessage(response));
-      }
-    } on DioException catch (e) {
-      return Result.failure(_handleDioError(e));
-    } catch (e) {
-      return Result.failure(e.toString());
-    }
-  }
-
+  // ✅ PROCESS ORDER - Backend: POST /orders/:id/process with action
   Future<Result<OrderModel>> processOrder(int orderId, String action) async {
     try {
       final response = await _remoteDataSource.processOrder(orderId, action);
@@ -208,6 +215,7 @@ class OrderRepository {
     }
   }
 
+  // ✅ UPDATE ORDER STATUS - Backend: PATCH /orders/:id/status
   Future<Result<OrderModel>> updateOrderStatus(
     int orderId,
     Map<String, dynamic> data,
@@ -236,6 +244,7 @@ class OrderRepository {
     }
   }
 
+  // ✅ CREATE ORDER REVIEW - Backend: POST /orders/:id/review
   Future<Result<void>> createOrderReview(
     int orderId,
     Map<String, dynamic> reviewData,
@@ -256,30 +265,54 @@ class OrderRepository {
     }
   }
 
-  // ✅ CANCEL ORDER METHODS
+  // ✅ CANCEL ORDER METHODS - Backend Compatible
 
-  /// Cancel order by Store (reject action)
-  /// Uses POST /orders/:id/process endpoint with action: 'reject'
-  Future<Result<OrderModel>> cancelOrderByStore(
+  /// Cancel order with automatic role detection
+  /// Backend automatically determines action based on user role:
+  /// - Customer: Uses PATCH /orders/:id/status with order_status: 'cancelled'
+  /// - Store: Uses POST /orders/:id/process with action: 'reject'
+  Future<Result<OrderModel>> cancelOrder(
     int orderId, {
     String? reason,
+    String? userRole,
   }) async {
     try {
-      final response = await _remoteDataSource.processOrder(orderId, 'reject');
+      // For customer cancellation: update status to cancelled
+      if (userRole?.toLowerCase() == 'customer') {
+        return cancelOrderByCustomer(orderId, reason: reason);
+      }
+      // For store cancellation: reject order
+      else if (userRole?.toLowerCase() == 'store') {
+        return cancelOrderByStore(orderId, reason: reason);
+      }
+      // Generic cancellation - let backend determine
+      else {
+        final data = <String, dynamic>{
+          'order_status': 'cancelled',
+        };
 
-      if (response.statusCode == 200) {
-        final responseData = response.data as Map<String, dynamic>;
-
-        if (responseData.containsKey('data') && responseData['data'] != null) {
-          final order =
-              OrderModel.fromJson(responseData['data'] as Map<String, dynamic>);
-          return Result.success(order);
-        } else {
-          return Result.failure(
-              responseData['message'] ?? 'Failed to cancel order');
+        if (reason != null && reason.isNotEmpty) {
+          data['cancellation_reason'] = reason;
         }
-      } else {
-        return Result.failure(_extractErrorMessage(response));
+
+        final response =
+            await _remoteDataSource.updateOrderStatus(orderId, data);
+
+        if (response.statusCode == 200) {
+          final responseData = response.data as Map<String, dynamic>;
+
+          if (responseData.containsKey('data') &&
+              responseData['data'] != null) {
+            final order = OrderModel.fromJson(
+                responseData['data'] as Map<String, dynamic>);
+            return Result.success(order);
+          } else {
+            return Result.failure(
+                responseData['message'] ?? 'Failed to cancel order');
+          }
+        } else {
+          return Result.failure(_extractErrorMessage(response));
+        }
       }
     } on DioException catch (e) {
       return Result.failure(_handleDioError(e));
@@ -288,8 +321,7 @@ class OrderRepository {
     }
   }
 
-  /// Cancel order by Customer
-  /// Uses PATCH /orders/:id/status endpoint with order_status: 'cancelled'
+  /// Cancel order by Customer - Backend: PATCH /orders/:id/status
   Future<Result<OrderModel>> cancelOrderByCustomer(
     int orderId, {
     String? reason,
@@ -326,23 +358,13 @@ class OrderRepository {
     }
   }
 
-  /// Cancel order by Driver
-  /// Uses PATCH /orders/:id/status endpoint with order_status: 'cancelled'
-  Future<Result<OrderModel>> cancelOrderByDriver(
+  /// Cancel order by Store - Backend: POST /orders/:id/process with action: 'reject'
+  Future<Result<OrderModel>> cancelOrderByStore(
     int orderId, {
     String? reason,
   }) async {
     try {
-      final data = <String, dynamic>{
-        'order_status': 'cancelled',
-        'delivery_status': 'cancelled',
-      };
-
-      if (reason != null && reason.isNotEmpty) {
-        data['cancellation_reason'] = reason;
-      }
-
-      final response = await _remoteDataSource.updateOrderStatus(orderId, data);
+      final response = await _remoteDataSource.processOrder(orderId, 'reject');
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
@@ -365,31 +387,9 @@ class OrderRepository {
     }
   }
 
-  /// Generic cancel order method
-  Future<Result<OrderModel>> cancelOrder(
-    int orderId, {
-    String? reason,
-    String? userRole,
-  }) async {
-    if (userRole == null) {
-      return Result.failure('User role is required for cancellation');
-    }
-
-    switch (userRole.toLowerCase()) {
-      case 'store':
-        return cancelOrderByStore(orderId, reason: reason);
-      case 'customer':
-        return cancelOrderByCustomer(orderId, reason: reason);
-      case 'driver':
-        return cancelOrderByDriver(orderId, reason: reason);
-      default:
-        return Result.failure('Invalid user role for cancellation');
-    }
-  }
-
   // ✅ STORE SPECIFIC ACTIONS
 
-  /// Approve order by Store
+  /// Approve order by Store - Backend: POST /orders/:id/process with action: 'approve'
   Future<Result<OrderModel>> approveOrderByStore(int orderId) async {
     try {
       final response = await _remoteDataSource.processOrder(orderId, 'approve');
@@ -476,8 +476,9 @@ class OrderRepository {
     }
   }
 
-  // ✅ TRACKING METHODS
+  // ✅ TRACKING METHODS - Backend Compatible
 
+  /// Get tracking data - Backend: GET /orders/:id/tracking
   Future<Result<Map<String, dynamic>>> getTrackingData(int orderId) async {
     try {
       final response = await _remoteDataSource.getTrackingData(orderId);
@@ -501,6 +502,7 @@ class OrderRepository {
     }
   }
 
+  /// Start delivery - Backend: POST /orders/:id/tracking/start (Driver only)
   Future<Result<Map<String, dynamic>>> startDelivery(int orderId) async {
     try {
       final response = await _remoteDataSource.startDelivery(orderId);
@@ -524,6 +526,7 @@ class OrderRepository {
     }
   }
 
+  /// Complete delivery - Backend: POST /orders/:id/tracking/complete (Driver only)
   Future<Result<Map<String, dynamic>>> completeDelivery(int orderId) async {
     try {
       final response = await _remoteDataSource.completeDelivery(orderId);
@@ -547,6 +550,7 @@ class OrderRepository {
     }
   }
 
+  /// Update driver location - Backend: PUT /orders/:id/tracking/location (Driver only)
   Future<Result<void>> updateDriverLocation(
     int orderId,
     double latitude,
@@ -571,6 +575,7 @@ class OrderRepository {
     }
   }
 
+  /// Get tracking history - Backend: GET /orders/:id/tracking/history
   Future<Result<Map<String, dynamic>>> getTrackingHistory(int orderId) async {
     try {
       final response = await _remoteDataSource.getTrackingHistory(orderId);
