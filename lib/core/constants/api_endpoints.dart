@@ -158,18 +158,47 @@ class ApiEndpoints {
     int? page,
     int? limit,
   }) {
-    final params = <String, dynamic>{};
-    if (storeId != null) params['store_id'] = storeId;
-    if (category != null) params['category'] = category;
-    if (isAvailable != null) params['is_available'] = isAvailable;
-    if (minPrice != null) params['min_price'] = minPrice;
-    if (maxPrice != null) params['max_price'] = maxPrice;
-    if (search != null) params['search'] = search;
-    if (page != null) params['page'] = page;
-    if (limit != null) params['limit'] = limit;
+    final queryParams = <String>[];
 
-    return _buildUrlWithParams(menu, params);
+    if (storeId != null) queryParams.add('storeId=$storeId');
+    if (category != null && category.isNotEmpty)
+      queryParams.add('category=$category');
+    if (isAvailable != null) queryParams.add('isAvailable=$isAvailable');
+    if (minPrice != null) queryParams.add('minPrice=$minPrice');
+    if (maxPrice != null) queryParams.add('maxPrice=$maxPrice');
+    if (search != null && search.isNotEmpty) queryParams.add('search=$search');
+    if (page != null) queryParams.add('page=$page');
+    if (limit != null) queryParams.add('limit=$limit');
+
+    if (queryParams.isEmpty) {
+      return getAllMenuItems;
+    }
+
+    return '$getAllMenuItems?${queryParams.join('&')}';
   }
+  //
+  // static String getMenuItemsWithFilters({
+  //   int? storeId,
+  //   String? category,
+  //   bool? isAvailable,
+  //   double? minPrice,
+  //   double? maxPrice,
+  //   String? search,
+  //   int? page,
+  //   int? limit,
+  // }) {
+  //   final params = <String, dynamic>{};
+  //   if (storeId != null) params['store_id'] = storeId;
+  //   if (category != null) params['category'] = category;
+  //   if (isAvailable != null) params['is_available'] = isAvailable;
+  //   if (minPrice != null) params['min_price'] = minPrice;
+  //   if (maxPrice != null) params['max_price'] = maxPrice;
+  //   if (search != null) params['search'] = search;
+  //   if (page != null) params['page'] = page;
+  //   if (limit != null) params['limit'] = limit;
+  //
+  //   return _buildUrlWithParams(menu, params);
+  // }
 
   /// Add pagination to endpoint
   static String addPagination(String endpoint, {int? page, int? limit}) {
