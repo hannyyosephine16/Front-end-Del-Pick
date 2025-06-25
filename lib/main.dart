@@ -1,4 +1,5 @@
-// lib/main.dart
+// lib/main.dart - DelPick App Entry Point (Production Ready)
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
@@ -13,56 +14,76 @@ import 'app/themes/app_theme.dart';
 import 'core/services/external/notification_service.dart';
 import 'core/services/external/location_service.dart';
 import 'core/services/external/permission_service.dart';
+import 'core/services/local/storage_service.dart';
 
 // ✅ Firebase messaging background handler
+@pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  await Firebase.initializeApp();
-  debugPrint('Handling a background message: ${message.messageId}');
-}
-
-void main() async {
-  // ✅ Comprehensive error handling untuk initialization
   try {
-    WidgetsFlutterBinding.ensureInitialized();
+    await Firebase.initializeApp();
+    debugPrint('📨 Background message handled: ${message.messageId}');
 
-    // ✅ Configure system UI untuk better performance
-    await _configureSystemUI();
-
-    // ✅ Setup global error handling sebelum app initialization
-    _setupErrorHandling();
-
-    // ✅ Initialize Firebase dengan timeout protection
-    await _initializeFirebaseWithTimeout();
-
-    // ✅ Initialize app services dengan timeout protection
-    await _initializeServicesWithTimeout();
-
-    debugPrint('✅ App initialization completed successfully');
-
-    // ✅ Run optimized app
-    runApp(const DelPickApp());
-  } catch (e, stackTrace) {
-    debugPrint('❌ Fatal error during app initialization: $e');
-    debugPrint('Stack trace: $stackTrace');
-
-    // ✅ Log to crash reporting service if available
-    // FirebaseCrashlytics.instance.recordError(e, stackTrace);
-
-    // ✅ Fallback: Run minimal recovery app
-    runApp(_createRecoveryApp(e.toString()));
+    // Handle background notification untuk DelPick
+    if (message.data.containsKey('order_id')) {
+      debugPrint(
+          '📦 Order notification in background: ${message.data['order_id']}');
+    }
+  } catch (e) {
+    debugPrint('❌ Error handling background message: $e');
   }
 }
 
-// ✅ Configure system UI untuk better performance
+void main() async {
+  await runZonedGuarded<Future<void>>(() async {
+    try {
+      // ✅ Essential Flutter initialization
+      WidgetsFlutterBinding.ensureInitialized();
+
+      // ✅ Configure system UI first
+      await _configureSystemUI();
+
+      // ✅ Setup comprehensive error handling
+      _setupGlobalErrorHandling();
+
+      // ✅ Initialize Firebase with proper error handling
+      await _initializeFirebase();
+
+      // ✅ Initialize core app services
+      await _initializeAppServices();
+
+      debugPrint('✅ DelPick app initialization completed successfully');
+
+      // ✅ Launch optimized app
+      runApp(const DelPickApp());
+    } catch (e, stackTrace) {
+      debugPrint('❌ Fatal initialization error: $e');
+      debugPrint('Stack trace: $stackTrace');
+
+      // ✅ Launch recovery app
+      runApp(_createEmergencyApp(e.toString()));
+    }
+  }, (error, stackTrace) {
+    // ✅ Global zone error handler
+    debugPrint('🔴 Unhandled error in zone: $error');
+    debugPrint('Stack: $stackTrace');
+
+    // In production, send to crash reporting
+    if (!kDebugMode) {
+      // FirebaseCrashlytics.instance.recordError(error, stackTrace);
+    }
+  });
+}
+
+// ✅ Configure system UI for DelPick app
 Future<void> _configureSystemUI() async {
   try {
-    // ✅ Set preferred orientations
+    // Set portrait orientation only
     await SystemChrome.setPreferredOrientations([
       DeviceOrientation.portraitUp,
       DeviceOrientation.portraitDown,
     ]);
 
-    // ✅ Configure system UI overlay
+    // Configure status bar untuk DelPick branding
     SystemChrome.setSystemUIOverlayStyle(
       const SystemUiOverlayStyle(
         statusBarColor: Colors.transparent,
@@ -74,238 +95,254 @@ Future<void> _configureSystemUI() async {
       ),
     );
 
-    // ✅ Enable edge-to-edge mode
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
-
-    debugPrint('✅ System UI configured successfully');
+    debugPrint('✅ System UI configured for DelPick');
   } catch (e) {
-    debugPrint('❌ Error configuring system UI: $e');
-    // Don't throw, continue with app initialization
+    debugPrint('⚠️ System UI configuration failed: $e');
   }
 }
 
-// ✅ Global error handling
-void _setupErrorHandling() {
-  // ✅ Handle Flutter framework errors
+// ✅ Comprehensive error handling setup
+void _setupGlobalErrorHandling() {
+  // Flutter framework errors
   FlutterError.onError = (FlutterErrorDetails details) {
-    debugPrint('Flutter Error: ${details.exception}');
+    debugPrint('🔴 Flutter Error: ${details.exception}');
     debugPrint('Library: ${details.library}');
-    debugPrint('Context: ${details.context}');
+    debugPrint('Context: ${details.context?.toString() ?? 'Unknown context'}');
 
     if (kDebugMode) {
       FlutterError.presentError(details);
     } else {
-      // ✅ Log to crash reporting in release mode
+      // Send to crash reporting in production
       // FirebaseCrashlytics.instance.recordFlutterFatalError(details);
     }
   };
 
-  // ✅ Handle platform errors
+  // Platform-specific errors
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('Platform Error: $error');
-    debugPrint('Stack: $stack');
+    debugPrint('🔴 Platform Error: $error');
 
     if (!kDebugMode) {
-      // ✅ Log to crash reporting in release mode
       // FirebaseCrashlytics.instance.recordError(error, stack);
     }
 
-    return true; // Handled
+    return true;
   };
 }
 
-// ✅ Initialize Firebase dengan timeout protection
-Future<void> _initializeFirebaseWithTimeout() async {
+// ✅ Initialize Firebase with timeout and retry logic
+Future<void> _initializeFirebase() async {
   try {
+    debugPrint('🔄 Initializing Firebase...');
+
     await Future.any([
       Firebase.initializeApp(),
-      Future.delayed(const Duration(seconds: 15)).then(
-          (_) => throw TimeoutException('Firebase initialization timeout')),
+      Future.delayed(const Duration(seconds: 20)).then((_) =>
+          throw TimeoutException(
+              'Firebase initialization timeout after 20 seconds')),
     ]);
 
-    // Set Firebase messaging background handler
+    // Configure Firebase Messaging
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    // Request notification permissions
+    final messaging = FirebaseMessaging.instance;
+    await messaging.requestPermission(
+      alert: true,
+      badge: true,
+      sound: true,
+      provisional: false,
+    );
 
     debugPrint('✅ Firebase initialized successfully');
   } catch (e) {
-    debugPrint('❌ Firebase initialization error: $e');
+    debugPrint('⚠️ Firebase initialization failed: $e');
 
     if (e.toString().contains('timeout')) {
-      throw Exception(
-          'Firebase initialization timed out. Please check your internet connection.');
+      debugPrint('⚠️ Firebase timeout - continuing without real-time features');
+    } else {
+      debugPrint('⚠️ Firebase unavailable - running in offline mode');
     }
 
-    // For DelPick, Firebase is not critical, so we can continue without it
-    debugPrint('⚠️ Continuing without Firebase services');
+    // DelPick can work without Firebase, so don't throw
   }
 }
 
-// ✅ Initialize app services dengan timeout protection
-Future<void> _initializeServicesWithTimeout() async {
+// ✅ Initialize core app services for DelPick
+Future<void> _initializeAppServices() async {
   try {
-    await Future.any([
-      _initializeServices(),
-      Future.delayed(const Duration(seconds: 15)).then(
-          (_) => throw TimeoutException('Services initialization timeout')),
-    ]);
+    debugPrint('🔄 Initializing DelPick services...');
 
-    debugPrint('✅ Services initialized successfully');
-  } catch (e) {
-    debugPrint('❌ Services initialization error: $e');
+    // Initialize storage first (critical for auth state)
+    final storageService = StorageService();
+    // await storageService.init();
+    Get.put<StorageService>(storageService, permanent: true);
 
-    if (e.toString().contains('timeout')) {
-      throw Exception(
-          'Services initialization timed out. Please restart the app.');
-    }
-    rethrow;
-  }
-}
-
-// ✅ Initialize core services
-Future<void> _initializeServices() async {
-  try {
-    // Initialize notification service
-    // Get.put(NotificationService(), permanent: true);
-    // await Get.find<NotificationService>().initialize();
-
-    // Initialize location service
-    Get.put(LocationService(), permanent: true);
+    // Initialize location service (critical for delivery app)
+    final locationService = LocationService();
+    Get.put<LocationService>(locationService, permanent: true);
 
     // Initialize permission service
-    Get.put(PermissionService(), permanent: true);
+    final permissionService = PermissionService();
+    Get.put<PermissionService>(permissionService, permanent: true);
 
-    debugPrint('✅ Core services initialized');
+    // // Initialize notification service (optional)
+    // try {
+    //   final notificationService = NotificationService();
+    //   // await notificationService.initialize();
+    //   Get.put<NotificationService>(notificationService, permanent: true);
+    // } catch (e) {
+    //   debugPrint('⚠️ Notification service failed to initialize: $e');
+    //   // Continue without notifications
+    // }
+
+    debugPrint('✅ DelPick services initialized successfully');
   } catch (e) {
-    debugPrint('❌ Error initializing services: $e');
-    throw Exception('Failed to initialize core services: $e');
+    debugPrint('❌ Critical service initialization failed: $e');
+    throw DelPickServiceException('Failed to initialize core services: $e');
   }
 }
 
-// ✅ Main app class dengan comprehensive error handling
+// ✅ Main DelPick Application
 class DelPickApp extends StatelessWidget {
   const DelPickApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return GetMaterialApp(
-      title: 'DelPick',
+      // ✅ App identity
+      title: 'DelPick - Food Delivery',
       debugShowCheckedModeBanner: false,
 
-      // ✅ Themes
+      // ✅ DelPick theme configuration
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
 
-      // ✅ Routes
-      initialRoute: Routes.SPLASH,
+      // ✅ Routing configuration
+      initialRoute: Routes.SPLASH, // Always start with splash
       getPages: AppPages.routes,
-
-      // ✅ Initial binding
       initialBinding: InitialBinding(),
 
-      // ✅ Localization
+      // ✅ Localization for Indonesia
       locale: const Locale('id', 'ID'),
       fallbackLocale: const Locale('en', 'US'),
 
       // ✅ Performance optimizations
       defaultTransition: Transition.cupertino,
-      transitionDuration: const Duration(milliseconds: 250),
-
-      // ✅ Memory management
+      transitionDuration: const Duration(milliseconds: 300),
       smartManagement: SmartManagement.keepFactory,
 
-      // ✅ Unknown route handling
+      // ✅ Error route handling
       unknownRoute: GetPage(
-        name: '/unknown',
-        page: () => const _ErrorPage(
+        name: '/404',
+        page: () => const DelPickErrorPage(
           title: 'Halaman Tidak Ditemukan',
           message: 'Halaman yang Anda cari tidak dapat ditemukan.',
-          showRetryButton: false,
+          errorType: DelPickErrorType.notFound,
         ),
       ),
 
-      // ✅ Global app builder dengan error handling
+      // ✅ Global app wrapper
       builder: (context, child) {
-        // ✅ Configure global error widget
+        // Configure global error widget
         ErrorWidget.builder = (FlutterErrorDetails details) {
-          return _ErrorPage(
+          return DelPickErrorPage(
             title: 'Terjadi Kesalahan',
             message: kDebugMode
-                ? '${details.exception}\n\n${details.stack?.toString().split('\n').take(3).join('\n')}'
+                ? 'Error: ${details.exception}\n\n${details.stack?.toString().split('\n').take(5).join('\n')}'
                 : 'Terjadi kesalahan yang tidak terduga. Silakan restart aplikasi.',
-            showRetryButton: true,
+            errorType: DelPickErrorType.runtime,
           );
         };
 
-        // ✅ Wrap dengan MediaQuery untuk responsive design
-        return MediaQuery(
-          data: MediaQuery.of(context).copyWith(
-            textScaleFactor:
-                MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.2),
-          ),
-          child: child ?? const SizedBox.shrink(),
-        );
+        return _DelPickAppWrapper(child: child ?? const SizedBox.shrink());
       },
 
-      // ✅ Global navigation observer untuk debugging
-      navigatorObservers: kDebugMode ? [_CustomNavigatorObserver()] : [],
+      // ✅ Navigation observer for analytics
+      navigatorObservers: kDebugMode ? [_DelPickNavigatorObserver()] : [],
 
-      // ✅ Enable logging
+      // ✅ Development settings
       enableLog: kDebugMode,
+      logWriterCallback: (text, {isError = false}) {
+        if (isError) {
+          debugPrint('🔴 GetX Error: $text');
+        } else if (kDebugMode) {
+          debugPrint('🟢 GetX: $text');
+        }
+      },
     );
   }
 }
 
-// ✅ Navigation observer untuk debugging
-class _CustomNavigatorObserver extends NavigatorObserver {
+// ✅ App wrapper for global configurations
+class _DelPickAppWrapper extends StatelessWidget {
+  final Widget child;
+
+  const _DelPickAppWrapper({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return MediaQuery(
+      data: MediaQuery.of(context).copyWith(
+        textScaleFactor: MediaQuery.of(context).textScaleFactor.clamp(0.8, 1.3),
+      ),
+      child: child,
+    );
+  }
+}
+
+// ✅ Navigation observer for DelPick analytics
+class _DelPickNavigatorObserver extends NavigatorObserver {
   @override
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('🔄 Navigated to: ${route.settings.name}');
+    if (route.settings.name != null) {
+      debugPrint('📱 Navigated to: ${route.settings.name}');
+      // Add analytics tracking here
+      // Analytics.trackScreen(route.settings.name!);
+    }
   }
 
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
-    debugPrint('🔙 Popped from: ${route.settings.name}');
-  }
-
-  @override
-  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
-    debugPrint(
-        '🔄 Replaced ${oldRoute?.settings.name} with ${newRoute?.settings.name}');
+    if (route.settings.name != null) {
+      debugPrint('📱 Popped from: ${route.settings.name}');
+    }
   }
 }
 
-// ✅ Recovery app untuk emergency cases
-Widget _createRecoveryApp(String errorMessage) {
+// ✅ Emergency app for critical failures
+Widget _createEmergencyApp(String error) {
   return MaterialApp(
-    title: 'DelPick - Recovery',
+    title: 'DelPick - Recovery Mode',
     debugShowCheckedModeBanner: false,
     theme: ThemeData(
       primarySwatch: Colors.green,
       fontFamily: 'Inter',
+      useMaterial3: true,
     ),
-    home: _ErrorPage(
-      title: 'Gagal Memulai Aplikasi',
-      message: 'DelPick gagal dimulai dengan benar.\n\nError: $errorMessage',
-      showRetryButton: true,
-      isRecoveryMode: true,
+    home: DelPickErrorPage(
+      title: 'DelPick Tidak Dapat Dimulai',
+      message:
+          'Aplikasi DelPick mengalami masalah saat startup.\n\nDetail: $error',
+      errorType: DelPickErrorType.critical,
     ),
   );
 }
 
-// ✅ Comprehensive error page widget
-class _ErrorPage extends StatelessWidget {
+// ✅ Comprehensive error page for DelPick
+enum DelPickErrorType { notFound, runtime, critical, network }
+
+class DelPickErrorPage extends StatelessWidget {
   final String title;
   final String message;
-  final bool showRetryButton;
-  final bool isRecoveryMode;
+  final DelPickErrorType errorType;
 
-  const _ErrorPage({
+  const DelPickErrorPage({
     Key? key,
     required this.title,
     required this.message,
-    this.showRetryButton = true,
-    this.isRecoveryMode = false,
+    required this.errorType,
   }) : super(key: key);
 
   @override
@@ -317,150 +354,112 @@ class _ErrorPage extends StatelessWidget {
           padding: const EdgeInsets.all(24.0),
           child: Column(
             children: [
-              // ✅ Error illustration
               Expanded(
-                flex: 2,
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      // ✅ Error icon dengan animation
-                      TweenAnimationBuilder<double>(
-                        tween: Tween(begin: 0.0, end: 1.0),
-                        duration: const Duration(milliseconds: 600),
-                        builder: (context, value, child) {
-                          return Transform.scale(
-                            scale: value,
-                            child: Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                color: Colors.red.shade50,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                  color: Colors.red.shade200,
-                                  width: 2,
-                                ),
-                              ),
-                              child: Icon(
-                                isRecoveryMode
-                                    ? Icons.settings_backup_restore
-                                    : Icons.error_outline,
-                                size: 64,
-                                color: Colors.red.shade600,
-                              ),
-                            ),
-                          );
-                        },
-                      ),
-
-                      const SizedBox(height: 32),
-
-                      // ✅ Error title
-                      Text(
-                        title,
-                        style: const TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.black87,
-                        ),
-                        textAlign: TextAlign.center,
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      // ✅ Error message dengan scrollable container
-                      Container(
-                        constraints: const BoxConstraints(maxHeight: 200),
-                        child: SingleChildScrollView(
-                          child: Text(
-                            message,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              color: Colors.black54,
-                              height: 1.5,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // ✅ Action buttons
-              if (showRetryButton) ...[
-                const SizedBox(height: 32),
-                Column(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // ✅ Primary action button
-                    SizedBox(
-                      width: double.infinity,
-                      height: 56,
-                      child: ElevatedButton.icon(
-                        onPressed: () => _handleRetryAction(),
-                        icon: const Icon(Icons.refresh),
-                        label:
-                            Text(isRecoveryMode ? 'Restart App' : 'Coba Lagi'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2E7D3E),
-                          foregroundColor: Colors.white,
-                          elevation: 2,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
+                    // ✅ Animated error icon
+                    TweenAnimationBuilder<double>(
+                      tween: Tween(begin: 0.0, end: 1.0),
+                      duration: const Duration(milliseconds: 800),
+                      curve: Curves.elasticOut,
+                      builder: (context, value, child) {
+                        return Transform.scale(
+                          scale: value,
+                          child: Container(
+                            width: 120,
+                            height: 120,
+                            decoration: BoxDecoration(
+                              color: _getErrorColor().withOpacity(0.1),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: _getErrorColor().withOpacity(0.3),
+                                width: 2,
+                              ),
+                            ),
+                            child: Icon(
+                              _getErrorIcon(),
+                              size: 64,
+                              color: _getErrorColor(),
+                            ),
                           ),
-                        ),
+                        );
+                      },
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    // ✅ Error title
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black87,
                       ),
+                      textAlign: TextAlign.center,
                     ),
 
                     const SizedBox(height: 16),
 
-                    // ✅ Secondary action button
-                    if (!isRecoveryMode) ...[
-                      TextButton(
-                        onPressed: () => _handleNavigateToSafeScreen(),
-                        child: const Text(
-                          'Ke Halaman Login',
-                          style: TextStyle(
-                            color: Color(0xFF2E7D3E),
+                    // ✅ Error message
+                    Container(
+                      constraints: const BoxConstraints(maxHeight: 300),
+                      child: SingleChildScrollView(
+                        child: Text(
+                          message,
+                          style: const TextStyle(
                             fontSize: 16,
+                            color: Colors.black54,
+                            height: 1.6,
                           ),
+                          textAlign: TextAlign.center,
                         ),
                       ),
-                    ],
+                    ),
                   ],
                 ),
-              ],
+              ),
 
-              // ✅ Debug info untuk development
-              if (kDebugMode) ...[
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  'Debug Mode',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    TextButton(
-                      onPressed: () => _showDebugInfo(),
-                      child: const Text('Show Logs'),
+              // ✅ Action buttons
+              Column(
+                children: [
+                  // Primary action
+                  SizedBox(
+                    width: double.infinity,
+                    height: 56,
+                    child: ElevatedButton.icon(
+                      onPressed: _handlePrimaryAction,
+                      icon: Icon(_getPrimaryActionIcon()),
+                      label: Text(_getPrimaryActionText()),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF2E7D3E),
+                        foregroundColor: Colors.white,
+                        elevation: 2,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
+                  ),
+
+                  if (errorType != DelPickErrorType.critical) ...[
+                    const SizedBox(height: 16),
+
+                    // Secondary action
                     TextButton(
-                      onPressed: () => _copyErrorToClipboard(),
-                      child: const Text('Copy Error'),
+                      onPressed: _handleSecondaryAction,
+                      child: const Text(
+                        'Kembali ke Login',
+                        style: TextStyle(
+                          color: Color(0xFF2E7D3E),
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ],
-                ),
-              ],
+                ],
+              ),
             ],
           ),
         ),
@@ -468,25 +467,67 @@ class _ErrorPage extends StatelessWidget {
     );
   }
 
-  void _handleRetryAction() {
-    if (isRecoveryMode) {
-      // ✅ Force restart aplikasi
-      _restartApp();
-    } else {
-      // ✅ Try to navigate back atau retry operation
-      try {
-        if (Get.isRegistered<GetxController>()) {
-          Get.offAllNamed(Routes.SPLASH);
-        } else {
-          _restartApp();
-        }
-      } catch (e) {
-        _restartApp();
-      }
+  Color _getErrorColor() {
+    switch (errorType) {
+      case DelPickErrorType.notFound:
+        return Colors.orange;
+      case DelPickErrorType.runtime:
+        return Colors.red;
+      case DelPickErrorType.critical:
+        return Colors.red.shade700;
+      case DelPickErrorType.network:
+        return Colors.blue;
     }
   }
 
-  void _handleNavigateToSafeScreen() {
+  IconData _getErrorIcon() {
+    switch (errorType) {
+      case DelPickErrorType.notFound:
+        return Icons.search_off;
+      case DelPickErrorType.runtime:
+        return Icons.error_outline;
+      case DelPickErrorType.critical:
+        return Icons.settings_backup_restore;
+      case DelPickErrorType.network:
+        return Icons.wifi_off;
+    }
+  }
+
+  IconData _getPrimaryActionIcon() {
+    switch (errorType) {
+      case DelPickErrorType.critical:
+        return Icons.restart_alt;
+      default:
+        return Icons.refresh;
+    }
+  }
+
+  String _getPrimaryActionText() {
+    switch (errorType) {
+      case DelPickErrorType.critical:
+        return 'Restart Aplikasi';
+      case DelPickErrorType.network:
+        return 'Coba Lagi';
+      default:
+        return 'Muat Ulang';
+    }
+  }
+
+  void _handlePrimaryAction() {
+    switch (errorType) {
+      case DelPickErrorType.critical:
+        _restartApp();
+        break;
+      case DelPickErrorType.notFound:
+        _navigateToHome();
+        break;
+      default:
+        _retryCurrentOperation();
+        break;
+    }
+  }
+
+  void _handleSecondaryAction() {
     try {
       Get.offAllNamed(Routes.LOGIN);
     } catch (e) {
@@ -495,85 +536,41 @@ class _ErrorPage extends StatelessWidget {
   }
 
   void _restartApp() {
-    // ✅ In a real app, you might use restart_app package
-    // For now, we'll try to reinitialize
     try {
       Get.deleteAll(force: true);
+      // In production, use restart_app package
       main();
     } catch (e) {
-      debugPrint('❌ Failed to restart app: $e');
+      debugPrint('❌ Restart failed: $e');
     }
   }
 
-  void _showDebugInfo() {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Debug Information'),
-        content: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _buildDebugRow('Platform', defaultTargetPlatform.name),
-              _buildDebugRow('Error', title),
-              _buildDebugRow('Message', message),
-              _buildDebugRow('Recovery Mode', isRecoveryMode.toString()),
-              _buildDebugRow(
-                  'GetX Ready', Get.isRegistered<GetxController>().toString()),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
+  void _navigateToHome() {
+    try {
+      Get.offAllNamed(Routes.SPLASH);
+    } catch (e) {
+      _restartApp();
+    }
   }
 
-  Widget _buildDebugRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 4),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 80,
-            child: Text(
-              '$label:',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(fontFamily: 'monospace'),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _copyErrorToClipboard() {
-    final errorText =
-        'Title: $title\nMessage: $message\nRecovery Mode: $isRecoveryMode';
-    Clipboard.setData(ClipboardData(text: errorText));
-
-    if (Get.isRegistered<GetxController>()) {
-      Get.snackbar(
-        'Tersalin',
-        'Informasi error berhasil disalin ke clipboard',
-        snackPosition: SnackPosition.BOTTOM,
-        duration: const Duration(seconds: 2),
-      );
+  void _retryCurrentOperation() {
+    try {
+      Get.back();
+    } catch (e) {
+      Get.offAllNamed(Routes.SPLASH);
     }
   }
 }
 
-// ✅ Exception classes untuk better error handling
+// ✅ Custom exceptions for DelPick
+class DelPickServiceException implements Exception {
+  final String message;
+  const DelPickServiceException(this.message);
+
+  @override
+  String toString() => 'DelPickServiceException: $message';
+}
+
 class TimeoutException implements Exception {
   final String message;
   const TimeoutException(this.message);

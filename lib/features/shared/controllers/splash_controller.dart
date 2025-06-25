@@ -1,5 +1,4 @@
-// 1. lib/features/shared/controllers/splash_controller.dart (UPDATED)
-import 'package:del_pick/app/config/storage_config.dart';
+// lib/features/shared/controllers/splash_controller.dart (FIXED NAVIGATION FLOW)
 import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/services/external/permission_service.dart';
@@ -30,7 +29,7 @@ class SplashController extends GetxController {
       await Future.delayed(const Duration(seconds: 2));
 
       // Update loading text
-      loadingText.value = 'Memeriksa koneksi...';
+      loadingText.value = 'Memeriksa status aplikasi...';
       await Future.delayed(const Duration(milliseconds: 500));
 
       // Initialize services
@@ -41,9 +40,9 @@ class SplashController extends GetxController {
       loadingText.value = 'Memeriksa izin...';
       await _checkPermissions();
 
-      // Check authentication status
-      loadingText.value = 'Memeriksa autentikasi...';
-      await _checkAuthStatus();
+      // ✅ FIXED: Check onboarding first, then auth
+      loadingText.value = 'Memuat...';
+      await _checkNavigationFlow();
     } catch (e) {
       print('Error during initialization: $e');
       _navigateToOnboarding();
@@ -57,7 +56,6 @@ class SplashController extends GetxController {
           StorageConstants.analyticsEnabled, true);
 
       if (analyticsEnabled) {
-        // Initialize analytics service here if needed
         print('Analytics initialized');
       }
 
@@ -78,10 +76,6 @@ class SplashController extends GetxController {
     try {
       // Clear temporary data from previous session
       await _storageService.remove(StorageConstants.tempImagePath);
-      await _storageService.remove(StorageConstants.tempOrderData);
-      await _storageService.remove(StorageConstants.tempFilterSettings);
-      await _storageService.remove(StorageConstants.tempSearchQuery);
-
       print('Temporary data cleaned up');
     } catch (e) {
       print('Error cleaning up temporary data: $e');
@@ -93,7 +87,7 @@ class SplashController extends GetxController {
       // Request notification permission
       await _notificationService.requestPermission();
 
-      // Check location permission status
+      // Check location permission status (don't request yet)
       final hasLocationPermission =
           await _permissionService.hasLocationPermission();
       await _storageService.writeBool(
@@ -108,26 +102,38 @@ class SplashController extends GetxController {
     }
   }
 
-  Future<void> _checkAuthStatus() async {
+  // ✅ FIXED: Proper navigation flow check
+  Future<void> _checkNavigationFlow() async {
     try {
-      // Check if this is first time opening the app
+      // 1. Check if this is first time opening the app
       final isFirstTime = _storageService.readBoolWithDefault(
           StorageConstants.isFirstTime, true);
 
-      // Check if user has seen onboarding
+      // 2. Check if user has seen onboarding
       final hasSeenOnboarding = _storageService.readBoolWithDefault(
           StorageConstants.hasSeenOnboarding, false);
 
-      // If first time or hasn't seen onboarding, show onboarding
+      // 3. If first time OR hasn't seen onboarding, show onboarding
       if (isFirstTime || !hasSeenOnboarding) {
+        print('First time user or onboarding not completed');
         _navigateToOnboarding();
         return;
       }
 
+      // 4. User has seen onboarding, check authentication
+      loadingText.value = 'Memeriksa autentikasi...';
+      await _checkAuthStatus();
+    } catch (e) {
+      print('Error checking navigation flow: $e');
+      _navigateToOnboarding();
+    }
+  }
+
+  Future<void> _checkAuthStatus() async {
+    try {
       // Check if user is logged in
       final isLoggedIn = _storageService.readBoolWithDefault(
           StorageConstants.isLoggedIn, false);
-
       final token = _storageService.readString(StorageConstants.authToken);
 
       if (isLoggedIn && token != null && token.isNotEmpty) {
@@ -135,29 +141,38 @@ class SplashController extends GetxController {
         loadingText.value = 'Memverifikasi sesi...';
         final result = await _authRepository.getProfile();
 
-        result.fold(
-          (failure) {
-            // Token invalid, clear session and navigate to login
-            _clearInvalidSession();
-            _navigateToLogin();
-          },
-          (user) {
-            // Token valid, update user data and navigate based on role
-            _updateUserSession(user);
-            _navigateBasedOnRole(user.role);
-          },
-        );
+        if (result.isSuccess && result.data != null) {
+          // Token valid, update user data and navigate based on role
+          _updateUserSession(result.data!);
+          _navigateBasedOnRole(result.data!.role);
+        } else {
+          // Token invalid, clear session and navigate to login
+          _clearInvalidSession();
+          _navigateToLogin();
+        }
       } else {
+        // Not logged in, go to login
         _navigateToLogin();
       }
     } catch (e) {
       print('Error checking auth status: $e');
+      // On error, clear session and go to login
+      _clearInvalidSession();
       _navigateToLogin();
     }
   }
 
   void _clearInvalidSession() {
-    _storageService.clearLoginSession();
+    // Clear auth data
+    _storageService.remove(StorageConstants.authToken);
+    _storageService.remove(StorageConstants.refreshToken);
+    _storageService.remove(StorageConstants.userId);
+    _storageService.remove(StorageConstants.userRole);
+    _storageService.remove(StorageConstants.userEmail);
+    _storageService.remove(StorageConstants.userName);
+    _storageService.remove(StorageConstants.userPhone);
+    _storageService.remove(StorageConstants.userAvatar);
+    _storageService.writeBool(StorageConstants.isLoggedIn, false);
   }
 
   void _updateUserSession(dynamic user) {
@@ -166,41 +181,44 @@ class SplashController extends GetxController {
         StorageConstants.lastLoginTime, DateTime.now().toIso8601String());
 
     // Update user data in storage
-    _storageService.writeInt(StorageConstants.userId, user.id);
     _storageService.writeString(StorageConstants.userName, user.name);
     _storageService.writeString(StorageConstants.userEmail, user.email);
     _storageService.writeString(StorageConstants.userRole, user.role);
-    _storageService.writeString(StorageConstants.userPhone, user.phone ?? '');
-    _storageService.writeString(StorageConstants.userAvatar, user.avatar ?? '');
+
+    if (user.phone != null) {
+      _storageService.writeString(StorageConstants.userPhone, user.phone!);
+    }
+    if (user.avatar != null) {
+      _storageService.writeString(StorageConstants.userAvatar, user.avatar!);
+    }
   }
 
+  // ✅ Navigation methods with proper flow
   void _navigateToOnboarding() {
     isLoading.value = false;
+    print('Navigating to onboarding');
     Get.offAllNamed(Routes.ONBOARDING);
   }
 
   void _navigateToLogin() {
     isLoading.value = false;
+    print('Navigating to login');
     Get.offAllNamed(Routes.LOGIN);
   }
 
   void _navigateBasedOnRole(String role) {
     isLoading.value = false;
-
-    // Clear last active tab when switching roles
-    _storageService.remove(StorageKeys.lastActiveTab);
+    print('Navigating based on role: $role');
 
     switch (role.toLowerCase()) {
       case 'customer':
         Get.offAllNamed(Routes.CUSTOMER_HOME);
         break;
       case 'driver':
-        // Check driver status and navigate accordingly
-        _navigateToDriverHome();
+        Get.offAllNamed(Routes.DRIVER_MAIN);
         break;
       case 'store':
-        // Check store status and navigate accordingly
-        _navigateToStoreHome();
+        Get.offAllNamed(Routes.STORE_DASHBOARD);
         break;
       default:
         print('Unknown role: $role, navigating to login');
@@ -208,47 +226,14 @@ class SplashController extends GetxController {
     }
   }
 
-  void _navigateToDriverHome() {
-    // Check if driver has set working hours
-    final workingHoursStart =
-        _storageService.readString(StorageConstants.workingHoursStart);
-    final workingHoursEnd =
-        _storageService.readString(StorageConstants.workingHoursEnd);
-
-    if (workingHoursStart == null || workingHoursEnd == null) {
-      // First time driver, might need to set up profile
-      Get.offAllNamed(Routes.DRIVER_HOME);
-    } else {
-      Get.offAllNamed(Routes.DRIVER_HOME);
-    }
-  }
-
-  void _navigateToStoreHome() {
-    // Check if store has basic setup
-    final storeName = _storageService.readString(StorageConstants.storeName);
-    final storeOpenTime =
-        _storageService.readString(StorageConstants.storeOpenTime);
-    final storeCloseTime =
-        _storageService.readString(StorageConstants.storeCloseTime);
-
-    if (storeName == null || storeOpenTime == null || storeCloseTime == null) {
-      // First time store, might need to set up profile
-      Get.offAllNamed(Routes.PROFILE);
-    } else {
-      Get.offAllNamed(Routes.STORE_DASHBOARD);
-    }
-  }
-
-  // Method to be called when app becomes active (for debugging)
+  // Methods untuk handle app lifecycle
   void onAppResumed() {
     final sessionCount =
         _storageService.readIntWithDefault(StorageConstants.sessionCount, 0);
     print('App resumed - Session count: $sessionCount');
   }
 
-  // Method to handle app going to background
   void onAppPaused() {
-    // Save any pending data
     print('App paused - Saving state');
   }
 }

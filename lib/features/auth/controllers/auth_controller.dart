@@ -1,254 +1,319 @@
+// lib/features/auth/controllers/auth_controller.dart
 import 'package:get/get.dart';
-import 'package:del_pick/data/repositories/auth_repository.dart';
+import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
-import 'package:del_pick/core/constants/app_constants.dart';
-import 'package:del_pick/app/routes/app_routes.dart';
+import 'package:del_pick/data/repositories/auth_repository.dart';
+import 'package:del_pick/core/services/external/notification_service.dart';
+import 'package:del_pick/core/services/external/connectivity_service.dart';
 import 'package:del_pick/core/services/local/storage_service.dart';
+import 'package:del_pick/app/routes/app_routes.dart';
+import 'package:del_pick/core/utils/helpers.dart';
+import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/core/constants/storage_constants.dart';
-import 'package:flutter/foundation.dart';
-import 'package:del_pick/core/utils/auth_debug.dart';
+import 'package:del_pick/data/models/auth/login_response_model.dart';
+
+import '../../../data/models/driver/driver_model.dart';
+import '../../../data/models/store/store_model.dart';
 
 class AuthController extends GetxController {
   final AuthRepository _authRepository;
-  final StorageService _storageService = Get.find<StorageService>();
+  final NotificationService _notificationService;
+  final ConnectivityService _connectivityService;
+  final StorageService _storageService;
 
-  AuthController(this._authRepository);
+  AuthController(
+    this._authRepository,
+    this._notificationService,
+    this._connectivityService,
+    this._storageService,
+  );
 
-  // Observable variables
-  final RxBool _isLoading = false.obs;
-  final RxBool _isLoggedIn = false.obs;
-  final Rx<UserModel?> _currentUser = Rx<UserModel?>(null);
-  final RxString _userRole = ''.obs;
-  final Rx<Map<String, dynamic>?> _rawUserData =
+  // Observable properties
+  final RxBool isLoggedIn = false.obs;
+  final RxBool isLoading = false.obs;
+  final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
+  final RxString userRole = ''.obs;
+  final RxString token = ''.obs;
+  final RxString errorMessage = ''.obs;
+
+  // Additional data for driver/store
+  final Rx<Map<String, dynamic>?> additionalData =
       Rx<Map<String, dynamic>?>(null);
-
-  // Getters
-  bool get isLoading => _isLoading.value;
-  bool get isLoggedIn => _isLoggedIn.value;
-  UserModel? get currentUser => _currentUser.value;
-  String get userRole => _userRole.value;
-  Map<String, dynamic>? get rawUserData => _rawUserData.value;
-
-  // Role checkers
-  bool get isCustomer => userRole == AppConstants.roleCustomer;
-  bool get isDriver => userRole == AppConstants.roleDriver;
-  bool get isStore => userRole == AppConstants.roleStore;
-  bool get isAdmin => userRole == AppConstants.roleAdmin;
-
-  // Driver and Store data getters
-  Map<String, dynamic>? get driverData {
-    if (rawUserData != null && rawUserData!.containsKey('driver')) {
-      return rawUserData!['driver'] as Map<String, dynamic>?;
-    }
-    return null;
-  }
-
-  Map<String, dynamic>? get storeData {
-    if (rawUserData != null && rawUserData!.containsKey('store')) {
-      return rawUserData!['store'] as Map<String, dynamic>?;
-    }
-    return null;
-  }
 
   @override
   void onInit() {
     super.onInit();
-    // _checkAuthStatus();
     checkAuthStatus();
-    reloadUserProfile();
   }
 
+  // Check if user is already logged in from storage
   Future<void> checkAuthStatus() async {
-    await _checkAuthStatus();
-  }
-
-  Future<void> reloadUserProfile() async {
-    await _loadUserProfile();
-  }
-
-  Future<void> _checkAuthStatus() async {
     try {
-      _isLoading.value = true;
+      isLoading.value = true;
+      errorMessage.value = '';
 
-      final isLoggedIn = _storageService.readBoolWithDefault(
-        StorageConstants.isLoggedIn,
-        false,
-      );
+      // First check from storage (offline capability)
+      final isStoredLoggedIn = _storageService.readBoolWithDefault(
+          StorageConstants.isLoggedIn, false);
 
-      if (isLoggedIn) {
-        final token = _storageService.readString(StorageConstants.authToken);
-        final role = _storageService.readString(StorageConstants.userRole);
+      if (isStoredLoggedIn) {
+        final storedToken =
+            _storageService.readString(StorageConstants.authToken);
+        final storedRole =
+            _storageService.readString(StorageConstants.userRole);
+        final storedUserData =
+            _storageService.readJson(StorageConstants.userDataKey);
 
-        if (token != null && token.isNotEmpty && role != null) {
-          _isLoggedIn.value = true;
-          _userRole.value = role;
+        if (storedToken != null &&
+            storedRole != null &&
+            storedUserData != null) {
+          // Load from storage first
+          final user = UserModel.fromJson(storedUserData);
+          currentUser.value = user;
+          userRole.value = storedRole;
+          token.value = storedToken;
+          isLoggedIn.value = true;
 
-          // Load user profile and raw data
-          await _loadUserProfile();
-        } else {
-          await _clearAuthData();
+          // Load additional data from storage
+          await _loadAdditionalDataFromStorage();
+
+          // Navigate to home
+          _navigateToHome(storedRole);
+
+          // Try to refresh from API in background (if connected)
+          if (_connectivityService.isConnected) {
+            _refreshUserDataInBackground();
+          }
+          return;
         }
       }
-    } catch (e) {
-      await _clearAuthData();
-    } finally {
-      _isLoading.value = false;
-    }
-  }
+      // No valid storage data, try API
+      if (_connectivityService.isConnected) {
+        final userData = await _authRepository.getCurrentUser();
+        if (userData != null) {
+          currentUser.value = userData;
+          userRole.value = userData.role ?? '';
+          isLoggedIn.value = true;
 
-  Future<void> _loadUserProfile() async {
-    try {
-      final result = await _authRepository.getProfile();
+          // Save to storage
+          await _saveUserDataToStorage(userData);
 
-      if (result.isSuccess && result.data != null) {
-        _currentUser.value = result.data;
-        _userRole.value = result.data!.role;
-
-        // Load raw data from storage
-        final rawDataKey =
-            '${StorageConstants.userRole}_${result.data!.role}_raw';
-        final rawData = _storageService.readJson(rawDataKey);
-        if (rawData != null) {
-          _rawUserData.value = rawData;
+          // Navigate to appropriate home
+          _navigateToHome(userData.role ?? '');
+        } else {
+          // API failed, clear storage and go to login
+          await _clearAuthData();
+          Get.offAllNamed(Routes.LOGIN);
         }
       } else {
-        // Try to use cached data
-        final userData = _storageService.readJson(StorageConstants.userId);
-        if (userData != null) {
-          try {
-            _currentUser.value = UserModel.fromJson(userData);
-            final rawDataKey =
-                '${StorageConstants.userRole}_${_currentUser.value!.role}_raw';
-            final rawData = _storageService.readJson(rawDataKey);
-            if (rawData != null) {
-              _rawUserData.value = rawData;
-            }
-          } catch (e) {
-            await _clearAuthData();
-          }
-        } else {
-          await _clearAuthData();
-        }
+        // No internet and no valid storage, go to login
+        Get.offAllNamed(Routes.LOGIN);
       }
     } catch (e) {
-      // Try cached data as fallback
-      final userData = _storageService.readJson(StorageConstants.userId);
-      if (userData != null) {
-        try {
-          _currentUser.value = UserModel.fromJson(userData);
-          final rawDataKey =
-              '${StorageConstants.userRole}_${_currentUser.value!.role}_raw';
-          final rawData = _storageService.readJson(rawDataKey);
-          if (rawData != null) {
-            _rawUserData.value = rawData;
-          }
-        } catch (e) {
-          await _clearAuthData();
-        }
+      errorMessage.value = e.toString();
+      // On error, try to use storage data or go to login
+      final hasStorageData = _storageService.readBoolWithDefault(
+          StorageConstants.isLoggedIn, false);
+
+      if (hasStorageData) {
+        Helpers.showWarningSnackbar(
+          'Offline Mode',
+          'Using cached data',
+          Get.context!,
+        );
+      } else {
+        Helpers.showErrorSnackbar(
+          'Error',
+          'Failed to check auth status',
+          Get.context!,
+        );
+        Get.offAllNamed(Routes.LOGIN);
       }
+    } finally {
+      isLoading.value = false;
     }
   }
 
+  // Login method - with storage persistence
   Future<bool> login({required String email, required String password}) async {
     try {
-      _isLoading.value = true;
+      isLoading.value = true;
+      errorMessage.value = '';
 
-      // Debug: Print current state before login
-      if (kDebugMode) {
-        print('\n🚀 === STARTING LOGIN PROCESS ===');
-        print('Email: $email');
-        // Don't print password for security
-        await AuthDebug.printCurrentAuthState();
+      // Check connectivity
+      if (!_connectivityService.isConnected) {
+        Helpers.showErrorSnackbar(
+          'No Internet',
+          'Please check your internet connection',
+          Get.context!,
+        );
+        return false;
       }
 
-      final result = await _authRepository.login(
-        email: email,
-        password: password,
-      );
+      // Call the login repository method
+      final result =
+          await _authRepository.login(email: email, password: password);
 
       if (result.isSuccess && result.data != null) {
-        final data = result.data!;
+        // Convert result data to LoginResponseModel
+        final loginResponse =
+            LoginResponseModel.fromJson(result.data as Map<String, dynamic>);
 
-        print('🔍 Controller received login data: $data');
+        // Extract user data from login response
+        final user = loginResponse.user;
+        final authToken = loginResponse.token;
 
-        // data contains { token, user }
-        // Extract user data - backend returns user with additional fields
-        Map<String, dynamic> userData = Map<String, dynamic>.from(data['user']);
-
-        // Check for driver/store data in user object (backend includes driver: null, owner: null)
-        if (userData.containsKey('driver') && userData['driver'] != null) {
-          _rawUserData.value = {'driver': userData['driver']};
-          userData.remove(
-              'driver'); // Remove from user data before creating UserModel
-        }
-
-        if (userData.containsKey('owner') && userData['owner'] != null) {
-          _rawUserData.value = {'store': userData['owner']};
-          userData.remove(
-              'owner'); // Remove from user data before creating UserModel
-        }
-
-        // Remove null fields that might cause issues
-        userData.remove('driver');
-        userData.remove('owner');
-
-        // Create UserModel from cleaned user data
-        final user = UserModel.fromJson(userData);
-        _currentUser.value = user;
-        _userRole.value = user.role;
-        _isLoggedIn.value = true;
+        // Update state
+        currentUser.value = user;
+        userRole.value = user.role ?? '';
+        isLoggedIn.value = true;
+        token.value = authToken;
 
         // Save to storage
-        await _saveUserDataToStorage(user, userData, data['token']);
+        await _saveAuthDataToStorage(user, authToken, loginResponse.toJson());
 
-        // Debug: Print state after successful login
-        if (kDebugMode) {
-          print('\n✅ === LOGIN SUCCESSFUL ===');
-          await AuthDebug.printCurrentAuthState();
-          await AuthDebug.syncAuthToken();
-        }
+        // Store additional data (driver/store info if any)
+        _storeAdditionalData(loginResponse);
 
-        // Navigate based on role
-        _navigateBasedOnRole(user.role);
+        // Navigate to appropriate home
+        _navigateToHome(user.role ?? '');
 
-        Get.snackbar(
+        Helpers.showSuccessSnackbar(
           'Success',
           'Login successful',
-          snackPosition: SnackPosition.TOP,
+          Get.context!,
         );
-
         return true;
       } else {
-        if (kDebugMode) {
-          print('\n❌ === LOGIN FAILED ===');
-          print('Result: ${result.message}');
-        }
-
-        Get.snackbar(
-          'Error',
-          result.message ?? 'Login failed',
-          snackPosition: SnackPosition.TOP,
+        errorMessage.value = result.message ?? 'Login failed';
+        Helpers.showErrorSnackbar(
+          'Login Failed',
+          result.message ?? 'Unknown error',
+          Get.context!,
         );
         return false;
       }
     } catch (e) {
-      print('❌ Controller login error: $e');
-
-      if (kDebugMode) {
-        await AuthDebug.printCurrentAuthState();
-      }
-
-      Get.snackbar(
-        'Error',
-        'An error occurred during login: $e',
-        snackPosition: SnackPosition.TOP,
+      errorMessage.value = e.toString();
+      Helpers.showErrorSnackbar(
+        'Login Error',
+        e.toString(),
+        Get.context!,
       );
       return false;
     } finally {
-      _isLoading.value = false;
+      isLoading.value = false;
     }
   }
 
+  // Register method
+  Future<bool> register({
+    required String name,
+    required String email,
+    required String password,
+    required String phone,
+    required String role,
+  }) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      // Check connectivity
+      if (!_connectivityService.isConnected) {
+        Helpers.showErrorSnackbar(
+          'No Internet',
+          'Please check your internet connection',
+          Get.context!,
+        );
+        return false;
+      }
+
+      // Validate role
+      if (!AppConstants.validRoles.contains(role)) {
+        Helpers.showErrorSnackbar(
+          'Invalid Role',
+          'Please select a valid role',
+          Get.context!,
+        );
+        return false;
+      }
+
+      final result = await _authRepository.register(
+        name: name,
+        email: email,
+        password: password,
+        phone: phone,
+        role: role,
+      );
+
+      if (result.isSuccess) {
+        Helpers.showSuccessSnackbar(
+          'Success',
+          'Registration successful. Please login.',
+          Get.context!,
+        );
+        Get.offAllNamed(Routes.LOGIN);
+        return true;
+      } else {
+        errorMessage.value = result.message ?? 'Registration failed';
+        Helpers.showErrorSnackbar(
+          'Registration Failed',
+          result.message ?? 'Unknown error',
+          Get.context!,
+        );
+        return false;
+      }
+    } catch (e) {
+      errorMessage.value = e.toString();
+      Helpers.showErrorSnackbar(
+          'Registration Error', e.toString(), Get.context!);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Logout method - clear storage
+  Future<void> logout() async {
+    try {
+      isLoading.value = true;
+
+      // Call API logout (even if it fails, we clear local data)
+      try {
+        if (_connectivityService.isConnected) {
+          await _authRepository.logout();
+        }
+      } catch (e) {
+        // Continue with logout even if API fails
+        print('API logout failed: $e');
+      }
+
+      // Clear all data
+      await _clearAuthData();
+
+      // Clear notifications
+      await _notificationService.clearToken();
+
+      // Navigate to login
+      Get.offAllNamed(Routes.LOGIN);
+
+      Helpers.showSuccessSnackbar(
+          'Success', 'Logged out successfully', Get.context!);
+    } catch (e) {
+      // Still clear local data and navigate
+      await _clearAuthData();
+      Get.offAllNamed(Routes.LOGIN);
+      Helpers.showErrorSnackbar(
+        'Logout Error',
+        e.toString(),
+        Get.context!,
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  // Update profile - with storage update
   Future<bool> updateProfile({
     String? name,
     String? email,
@@ -256,7 +321,8 @@ class AuthController extends GetxController {
     String? avatar,
   }) async {
     try {
-      _isLoading.value = true;
+      isLoading.value = true;
+      errorMessage.value = '';
 
       final result = await _authRepository.updateProfile(
         name: name,
@@ -266,258 +332,294 @@ class AuthController extends GetxController {
       );
 
       if (result.isSuccess && result.data != null) {
-        _currentUser.value = result.data;
+        currentUser.value = result.data;
 
         // Update storage
-        await _storageService.writeJson(
-            StorageConstants.userId, result.data!.toJson());
-        await _storageService.writeString(
-            StorageConstants.userName, result.data!.name);
-        await _storageService.writeString(
-            StorageConstants.userEmail, result.data!.email);
+        await _saveUserDataToStorage(result.data!);
 
-        if (result.data!.phone != null) {
-          await _storageService.writeString(
-              StorageConstants.userPhone, result.data!.phone!);
-        }
-
-        if (result.data!.avatar != null) {
-          await _storageService.writeString(
-              StorageConstants.userAvatar, result.data!.avatar!);
-        }
-
-        Get.snackbar(
+        Helpers.showSuccessSnackbar(
           'Success',
           'Profile updated successfully',
-          snackPosition: SnackPosition.TOP,
+          Get.context!,
         );
-
         return true;
       } else {
-        Get.snackbar(
-          'Error',
-          result.message ?? 'Update failed',
-          snackPosition: SnackPosition.TOP,
+        errorMessage.value = result.message ?? 'Profile update failed';
+        Helpers.showErrorSnackbar(
+          'Update Failed',
+          result.message ?? 'Unknown error',
+          Get.context!,
         );
         return false;
       }
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'An error occurred during update',
-        snackPosition: SnackPosition.TOP,
-      );
+      errorMessage.value = e.toString();
+      Helpers.showErrorSnackbar('Update Error', e.toString(), Get.context!);
       return false;
     } finally {
-      _isLoading.value = false;
+      isLoading.value = false;
     }
   }
 
-  Future<bool> updateFcmToken(String fcmToken) async {
-    try {
-      // Note: This would need to be implemented in AuthRepository
-      // For now, just store locally
-      await _storageService.writeString(StorageConstants.fcmToken, fcmToken);
-      return true;
-    } catch (e) {
-      return false;
-    }
+  // Method untuk update current user (dipanggil dari profile controller)
+  void updateCurrentUser(UserModel user) {
+    currentUser.value = user;
+    _saveUserDataToStorage(user);
   }
 
-  Future<bool> forgotPassword(String email) async {
-    try {
-      _isLoading.value = true;
-
-      final result = await _authRepository.forgotPassword(email);
-
-      if (result.isSuccess) {
-        Get.snackbar(
-          'Success',
-          'Password reset email sent',
-          snackPosition: SnackPosition.TOP,
-        );
-        return true;
-      } else {
-        Get.snackbar(
-          'Error',
-          result.message ?? 'Failed to send reset email',
-          snackPosition: SnackPosition.TOP,
-        );
-        return false;
-      }
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'An error occurred',
-        snackPosition: SnackPosition.TOP,
-      );
-      return false;
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<bool> resetPassword({
-    required String token,
-    required String newPassword,
-  }) async {
-    try {
-      _isLoading.value = true;
-
-      final result = await _authRepository.resetPassword(
-        token: token,
-        password: newPassword, // ✅ FIXED: Use 'password' parameter name
-      );
-
-      if (result.isSuccess) {
-        Get.snackbar(
-          'Success',
-          'Password reset successfully',
-          snackPosition: SnackPosition.TOP,
-        );
-
-        Get.offAllNamed(Routes.LOGIN);
-        return true;
-      } else {
-        Get.snackbar(
-          'Error',
-          result.message ?? 'Password reset failed',
-          snackPosition: SnackPosition.TOP,
-        );
-        return false;
-      }
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'An error occurred',
-        snackPosition: SnackPosition.TOP,
-      );
-      return false;
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<void> logout() async {
-    try {
-      _isLoading.value = true;
-
-      // Call API logout
-      await _authRepository.logout();
-
-      // Clear local data
-      await _clearAuthData();
-
-      Get.snackbar(
-        'Success',
-        'Logged out successfully',
-        snackPosition: SnackPosition.TOP,
-      );
-
-      Get.offAllNamed(Routes.LOGIN);
-    } catch (e) {
-      // Still clear local data even if API call fails
-      await _clearAuthData();
-      Get.offAllNamed(Routes.LOGIN);
-    } finally {
-      _isLoading.value = false;
-    }
-  }
-
-  Future<void> _saveUserDataToStorage(
-      UserModel user, Map<String, dynamic> rawData, String token) async {
-    // Save basic auth data
-    await _storageService.writeString(StorageConstants.authToken, token);
-    await _storageService.writeJson(StorageConstants.userId, user.toJson());
-    await _storageService.writeString(StorageConstants.userRole, user.role);
-    await _storageService.writeString(StorageConstants.userEmail, user.email);
-    await _storageService.writeString(StorageConstants.userName, user.name);
+  // Storage management methods
+  Future<void> _saveAuthDataToStorage(UserModel user, String authToken,
+      Map<String, dynamic> loginResponse) async {
+    // Simpan data utama pengguna
+    await _storageService.writeString(StorageConstants.authToken, authToken);
+    await _storageService.writeJson(
+        StorageConstants.userDataKey, user.toJson());
+    await _storageService.writeString(
+        StorageConstants.userRole, user.role ?? '');
+    await _storageService.writeString(
+        StorageConstants.userName, user.name ?? '');
+    await _storageService.writeString(
+        StorageConstants.userEmail, user.email ?? '');
     await _storageService.writeBool(StorageConstants.isLoggedIn, true);
 
-    // Save optional fields
+    // Simpan optional fields
     if (user.phone != null) {
       await _storageService.writeString(
           StorageConstants.userPhone, user.phone!);
     }
-
     if (user.avatar != null) {
       await _storageService.writeString(
           StorageConstants.userAvatar, user.avatar!);
     }
 
-    // Save raw data with role-specific key
-    final rawDataKey = '${StorageConstants.userRole}_${user.role}_raw';
-    await _storageService.writeJson(rawDataKey, rawData);
-  }
-
-  Future<void> _clearAuthData() async {
-    _currentUser.value = null;
-    _userRole.value = '';
-    _isLoggedIn.value = false;
-    _rawUserData.value = null;
-
-    // Clear all auth-related storage
-    await _storageService.remove(StorageConstants.authToken);
-    await _storageService.remove(StorageConstants.refreshToken);
-    await _storageService.remove(StorageConstants.userId);
-    await _storageService.remove(StorageConstants.userRole);
-    await _storageService.remove(StorageConstants.userEmail);
-    await _storageService.remove(StorageConstants.userName);
-    await _storageService.remove(StorageConstants.userPhone);
-    await _storageService.remove(StorageConstants.userAvatar);
-    await _storageService.remove(StorageConstants.fcmToken);
-    await _storageService.writeBool(StorageConstants.isLoggedIn, false);
-
-    // Clear role-specific raw data
-    for (final role in AppConstants.validRoles) {
-      await _storageService.remove('${StorageConstants.userRole}_${role}_raw');
+    // Menyimpan data store dan driver jika ada
+    if (loginResponse['store'] != null) {
+      final storeData = StoreModel.fromJson(loginResponse['store']);
+      await _storageService.writeJson(
+          StorageConstants.storeDataKey, storeData.toJson());
+    }
+    if (loginResponse['driver'] != null) {
+      final driverData = DriverModel.fromJson(loginResponse['driver']);
+      await _storageService.writeJson(
+          StorageConstants.driverDataKey, driverData.toJson());
     }
   }
 
-  void _navigateBasedOnRole(String role) {
-    switch (role) {
-      case AppConstants.roleCustomer:
+  Future<void> _saveUserDataToStorage(UserModel user) async {
+    await _storageService.writeJson(
+        StorageConstants.userDataKey, user.toJson());
+    await _storageService.writeString(
+        StorageConstants.userName, user.name ?? '');
+    await _storageService.writeString(
+        StorageConstants.userEmail, user.email ?? '');
+
+    if (user.phone != null) {
+      await _storageService.writeString(
+          StorageConstants.userPhone, user.phone!);
+    }
+    if (user.avatar != null) {
+      await _storageService.writeString(
+          StorageConstants.userAvatar, user.avatar!);
+    }
+  }
+
+  Future<void> _loadAdditionalDataFromStorage() async {
+    if (isDriver) {
+      final driverData =
+          _storageService.readJson(StorageConstants.driverDataKey);
+      if (driverData != null) {
+        additionalData.value = {'driver': driverData};
+      }
+    } else if (isStore) {
+      final storeData = _storageService.readJson(StorageConstants.storeDataKey);
+      if (storeData != null) {
+        additionalData.value = {'store': storeData};
+      }
+    }
+  }
+
+  Future<void> _clearAuthData() async {
+    // Clear state
+    isLoggedIn.value = false;
+    currentUser.value = null;
+    userRole.value = '';
+    token.value = '';
+    errorMessage.value = '';
+    additionalData.value = null;
+
+    // Clear storage
+    await _storageService.remove(StorageConstants.authToken);
+    await _storageService.remove(StorageConstants.userDataKey);
+    await _storageService.remove(StorageConstants.userRole);
+    await _storageService.remove(StorageConstants.userName);
+    await _storageService.remove(StorageConstants.userEmail);
+    await _storageService.remove(StorageConstants.userPhone);
+    await _storageService.remove(StorageConstants.userAvatar);
+    await _storageService.remove(StorageConstants.fcmToken);
+    await _storageService.remove(StorageConstants.driverDataKey);
+    await _storageService.remove(StorageConstants.storeDataKey);
+    await _storageService.writeBool(StorageConstants.isLoggedIn, false);
+  }
+
+  // Background refresh when app becomes active
+  Future<void> _refreshUserDataInBackground() async {
+    try {
+      final userData = await _authRepository.getCurrentUser();
+      if (userData != null) {
+        currentUser.value = userData;
+        await _saveUserDataToStorage(userData);
+      }
+    } catch (e) {
+      // Silent failure for background refresh
+      print('Background refresh failed: $e');
+    }
+  }
+
+  // Other methods remain the same...
+  Future<bool> forgotPassword(String email) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      final result = await _authRepository.forgotPassword(email);
+
+      if (result.isSuccess) {
+        Helpers.showSuccessSnackbar(
+          'Success',
+          'Password reset email sent',
+          Get.context!,
+        );
+        return true;
+      } else {
+        errorMessage.value = result.message ?? 'Failed to send reset email';
+        Helpers.showErrorSnackbar(
+          'Failed',
+          result.message ?? 'Unknown error',
+          Get.context!,
+        );
+        return false;
+      }
+    } catch (e) {
+      errorMessage.value = e.toString();
+      Helpers.showErrorSnackbar('Error', e.toString(), Get.context!);
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<bool> resetPassword({
+    required String token,
+    required String password,
+  }) async {
+    try {
+      isLoading.value = true;
+      errorMessage.value = '';
+
+      final result = await _authRepository.resetPassword(
+        token: token,
+        password: password,
+      );
+
+      if (result.isSuccess) {
+        Helpers.showSuccessSnackbar(
+            'Success', 'Password reset successful', Get.context!);
+        Get.offAllNamed(Routes.LOGIN);
+        return true;
+      } else {
+        errorMessage.value = result.message ?? 'Password reset failed';
+        Helpers.showErrorSnackbar(
+          'Failed',
+          result.message ?? 'Unknown error',
+          Get.context!,
+        );
+        return false;
+      }
+    } catch (e) {
+      errorMessage.value = e.toString();
+      Helpers.showErrorSnackbar(
+        'Error',
+        e.toString(),
+        Get.context!,
+      );
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> updateFcmToken(String fcmToken) async {
+    try {
+      await _authRepository.updateFcmToken(fcmToken);
+      await _storageService.writeString(StorageConstants.fcmToken, fcmToken);
+    } catch (e) {
+      print('Failed to update FCM token: $e');
+    }
+  }
+
+  void _navigateToHome(String role) {
+    switch (role.toLowerCase()) {
+      case 'customer':
         Get.offAllNamed(Routes.CUSTOMER_HOME);
         break;
-      case AppConstants.roleDriver:
-        Get.offAllNamed(Routes.DRIVER_MAIN);
+      case 'driver':
+        Get.offAllNamed(Routes.DRIVER_HOME);
         break;
-      case AppConstants.roleStore:
+      case 'store':
         Get.offAllNamed(Routes.STORE_DASHBOARD);
         break;
       default:
         Get.offAllNamed(Routes.LOGIN);
+        break;
     }
   }
 
-  void updateCurrentUser(UserModel user) {
-    _currentUser.value = user;
-    _userRole.value = user.role;
-
-    // Update storage
-    _storageService.writeJson(StorageConstants.userId, user.toJson());
-    _storageService.writeString(StorageConstants.userRole, user.role);
-    _storageService.writeString(StorageConstants.userEmail, user.email);
-    _storageService.writeString(StorageConstants.userName, user.name);
-
-    if (user.phone != null) {
-      _storageService.writeString(StorageConstants.userPhone, user.phone!);
+  void _storeAdditionalData(LoginResponseModel loginResponse) {
+    // Store data for driver if available
+    if (loginResponse.isDriver && loginResponse.driver != null) {
+      additionalData.value = {'driver': loginResponse.driver?.toJson()};
     }
 
-    if (user.avatar != null) {
-      _storageService.writeString(StorageConstants.userAvatar, user.avatar!);
+    // Store data for store if available
+    if (loginResponse.isStore && loginResponse.store != null) {
+      additionalData.value = {'store': loginResponse.store?.toJson()};
     }
   }
 
-  // Quick access methods
-  String get userName => currentUser?.name ?? '';
-  String get userEmail => currentUser?.email ?? '';
-  String? get userAvatar => currentUser?.avatar;
-  String? get userPhone => currentUser?.phone;
+  // Getters
+  bool get hasValidRole =>
+      AppConstants.validRoles.contains(userRole.value.toLowerCase());
+  String get displayName => currentUser.value?.name ?? '';
+  String get userEmail => currentUser.value?.email ?? '';
+  String get userPhone => currentUser.value?.phone ?? '';
+  String get userAvatar => currentUser.value?.avatar ?? '';
 
-  // Permission check methods
-  bool canAccessCustomerFeatures() => isCustomer;
-  bool canAccessDriverFeatures() => isDriver;
-  bool canAccessStoreFeatures() => isStore;
-  bool canAccessAdminFeatures() => isAdmin;
+  // Role checkers
+  bool get isCustomer => userRole.value.toLowerCase() == 'customer';
+  bool get isDriver => userRole.value.toLowerCase() == 'driver';
+  bool get isStore => userRole.value.toLowerCase() == 'store';
+
+  // Additional data getters
+  Map<String, dynamic>? get driverData {
+    return additionalData.value?['driver'] as Map<String, dynamic>?;
+  }
+
+  Map<String, dynamic>? get storeData {
+    return additionalData.value?['store'] as Map<String, dynamic>?;
+  }
+
+  // Utility methods
+  void clearError() {
+    errorMessage.value = '';
+  }
+
+  Future<void> refreshUser() async {
+    if (isLoggedIn.value && _connectivityService.isConnected) {
+      await _refreshUserDataInBackground();
+    }
+  }
+
+  // Check if user has cached data (for offline mode)
+  bool get hasOfflineData =>
+      _storageService.readBoolWithDefault(StorageConstants.isLoggedIn, false);
 }
