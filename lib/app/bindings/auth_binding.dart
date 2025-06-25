@@ -1,4 +1,3 @@
-// lib/app/bindings/auth_binding.dart - CORRECT VERSION
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/auth_repository.dart';
 import 'package:del_pick/data/providers/auth_provider.dart';
@@ -7,26 +6,47 @@ import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/features/auth/controllers/auth_controller.dart';
 import 'package:del_pick/features/auth/controllers/login_controller.dart';
 import 'package:del_pick/features/auth/controllers/register_controller.dart';
-import 'package:del_pick/features/auth/controllers/forget_password_controller.dart';
 import 'package:del_pick/features/auth/controllers/profile_controller.dart';
+import 'package:del_pick/core/services/external/notification_service.dart';
+import 'package:del_pick/core/services/external/connectivity_service.dart';
+import 'package:del_pick/core/services/local/storage_service.dart';
+import 'package:del_pick/core/services/api/api_service.dart';
 
 class AuthBinding extends Bindings {
   @override
   void dependencies() {
-    // Data sources
-    Get.lazyPut<AuthRemoteDataSource>(() => AuthRemoteDataSource(Get.find()));
-    Get.lazyPut<AuthLocalDataSource>(() => AuthLocalDataSource(Get.find()));
+    // ✅ Pastikan core services sudah tersedia (biasanya dari InitialBinding)
+    if (!Get.isRegistered<ApiService>()) {
+      Get.put<ApiService>(ApiService(), permanent: true);
+    }
+    if (!Get.isRegistered<StorageService>()) {
+      Get.put<StorageService>(StorageService(), permanent: true);
+    }
+    if (!Get.isRegistered<ConnectivityService>()) {
+      Get.put<ConnectivityService>(ConnectivityService(), permanent: true);
+    }
+    if (!Get.isRegistered<NotificationService>()) {
+      Get.put<NotificationService>(NotificationService(), permanent: true);
+    }
 
-    // Provider
+    // ✅ Data sources
+    Get.lazyPut<AuthRemoteDataSource>(
+      () => AuthRemoteDataSource(Get.find<ApiService>()),
+    );
+
+    Get.lazyPut<AuthLocalDataSource>(
+      () => AuthLocalDataSource(Get.find<StorageService>()),
+    );
+
+    // ✅ Provider
     Get.lazyPut<AuthProvider>(
       () => AuthProvider(
-        remoteDataSource: Get.find(),
-        localDataSource: Get.find(),
+        remoteDataSource: Get.find<AuthRemoteDataSource>(),
+        localDataSource: Get.find<AuthLocalDataSource>(),
       ),
     );
 
-    // Repository - CORRECT: AuthRepository constructor needs 2 positional parameters
-    // AuthRepository(this._remoteDataSource, this._localDataSource)
+    // ✅ Repository - Sesuai dengan constructor AuthRepository
     Get.lazyPut<AuthRepository>(
       () => AuthRepository(
         Get.find<AuthRemoteDataSource>(), // Parameter 1: _remoteDataSource
@@ -34,11 +54,17 @@ class AuthBinding extends Bindings {
       ),
     );
 
-    // Controllers
+    // ✅ AuthController - Sesuai dengan constructor yang ada (4 parameter)
     Get.lazyPut<AuthController>(
-      () => AuthController(Get.find<AuthRepository>()),
+      () => AuthController(
+        Get.find<AuthRepository>(), // Parameter 1: _authRepository
+        Get.find<NotificationService>(), // Parameter 2: _notificationService
+        Get.find<ConnectivityService>(), // Parameter 3: _connectivityService
+        Get.find<StorageService>(), // Parameter 4: _storageService
+      ),
     );
 
+    // ✅ Other Auth Controllers (sesuai dengan constructor masing-masing)
     Get.lazyPut<LoginController>(
       () => LoginController(Get.find<AuthRepository>()),
     );
@@ -47,12 +73,8 @@ class AuthBinding extends Bindings {
       () => RegisterController(Get.find<AuthRepository>()),
     );
 
-    Get.lazyPut<ForgetPasswordController>(
-      () => ForgetPasswordController(Get.find<AuthRepository>()),
-    );
-
     // Get.lazyPut<ProfileController>(
-    //       () => ProfileController(Get.find<AuthRepository>()),
+    //   () => ProfileController(Get.find<AuthRepository>()),
     // );
   }
 }
