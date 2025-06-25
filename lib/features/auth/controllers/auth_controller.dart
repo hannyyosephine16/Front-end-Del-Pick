@@ -1,7 +1,7 @@
-// lib/features/auth/controllers/auth_controller.dart
+// lib/features/auth/controllers/auth_controller.dart - FIXED
 import 'package:get/get.dart';
-import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
+import 'package:del_pick/data/models/auth/login_response_model.dart';
 import 'package:del_pick/data/repositories/auth_repository.dart';
 import 'package:del_pick/core/services/external/notification_service.dart';
 import 'package:del_pick/core/services/external/connectivity_service.dart';
@@ -10,10 +10,8 @@ import 'package:del_pick/app/routes/app_routes.dart';
 import 'package:del_pick/core/utils/helpers.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/core/constants/storage_constants.dart';
-import 'package:del_pick/data/models/auth/login_response_model.dart';
-
-import '../../../data/models/driver/driver_model.dart';
-import '../../../data/models/store/store_model.dart';
+import 'package:del_pick/data/models/driver/driver_model.dart';
+import 'package:del_pick/data/models/store/store_model.dart';
 
 class AuthController extends GetxController {
   final AuthRepository _authRepository;
@@ -36,9 +34,9 @@ class AuthController extends GetxController {
   final RxString token = ''.obs;
   final RxString errorMessage = ''.obs;
 
-  // Additional data for driver/store
-  final Rx<Map<String, dynamic>?> additionalData =
-      Rx<Map<String, dynamic>?>(null);
+  // Role-specific data
+  final Rx<DriverModel?> driverData = Rx<DriverModel?>(null);
+  final Rx<StoreModel?> storeData = Rx<StoreModel?>(null);
 
   @override
   void onInit() {
@@ -46,85 +44,78 @@ class AuthController extends GetxController {
     checkAuthStatus();
   }
 
-  // Check if user is already logged in from storage
+  // ✅ Check auth status dari storage dan API
   Future<void> checkAuthStatus() async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // First check from storage (offline capability)
-      final isStoredLoggedIn = _storageService.readBoolWithDefault(
-          StorageConstants.isLoggedIn, false);
+      // Check dari storage terlebih dahulu
+      final isStoredLoggedIn = _storageService.isUserLoggedIn();
+      final storedToken = _storageService.getCurrentUserToken();
+      final storedUser = _storageService.getCurrentUser();
+      final storedRole = _storageService.getCurrentUserRole();
 
-      if (isStoredLoggedIn) {
-        final storedToken =
-            _storageService.readString(StorageConstants.authToken);
-        final storedRole =
-            _storageService.readString(StorageConstants.userRole);
-        final storedUserData =
-            _storageService.readJson(StorageConstants.userDataKey);
+      if (isStoredLoggedIn &&
+          storedToken != null &&
+          storedUser != null &&
+          storedRole != null) {
+        // Load dari storage
+        final user = UserModel.fromJson(storedUser);
+        currentUser.value = user;
+        userRole.value = storedRole;
+        token.value = storedToken;
+        isLoggedIn.value = true;
 
-        if (storedToken != null &&
-            storedRole != null &&
-            storedUserData != null) {
-          // Load from storage first
-          final user = UserModel.fromJson(storedUserData);
-          currentUser.value = user;
-          userRole.value = storedRole;
-          token.value = storedToken;
-          isLoggedIn.value = true;
+        // Load role-specific data
+        await _loadRoleSpecificData();
 
-          // Load additional data from storage
-          await _loadAdditionalDataFromStorage();
+        // Navigate ke home
+        _navigateToHome(storedRole);
 
-          // Navigate to home
-          _navigateToHome(storedRole);
-
-          // Try to refresh from API in background (if connected)
-          if (_connectivityService.isConnected) {
-            _refreshUserDataInBackground();
-          }
-          return;
+        // Refresh data di background jika ada koneksi
+        if (_connectivityService.isConnected) {
+          _refreshUserDataInBackground();
         }
+        return;
       }
-      // No valid storage data, try API
+
+      // Tidak ada data valid di storage, coba dari API
       if (_connectivityService.isConnected) {
-        final userData = await _authRepository.getCurrentUser();
-        if (userData != null) {
-          currentUser.value = userData;
-          userRole.value = userData.role ?? '';
+        final result = await _authRepository.getProfile();
+        if (result.isSuccess && result.data != null) {
+          currentUser.value = result.data;
+          userRole.value = result.data!.role;
           isLoggedIn.value = true;
 
-          // Save to storage
-          await _saveUserDataToStorage(userData);
+          // Save ke storage
+          await _saveUserDataToStorage(result.data!);
+          await _loadRoleSpecificData();
 
-          // Navigate to appropriate home
-          _navigateToHome(userData.role ?? '');
+          _navigateToHome(result.data!.role);
         } else {
-          // API failed, clear storage and go to login
+          // API gagal, clear storage dan ke login
           await _clearAuthData();
           Get.offAllNamed(Routes.LOGIN);
         }
       } else {
-        // No internet and no valid storage, go to login
+        // Tidak ada internet dan tidak ada data valid
         Get.offAllNamed(Routes.LOGIN);
       }
     } catch (e) {
-      errorMessage.value = e.toString();
-      // On error, try to use storage data or go to login
-      final hasStorageData = _storageService.readBoolWithDefault(
-          StorageConstants.isLoggedIn, false);
+      print('❌ CheckAuthStatus error: $e');
+      final hasStorageData = _storageService.isUserLoggedIn();
 
       if (hasStorageData) {
         Helpers.showWarningSnackbar(
           'Offline Mode',
-          'Using cached data',
+          'Menggunakan data tersimpan',
           Get.context!,
         );
       } else {
         Helpers.showErrorSnackbar(
           'Error',
-          'Failed to check auth status',
+          'Gagal memeriksa status login',
           Get.context!,
         );
         Get.offAllNamed(Routes.LOGIN);
@@ -134,70 +125,77 @@ class AuthController extends GetxController {
     }
   }
 
-  // Login method - with storage persistence
+  // ✅ Login method - sesuai dengan backend response
   Future<bool> login({required String email, required String password}) async {
     try {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // Check connectivity
       if (!_connectivityService.isConnected) {
         Helpers.showErrorSnackbar(
           'No Internet',
-          'Please check your internet connection',
+          'Periksa koneksi internet Anda',
           Get.context!,
         );
         return false;
       }
 
-      // Call the login repository method
       final result =
           await _authRepository.login(email: email, password: password);
 
       if (result.isSuccess && result.data != null) {
-        // Convert result data to LoginResponseModel
-        final loginResponse =
-            LoginResponseModel.fromJson(result.data as Map<String, dynamic>);
-
-        // Extract user data from login response
+        // Data dari backend sudah dalam format LoginResponseModel
+        final loginResponse = result.data!;
         final user = loginResponse.user;
         final authToken = loginResponse.token;
 
         // Update state
         currentUser.value = user;
-        userRole.value = user.role ?? '';
+        userRole.value = user.role;
         isLoggedIn.value = true;
         token.value = authToken;
 
-        // Save to storage
-        await _saveAuthDataToStorage(user, authToken, loginResponse.toJson());
+        // Store role-specific data
+        if (loginResponse.hasDriver) {
+          driverData.value = loginResponse.driver;
+        }
+        if (loginResponse.hasStore) {
+          storeData.value = loginResponse.store;
+        }
 
-        // Store additional data (driver/store info if any)
-        _storeAdditionalData(loginResponse);
+        // Save ke storage menggunakan method yang sudah ada
+        await _storageService.saveLoginSession(
+          authToken,
+          user.toJson(),
+          user.role,
+          driverData: loginResponse.driver?.toJson(),
+          storeData: loginResponse.store?.toJson(),
+        );
 
-        // Navigate to appropriate home
-        _navigateToHome(user.role ?? '');
+        // Navigate ke home
+        _navigateToHome(user.role);
 
         Helpers.showSuccessSnackbar(
-          'Success',
-          'Login successful',
+          'Berhasil',
+          AppConstants.successLogin,
           Get.context!,
         );
         return true;
       } else {
-        errorMessage.value = result.message ?? 'Login failed';
+        errorMessage.value = result.errorMessage;
         Helpers.showErrorSnackbar(
-          'Login Failed',
-          result.message ?? 'Unknown error',
+          'Login Gagal',
+          result.errorMessage,
           Get.context!,
         );
         return false;
       }
     } catch (e) {
+      print('❌ Login error: $e');
       errorMessage.value = e.toString();
       Helpers.showErrorSnackbar(
         'Login Error',
-        e.toString(),
+        'Terjadi kesalahan saat login',
         Get.context!,
       );
       return false;
@@ -206,7 +204,7 @@ class AuthController extends GetxController {
     }
   }
 
-  // Register method
+  // ✅ Register method - sesuai dengan backend
   Future<bool> register({
     required String name,
     required String email,
@@ -218,21 +216,20 @@ class AuthController extends GetxController {
       isLoading.value = true;
       errorMessage.value = '';
 
-      // Check connectivity
       if (!_connectivityService.isConnected) {
         Helpers.showErrorSnackbar(
           'No Internet',
-          'Please check your internet connection',
+          'Periksa koneksi internet Anda',
           Get.context!,
         );
         return false;
       }
 
-      // Validate role
+      // Validasi role
       if (!AppConstants.validRoles.contains(role)) {
         Helpers.showErrorSnackbar(
           'Invalid Role',
-          'Please select a valid role',
+          'Pilih role yang valid',
           Get.context!,
         );
         return false;
@@ -248,72 +245,76 @@ class AuthController extends GetxController {
 
       if (result.isSuccess) {
         Helpers.showSuccessSnackbar(
-          'Success',
-          'Registration successful. Please login.',
+          'Berhasil',
+          AppConstants.successRegister,
           Get.context!,
         );
         Get.offAllNamed(Routes.LOGIN);
         return true;
       } else {
-        errorMessage.value = result.message ?? 'Registration failed';
+        errorMessage.value = result.errorMessage;
         Helpers.showErrorSnackbar(
-          'Registration Failed',
-          result.message ?? 'Unknown error',
+          'Registrasi Gagal',
+          result.errorMessage,
           Get.context!,
         );
         return false;
       }
     } catch (e) {
+      print('❌ Register error: $e');
       errorMessage.value = e.toString();
       Helpers.showErrorSnackbar(
-          'Registration Error', e.toString(), Get.context!);
+        'Registration Error',
+        'Terjadi kesalahan saat registrasi',
+        Get.context!,
+      );
       return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Logout method - clear storage
+  // ✅ Logout method - clear semua data
   Future<void> logout() async {
     try {
       isLoading.value = true;
 
-      // Call API logout (even if it fails, we clear local data)
+      // Call API logout (bahkan jika gagal, tetap clear local data)
       try {
         if (_connectivityService.isConnected) {
           await _authRepository.logout();
         }
       } catch (e) {
-        // Continue with logout even if API fails
-        print('API logout failed: $e');
+        print('❌ API logout failed: $e');
       }
 
-      // Clear all data
+      // Clear semua data menggunakan method storage
+      await _storageService.clearLoginSession();
       await _clearAuthData();
 
       // Clear notifications
       await _notificationService.clearToken();
 
-      // Navigate to login
+      // Navigate ke login
       Get.offAllNamed(Routes.LOGIN);
 
       Helpers.showSuccessSnackbar(
-          'Success', 'Logged out successfully', Get.context!);
-    } catch (e) {
-      // Still clear local data and navigate
-      await _clearAuthData();
-      Get.offAllNamed(Routes.LOGIN);
-      Helpers.showErrorSnackbar(
-        'Logout Error',
-        e.toString(),
+        'Berhasil',
+        'Logout berhasil',
         Get.context!,
       );
+    } catch (e) {
+      print('❌ Logout error: $e');
+      // Tetap clear local data dan navigate
+      await _storageService.clearLoginSession();
+      await _clearAuthData();
+      Get.offAllNamed(Routes.LOGIN);
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Update profile - with storage update
+  // ✅ Update profile method
   Future<bool> updateProfile({
     String? name,
     String? email,
@@ -338,144 +339,35 @@ class AuthController extends GetxController {
         await _saveUserDataToStorage(result.data!);
 
         Helpers.showSuccessSnackbar(
-          'Success',
-          'Profile updated successfully',
+          'Berhasil',
+          AppConstants.successUpdate,
           Get.context!,
         );
         return true;
       } else {
-        errorMessage.value = result.message ?? 'Profile update failed';
+        errorMessage.value = result.errorMessage;
         Helpers.showErrorSnackbar(
-          'Update Failed',
-          result.message ?? 'Unknown error',
+          'Update Gagal',
+          result.errorMessage,
           Get.context!,
         );
         return false;
       }
     } catch (e) {
+      print('❌ Update profile error: $e');
       errorMessage.value = e.toString();
-      Helpers.showErrorSnackbar('Update Error', e.toString(), Get.context!);
+      Helpers.showErrorSnackbar(
+        'Update Error',
+        'Terjadi kesalahan saat update profil',
+        Get.context!,
+      );
       return false;
     } finally {
       isLoading.value = false;
     }
   }
 
-  // Method untuk update current user (dipanggil dari profile controller)
-  void updateCurrentUser(UserModel user) {
-    currentUser.value = user;
-    _saveUserDataToStorage(user);
-  }
-
-  // Storage management methods
-  Future<void> _saveAuthDataToStorage(UserModel user, String authToken,
-      Map<String, dynamic> loginResponse) async {
-    // Simpan data utama pengguna
-    await _storageService.writeString(StorageConstants.authToken, authToken);
-    await _storageService.writeJson(
-        StorageConstants.userDataKey, user.toJson());
-    await _storageService.writeString(
-        StorageConstants.userRole, user.role ?? '');
-    await _storageService.writeString(
-        StorageConstants.userName, user.name ?? '');
-    await _storageService.writeString(
-        StorageConstants.userEmail, user.email ?? '');
-    await _storageService.writeBool(StorageConstants.isLoggedIn, true);
-
-    // Simpan optional fields
-    if (user.phone != null) {
-      await _storageService.writeString(
-          StorageConstants.userPhone, user.phone!);
-    }
-    if (user.avatar != null) {
-      await _storageService.writeString(
-          StorageConstants.userAvatar, user.avatar!);
-    }
-
-    // Menyimpan data store dan driver jika ada
-    if (loginResponse['store'] != null) {
-      final storeData = StoreModel.fromJson(loginResponse['store']);
-      await _storageService.writeJson(
-          StorageConstants.storeDataKey, storeData.toJson());
-    }
-    if (loginResponse['driver'] != null) {
-      final driverData = DriverModel.fromJson(loginResponse['driver']);
-      await _storageService.writeJson(
-          StorageConstants.driverDataKey, driverData.toJson());
-    }
-  }
-
-  Future<void> _saveUserDataToStorage(UserModel user) async {
-    await _storageService.writeJson(
-        StorageConstants.userDataKey, user.toJson());
-    await _storageService.writeString(
-        StorageConstants.userName, user.name ?? '');
-    await _storageService.writeString(
-        StorageConstants.userEmail, user.email ?? '');
-
-    if (user.phone != null) {
-      await _storageService.writeString(
-          StorageConstants.userPhone, user.phone!);
-    }
-    if (user.avatar != null) {
-      await _storageService.writeString(
-          StorageConstants.userAvatar, user.avatar!);
-    }
-  }
-
-  Future<void> _loadAdditionalDataFromStorage() async {
-    if (isDriver) {
-      final driverData =
-          _storageService.readJson(StorageConstants.driverDataKey);
-      if (driverData != null) {
-        additionalData.value = {'driver': driverData};
-      }
-    } else if (isStore) {
-      final storeData = _storageService.readJson(StorageConstants.storeDataKey);
-      if (storeData != null) {
-        additionalData.value = {'store': storeData};
-      }
-    }
-  }
-
-  Future<void> _clearAuthData() async {
-    // Clear state
-    isLoggedIn.value = false;
-    currentUser.value = null;
-    userRole.value = '';
-    token.value = '';
-    errorMessage.value = '';
-    additionalData.value = null;
-
-    // Clear storage
-    await _storageService.remove(StorageConstants.authToken);
-    await _storageService.remove(StorageConstants.userDataKey);
-    await _storageService.remove(StorageConstants.userRole);
-    await _storageService.remove(StorageConstants.userName);
-    await _storageService.remove(StorageConstants.userEmail);
-    await _storageService.remove(StorageConstants.userPhone);
-    await _storageService.remove(StorageConstants.userAvatar);
-    await _storageService.remove(StorageConstants.fcmToken);
-    await _storageService.remove(StorageConstants.driverDataKey);
-    await _storageService.remove(StorageConstants.storeDataKey);
-    await _storageService.writeBool(StorageConstants.isLoggedIn, false);
-  }
-
-  // Background refresh when app becomes active
-  Future<void> _refreshUserDataInBackground() async {
-    try {
-      final userData = await _authRepository.getCurrentUser();
-      if (userData != null) {
-        currentUser.value = userData;
-        await _saveUserDataToStorage(userData);
-      }
-    } catch (e) {
-      // Silent failure for background refresh
-      print('Background refresh failed: $e');
-    }
-  }
-
-  // Other methods remain the same...
+  // ✅ Forgot password method
   Future<bool> forgotPassword(String email) async {
     try {
       isLoading.value = true;
@@ -485,29 +377,35 @@ class AuthController extends GetxController {
 
       if (result.isSuccess) {
         Helpers.showSuccessSnackbar(
-          'Success',
-          'Password reset email sent',
+          'Berhasil',
+          'Email reset password telah dikirim',
           Get.context!,
         );
         return true;
       } else {
-        errorMessage.value = result.message ?? 'Failed to send reset email';
+        errorMessage.value = result.errorMessage;
         Helpers.showErrorSnackbar(
-          'Failed',
-          result.message ?? 'Unknown error',
+          'Gagal',
+          result.errorMessage,
           Get.context!,
         );
         return false;
       }
     } catch (e) {
+      print('❌ Forgot password error: $e');
       errorMessage.value = e.toString();
-      Helpers.showErrorSnackbar('Error', e.toString(), Get.context!);
+      Helpers.showErrorSnackbar(
+        'Error',
+        'Terjadi kesalahan',
+        Get.context!,
+      );
       return false;
     } finally {
       isLoading.value = false;
     }
   }
 
+  // ✅ Reset password method
   Future<bool> resetPassword({
     required String token,
     required String password,
@@ -523,23 +421,27 @@ class AuthController extends GetxController {
 
       if (result.isSuccess) {
         Helpers.showSuccessSnackbar(
-            'Success', 'Password reset successful', Get.context!);
+          'Berhasil',
+          'Password berhasil direset',
+          Get.context!,
+        );
         Get.offAllNamed(Routes.LOGIN);
         return true;
       } else {
-        errorMessage.value = result.message ?? 'Password reset failed';
+        errorMessage.value = result.errorMessage;
         Helpers.showErrorSnackbar(
-          'Failed',
-          result.message ?? 'Unknown error',
+          'Gagal',
+          result.errorMessage,
           Get.context!,
         );
         return false;
       }
     } catch (e) {
+      print('❌ Reset password error: $e');
       errorMessage.value = e.toString();
       Helpers.showErrorSnackbar(
         'Error',
-        e.toString(),
+        'Terjadi kesalahan',
         Get.context!,
       );
       return false;
@@ -548,12 +450,69 @@ class AuthController extends GetxController {
     }
   }
 
+  // ✅ Update FCM token
   Future<void> updateFcmToken(String fcmToken) async {
     try {
       await _authRepository.updateFcmToken(fcmToken);
-      await _storageService.writeString(StorageConstants.fcmToken, fcmToken);
+      await _storageService.saveFCMToken(fcmToken);
     } catch (e) {
-      print('Failed to update FCM token: $e');
+      print('❌ Failed to update FCM token: $e');
+    }
+  }
+
+  // ===============================================
+  // PRIVATE HELPER METHODS
+  // ===============================================
+
+  Future<void> _loadRoleSpecificData() async {
+    if (isDriver) {
+      final driverDataMap = _storageService.getDriverData();
+      if (driverDataMap != null) {
+        driverData.value = DriverModel.fromJson(driverDataMap);
+      }
+    } else if (isStore) {
+      final storeDataMap = _storageService.getStoreData();
+      if (storeDataMap != null) {
+        storeData.value = StoreModel.fromJson(storeDataMap);
+      }
+    }
+  }
+
+  Future<void> _saveUserDataToStorage(UserModel user) async {
+    await _storageService.writeJson(
+        StorageConstants.userDataKey, user.toJson());
+    await _storageService.writeString(StorageConstants.userName, user.name);
+    await _storageService.writeString(StorageConstants.userEmail, user.email);
+    if (user.phone != null) {
+      await _storageService.writeString(
+          StorageConstants.userPhone, user.phone!);
+    }
+    if (user.avatar != null) {
+      await _storageService.writeString(
+          StorageConstants.userAvatar, user.avatar!);
+    }
+  }
+
+  Future<void> _clearAuthData() async {
+    // Clear reactive state
+    isLoggedIn.value = false;
+    currentUser.value = null;
+    userRole.value = '';
+    token.value = '';
+    errorMessage.value = '';
+    driverData.value = null;
+    storeData.value = null;
+  }
+
+  Future<void> _refreshUserDataInBackground() async {
+    try {
+      final result = await _authRepository.getProfile();
+      if (result.isSuccess && result.data != null) {
+        currentUser.value = result.data;
+        await _saveUserDataToStorage(result.data!);
+      }
+    } catch (e) {
+      print('❌ Background refresh failed: $e');
     }
   }
 
@@ -574,19 +533,10 @@ class AuthController extends GetxController {
     }
   }
 
-  void _storeAdditionalData(LoginResponseModel loginResponse) {
-    // Store data for driver if available
-    if (loginResponse.isDriver && loginResponse.driver != null) {
-      additionalData.value = {'driver': loginResponse.driver?.toJson()};
-    }
+  // ===============================================
+  // GETTERS
+  // ===============================================
 
-    // Store data for store if available
-    if (loginResponse.isStore && loginResponse.store != null) {
-      additionalData.value = {'store': loginResponse.store?.toJson()};
-    }
-  }
-
-  // Getters
   bool get hasValidRole =>
       AppConstants.validRoles.contains(userRole.value.toLowerCase());
   String get displayName => currentUser.value?.name ?? '';
@@ -595,23 +545,17 @@ class AuthController extends GetxController {
   String get userAvatar => currentUser.value?.avatar ?? '';
 
   // Role checkers
-  bool get isCustomer => userRole.value.toLowerCase() == 'customer';
-  bool get isDriver => userRole.value.toLowerCase() == 'driver';
-  bool get isStore => userRole.value.toLowerCase() == 'store';
+  bool get isCustomer =>
+      userRole.value.toLowerCase() == AppConstants.roleCustomer;
+  bool get isDriver => userRole.value.toLowerCase() == AppConstants.roleDriver;
+  bool get isStore => userRole.value.toLowerCase() == AppConstants.roleStore;
 
-  // Additional data getters
-  Map<String, dynamic>? get driverData {
-    return additionalData.value?['driver'] as Map<String, dynamic>?;
-  }
-
-  Map<String, dynamic>? get storeData {
-    return additionalData.value?['store'] as Map<String, dynamic>?;
-  }
+  // Role-specific data getters
+  DriverModel? get currentDriverData => driverData.value;
+  StoreModel? get currentStoreData => storeData.value;
 
   // Utility methods
-  void clearError() {
-    errorMessage.value = '';
-  }
+  void clearError() => errorMessage.value = '';
 
   Future<void> refreshUser() async {
     if (isLoggedIn.value && _connectivityService.isConnected) {
@@ -619,7 +563,11 @@ class AuthController extends GetxController {
     }
   }
 
-  // Check if user has cached data (for offline mode)
-  bool get hasOfflineData =>
-      _storageService.readBoolWithDefault(StorageConstants.isLoggedIn, false);
+  bool get hasOfflineData => _storageService.isUserLoggedIn();
+
+  // Method untuk update current user (dipanggil dari profile controller)
+  void updateCurrentUser(UserModel user) {
+    currentUser.value = user;
+    _saveUserDataToStorage(user);
+  }
 }

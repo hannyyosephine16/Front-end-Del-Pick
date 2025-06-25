@@ -1,8 +1,11 @@
 // lib/features/auth/controllers/login_controller.dart - FIXED
+import 'package:del_pick/app/routes/app_routes.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/auth_repository.dart';
 import 'package:del_pick/features/auth/controllers/auth_controller.dart';
+import 'package:del_pick/core/utils/validators.dart';
+import 'package:del_pick/core/utils/helpers.dart';
 
 class LoginController extends GetxController {
   final AuthRepository _authRepository;
@@ -18,6 +21,13 @@ class LoginController extends GetxController {
   final RxBool isLoading = false.obs;
   final RxBool isPasswordVisible = false.obs;
   final RxString errorMessage = ''.obs;
+  final RxBool rememberMe = false.obs;
+
+  @override
+  void onInit() {
+    super.onInit();
+    _loadRememberedCredentials();
+  }
 
   @override
   void onClose() {
@@ -31,15 +41,25 @@ class LoginController extends GetxController {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
 
+  // ✅ Toggle remember me
+  void toggleRememberMe() {
+    rememberMe.value = !rememberMe.value;
+  }
+
   // ✅ Clear error message
   void clearError() {
     errorMessage.value = '';
   }
 
-  // ✅ Login with comprehensive error handling
+  // ✅ Load remembered credentials
+  void _loadRememberedCredentials() {
+    // TODO: Load from storage if remember me was enabled
+  }
+
+  // ✅ Login dengan AuthController integration
   Future<void> login() async {
     try {
-      // ✅ Validate form first
+      // ✅ Validate form
       if (!formKey.currentState!.validate()) {
         return;
       }
@@ -57,49 +77,29 @@ class LoginController extends GetxController {
         return;
       }
 
-      // ✅ Call repository
-      final result = await _authRepository.login(
+      // ✅ Call AuthController login method
+      final authController = Get.find<AuthController>();
+      final success = await authController.login(
         email: email,
         password: password,
       );
 
-      if (result.isSuccess) {
-        // ✅ Success - update auth controller
-        final authController = Get.find<AuthController>();
-        await authController.checkAuthStatus();
+      if (success) {
+        // ✅ Save credentials if remember me is checked
+        if (rememberMe.value) {
+          // TODO: Save to storage
+        }
 
-        // ✅ Navigate akan dilakukan di AuthController
-        Get.snackbar(
-          'Berhasil',
-          result.message ?? 'Login berhasil!',
-          snackPosition: SnackPosition.TOP,
-          backgroundColor: Get.theme.colorScheme.primary,
-          colorText: Get.theme.colorScheme.onPrimary,
-          duration: const Duration(seconds: 2),
-        );
+        // ✅ Navigation akan ditangani oleh AuthController
+        _clearForm();
       } else {
-        // ✅ Handle specific error messages
-        final error = result.error ?? 'Login gagal';
-        errorMessage.value = _getDisplayErrorMessage(error);
-        _showErrorSnackbar(errorMessage.value);
+        // ✅ Error handling sudah ditangani oleh AuthController
+        errorMessage.value = authController.errorMessage.value;
       }
     } catch (e) {
-      print('❌ Login error: $e');
-
-      // ✅ Handle different types of errors
-      String displayError = 'Terjadi kesalahan. Silakan coba lagi.';
-
-      if (e.toString().contains('network') ||
-          e.toString().contains('connection')) {
-        displayError = 'Tidak ada koneksi internet. Periksa koneksi Anda.';
-      } else if (e.toString().contains('timeout')) {
-        displayError = 'Koneksi timeout. Silakan coba lagi.';
-      } else if (e.toString().contains('server')) {
-        displayError = 'Server sedang bermasalah. Silakan coba lagi nanti.';
-      }
-
-      errorMessage.value = displayError;
-      _showErrorSnackbar(displayError);
+      print('❌ LoginController error: $e');
+      errorMessage.value = _getDisplayErrorMessage(e.toString());
+      _showErrorSnackbar(errorMessage.value);
     } finally {
       isLoading.value = false;
     }
@@ -111,13 +111,15 @@ class LoginController extends GetxController {
 
     if (lowercaseError.contains('invalid') ||
         lowercaseError.contains('salah') ||
-        lowercaseError.contains('incorrect')) {
+        lowercaseError.contains('incorrect') ||
+        lowercaseError.contains('email atau password salah')) {
       return 'Email atau password salah';
     } else if (lowercaseError.contains('not found') ||
         lowercaseError.contains('tidak ditemukan')) {
       return 'Akun tidak ditemukan';
     } else if (lowercaseError.contains('network') ||
-        lowercaseError.contains('connection')) {
+        lowercaseError.contains('connection') ||
+        lowercaseError.contains('internet')) {
       return 'Tidak ada koneksi internet';
     } else if (lowercaseError.contains('timeout')) {
       return 'Koneksi timeout. Silakan coba lagi';
@@ -127,64 +129,82 @@ class LoginController extends GetxController {
     } else if (lowercaseError.contains('validation') ||
         lowercaseError.contains('required')) {
       return 'Periksa input Anda dan coba lagi';
-    } else if (lowercaseError.contains('too many requests')) {
+    } else if (lowercaseError.contains('too many requests') ||
+        lowercaseError.contains('rate limit')) {
       return 'Terlalu banyak percobaan. Tunggu sebentar';
+    } else if (lowercaseError.contains('unauthorized')) {
+      return 'Email atau password salah';
+    } else if (lowercaseError.contains('forbidden')) {
+      return 'Akses ditolak';
     }
 
+    // Return original error if it's short enough, otherwise generic message
     return error.length > 100 ? 'Terjadi kesalahan saat login' : error;
   }
 
   // ✅ Show error snackbar
   void _showErrorSnackbar(String message) {
-    Get.snackbar(
-      'Error',
+    Helpers.showErrorSnackbar(
+      'Login Error',
       message,
-      snackPosition: SnackPosition.TOP,
-      backgroundColor: Get.theme.colorScheme.error,
-      colorText: Get.theme.colorScheme.onError,
-      duration: const Duration(seconds: 4),
-      margin: const EdgeInsets.all(16),
-      borderRadius: 8,
-      icon: Icon(
-        Icons.error_outline,
-        color: Get.theme.colorScheme.onError,
-      ),
+      Get.context!,
     );
   }
 
-  // ✅ Email validator
+  // ✅ Email validator using Validators utility
   String? validateEmail(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Email harus diisi';
-    }
-
-    final emailRegExp = RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$');
-    if (!emailRegExp.hasMatch(value)) {
-      return 'Format email tidak valid';
-    }
-
-    return null;
+    return Validators.validateEmail(value);
   }
 
-  // ✅ Password validator
+  // ✅ Password validator using Validators utility
   String? validatePassword(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Password harus diisi';
-    }
+    return Validators.validatePassword(value);
+  }
 
-    if (value.length < 6) {
-      return 'Password minimal 6 karakter';
-    }
-
-    return null;
+  // ✅ Clear form
+  void _clearForm() {
+    emailController.clear();
+    passwordController.clear();
+    clearError();
+    isPasswordVisible.value = false;
   }
 
   // ✅ Utility methods for UI
   void clearForm() {
-    emailController.clear();
-    passwordController.clear();
-    clearError();
+    _clearForm();
+  }
+
+  void resetForm() {
+    _clearForm();
+    rememberMe.value = false;
   }
 
   bool get hasError => errorMessage.value.isNotEmpty;
+  bool get isFormValid =>
+      emailController.text.isNotEmpty && passwordController.text.isNotEmpty;
+
+  // ✅ Navigation methods
+  void goToRegister() {
+    Get.toNamed(Routes.REGISTER);
+  }
+
+  void goToForgotPassword() {
+    Get.toNamed(Routes.FORGOT_PASSWORD);
+  }
+
+  // ✅ Auto-fill methods for testing/demo
+  void fillDemoCustomer() {
+    emailController.text = 'customer@delpick.com';
+    passwordController.text = 'password';
+  }
+
+  void fillDemoDriver() {
+    emailController.text = 'driver@delpick.com';
+    passwordController.text = 'password';
+  }
+
+  void fillDemoStore() {
+    emailController.text = 'store@delpick.com';
+    passwordController.text = 'password';
+  }
 }
