@@ -6,6 +6,11 @@ import 'package:del_pick/data/models/order/order_list_response.dart';
 import 'package:del_pick/core/utils/result.dart';
 import 'package:dio/dio.dart';
 
+import '../models/menu/create_menu_item_model.dart';
+import '../models/order/cart_item_model.dart';
+import '../models/order/create_order_request.dart';
+import '../models/order/place_order_response.dart';
+
 class OrderRepository {
   final OrderRemoteDataSource _remoteDataSource;
 
@@ -448,7 +453,38 @@ class OrderRepository {
   }) async {
     return cancelOrderByStore(orderId, reason: reason);
   }
+// lib/data/repositories/order_repository.dart - ADD PLACE ORDER METHOD
+// Tambahkan method ini ke dalam class OrderRepository yang sudah ada
 
+// ✅ ADD: Place Order method - Backend Compatible
+  Future<Result<PlaceOrderResponse>> placeOrder(
+      CreateOrderRequest request) async {
+    try {
+      final response = await _remoteDataSource.placeOrder(request);
+      return Result.success(response);
+    } on DioException catch (e) {
+      return Result.failure(_handleDioError(e));
+    } catch (e) {
+      return Result.failure('Failed to place order: ${e.toString()}');
+    }
+  }
+
+// ✅ CONVENIENCE METHOD: Place order from cart items
+  Future<Result<PlaceOrderResponse>> placeOrderFromCart({
+    required int storeId,
+    required List<CartItemModel> items,
+  }) async {
+    try {
+      final request = CreateOrderRequest.fromCartItems(
+        storeId: storeId,
+        cartItems: items,
+      );
+
+      return await placeOrder(request);
+    } catch (e) {
+      return Result.failure('Failed to prepare order: ${e.toString()}');
+    }
+  }
   // ✅ BUSINESS LOGIC HELPERS
 
   /// Check if order can be cancelled by the given role

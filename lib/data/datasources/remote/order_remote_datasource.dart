@@ -2,6 +2,9 @@ import 'package:del_pick/core/constants/api_endpoints.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:dio/dio.dart';
 
+import '../../models/order/create_order_request.dart';
+import '../../models/order/place_order_response.dart';
+
 class OrderRemoteDataSource {
   final ApiService _apiService;
 
@@ -21,6 +24,20 @@ class OrderRemoteDataSource {
     );
   }
 
+  // Future<Response> createOrder(Map<String, dynamic> data) async {
+  //   return await _apiService.post(ApiEndpoints.createOrder, data: data);
+  // }
+  Future<PlaceOrderResponse> placeOrder(CreateOrderRequest request) async {
+    final response = await _apiService.post(
+      ApiEndpoints.createOrder,
+      data: request.toJson(),
+    );
+
+    return PlaceOrderResponse.fromJson(response.data);
+  }
+
+  // ✅ DEPRECATED: Keep for backward compatibility but use placeOrder instead
+  @Deprecated('Use placeOrder(CreateOrderRequest) instead')
   Future<Response> createOrder(Map<String, dynamic> data) async {
     return await _apiService.post(ApiEndpoints.createOrder, data: data);
   }
