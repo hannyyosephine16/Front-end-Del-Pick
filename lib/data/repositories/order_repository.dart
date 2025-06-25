@@ -1,4 +1,4 @@
-// lib/data/repositories/order_repository.dart - BACKEND COMPATIBLE VERSION
+// lib/data/repositories/order_repository.dart - FIXED VERSION
 import 'package:del_pick/data/datasources/remote/order_remote_datasource.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/base/paginated_response.dart';
@@ -10,6 +10,32 @@ class OrderRepository {
   final OrderRemoteDataSource _remoteDataSource;
 
   OrderRepository(this._remoteDataSource);
+
+  // ✅ FIXED: Added missing getOrdersByUser method
+  Future<Result<OrderListResponse>> getOrdersByUser({
+    Map<String, dynamic>? params,
+  }) async {
+    try {
+      final result = await getCustomerOrders(params: params);
+
+      if (result.isSuccess && result.data != null) {
+        final paginatedResponse = result.data!;
+
+        final orderListResponse = OrderListResponse(
+          orders: paginatedResponse.items,
+          totalItems: paginatedResponse.totalItems,
+          totalPages: paginatedResponse.totalPages,
+          currentPage: paginatedResponse.currentPage,
+        );
+
+        return Result.success(orderListResponse);
+      } else {
+        return Result.failure(result.message ?? 'Failed to get orders');
+      }
+    } catch (e) {
+      return Result.failure('Failed to get user orders: ${e.toString()}');
+    }
+  }
 
   // ✅ CORE ORDER METHODS - Backend Compatible
 

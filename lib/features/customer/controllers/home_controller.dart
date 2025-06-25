@@ -3,12 +3,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
-import 'package:del_pick/data/repositories/order_repository_extensions.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
-import 'package:del_pick/core/errors/error_handler.dart';
-import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/app/config/app_config.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
 

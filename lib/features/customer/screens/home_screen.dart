@@ -14,8 +14,8 @@ class CustomerHomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GetBuilder<HomeController>(
-      init: HomeController(
+    return GetBuilder<CustomerHomeController>(
+      init: CustomerHomeController(
         storeRepository: Get.find(),
         orderRepository: Get.find(),
         locationService: Get.find(),
@@ -72,7 +72,7 @@ class CustomerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(HomeController controller) {
+  Widget _buildHeader(CustomerHomeController controller) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
@@ -114,7 +114,7 @@ class CustomerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildLocationSection(HomeController controller) {
+  Widget _buildLocationSection(CustomerHomeController controller) {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingLG),
       decoration: BoxDecoration(
@@ -176,7 +176,7 @@ class CustomerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildQuickActions(HomeController controller) {
+  Widget _buildQuickActions(CustomerHomeController controller) {
     return Row(
       children: [
         Expanded(
@@ -242,7 +242,7 @@ class CustomerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildRecentOrdersSection(HomeController controller) {
+  Widget _buildRecentOrdersSection(CustomerHomeController controller) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -302,7 +302,7 @@ class CustomerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildDraggableNearYouSection(HomeController controller) {
+  Widget _buildDraggableNearYouSection(CustomerHomeController controller) {
     return DraggableScrollableSheet(
       initialChildSize: 0.4, // 40% of screen height initially
       minChildSize: 0.15, // Minimum 15% when collapsed

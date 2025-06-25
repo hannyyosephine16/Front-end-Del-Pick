@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:del_pick/app/routes/app_routes.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/order/order_model_extensions.dart';
@@ -49,6 +50,20 @@ class OrderHistoryController extends GetxController {
     loadOrders();
   }
 
+  // ✅ FIXED: Map filter to backend status
+  String? _mapFilterToBackendStatus(String filter) {
+    switch (filter) {
+      case 'active':
+        return 'pending,preparing,on_delivery';
+      case 'completed':
+        return 'delivered';
+      case 'cancelled':
+        return 'cancelled';
+      default:
+        return null; // untuk 'all'
+    }
+  }
+
   // Load orders based on current filter
   Future<void> loadOrders({bool refresh = false}) async {
     if (refresh) {
@@ -62,17 +77,22 @@ class OrderHistoryController extends GetxController {
     _errorMessage.value = '';
 
     try {
-      final result = await _orderRepository.getOrdersByUser(
-        params: {
-          'page': _currentPage,
-          'limit': _itemsPerPage,
-          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
-        },
-      );
+      // ✅ FIXED: Use mapped status filter
+      final params = <String, dynamic>{
+        'page': _currentPage,
+        'limit': _itemsPerPage,
+      };
+
+      final backendStatus = _mapFilterToBackendStatus(_selectedFilter.value);
+      if (backendStatus != null) {
+        params['status'] = backendStatus;
+      }
+
+      final result = await _orderRepository.getOrdersByUser(params: params);
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items instead of .data
-        final newOrders = result.data!.items;
+        // ✅ Use .orders instead of .items for OrderListResponse
+        final newOrders = result.data!.orders;
 
         if (refresh) {
           _orders.assignAll(newOrders);
@@ -106,17 +126,22 @@ class OrderHistoryController extends GetxController {
     _isLoadingMore.value = true;
 
     try {
-      final result = await _orderRepository.getOrdersByUser(
-        params: {
-          'page': _currentPage,
-          'limit': _itemsPerPage,
-          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
-        },
-      );
+      // ✅ FIXED: Use mapped status filter
+      final params = <String, dynamic>{
+        'page': _currentPage,
+        'limit': _itemsPerPage,
+      };
+
+      final backendStatus = _mapFilterToBackendStatus(_selectedFilter.value);
+      if (backendStatus != null) {
+        params['status'] = backendStatus;
+      }
+
+      final result = await _orderRepository.getOrdersByUser(params: params);
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items instead of .data
-        final newOrders = result.data!.items;
+        // ✅ Use .orders instead of .items for OrderListResponse
+        final newOrders = result.data!.orders;
         _orders.addAll(newOrders);
 
         // Check if we can load more
@@ -152,7 +177,7 @@ class OrderHistoryController extends GetxController {
     }
   }
 
-  // ✅ FIXED: Added missing method
+  // ✅ FIXED: Updated status checking based on backend constants
   int getOrderCountByStatus(String status) {
     switch (status) {
       case 'active':
@@ -177,16 +202,17 @@ class OrderHistoryController extends GetxController {
     }
   }
 
-  // ✅ FIXED: Added missing method
+  // ✅ FIXED: Updated to use correct order properties
   Map<String, dynamic> getOrderStatistics() {
     final totalOrders = _orders.length;
     final activeOrders = getOrderCountByStatus('active');
     final completedOrders = getOrderCountByStatus('completed');
     final cancelledOrders = getOrderCountByStatus('cancelled');
 
+    // ✅ FIXED: Use totalAmount instead of total
     final totalSpent = _orders
         .where((order) => order.orderStatus == OrderStatusConstants.delivered)
-        .fold(0.0, (sum, order) => sum + order.total);
+        .fold(0.0, (sum, order) => sum + (order.totalAmount ?? 0.0));
 
     return {
       'totalOrders': totalOrders,
@@ -197,27 +223,26 @@ class OrderHistoryController extends GetxController {
     };
   }
 
-  // ✅ FIXED: Added missing method
+  // Navigation methods
   void navigateToOrderDetail(int orderId) {
     Get.toNamed('/order_detail', arguments: {'orderId': orderId});
   }
 
-  // ✅ FIXED: Added missing method
   void navigateToOrderTracking(int orderId) {
     Get.toNamed('/order_tracking', arguments: {'orderId': orderId});
   }
 
-  // ✅ FIXED: Added missing method
   void navigateToReview(int orderId) {
     Get.toNamed('/order_review', arguments: {'orderId': orderId});
   }
 
-  // ✅ FIXED: Added missing method - Cancel order
+  // ✅ FIXED: Added userRole parameter for customer cancellation
   Future<void> cancelOrder(OrderModel order) async {
+    // ✅ FIXED: Use order.id instead of order.code
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Cancel Order'),
-        content: Text('Are you sure you want to cancel order ${order.code}?'),
+        content: Text('Are you sure you want to cancel order #${order.id}?'),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -234,7 +259,11 @@ class OrderHistoryController extends GetxController {
 
     if (confirmed == true) {
       try {
-        final result = await _orderRepository.cancelOrder(order.id);
+        // ✅ FIXED: Add userRole parameter for customer
+        final result = await _orderRepository.cancelOrder(
+          order.id,
+          userRole: 'customer',
+        );
 
         if (result.isSuccess) {
           Get.snackbar(
@@ -270,12 +299,12 @@ class OrderHistoryController extends GetxController {
 
   Future<void> reorderItems(OrderModel order) async {
     try {
-      // Navigate to store with order items
-      Get.toNamed('/store_detail', arguments: {
+      // ✅ FIXED: Use correct order properties
+      Get.toNamed(Routes.STORE_DETAIL, arguments: {
         'storeId': order.storeId,
         'reorderItems': order.items
             ?.map((item) => {
-                  'itemId': item.id,
+                  'itemId': item.menuItemId,
                   'quantity': item.quantity,
                 })
             .toList(),
@@ -283,7 +312,7 @@ class OrderHistoryController extends GetxController {
 
       Get.snackbar(
         'Reorder',
-        'Items added to cart from ${order.storeName}',
+        'Items added to cart from ${order.store?.name ?? 'Store'}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.green,
         colorText: Colors.white,
