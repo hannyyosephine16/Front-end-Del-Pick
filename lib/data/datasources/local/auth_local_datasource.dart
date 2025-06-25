@@ -2,7 +2,7 @@ import 'package:del_pick/core/services/local/storage_service.dart';
 import 'package:del_pick/core/constants/storage_constants.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
 
-/// ✅ AuthLocalDataSource yang sesuai dengan backend DelPick
+/// ✅ AuthLocalDataSource yang sesuai dengan backend DelPick - COMPLETE FIXED
 class AuthLocalDataSource {
   final StorageService _storageService;
 
@@ -59,6 +59,36 @@ class AuthLocalDataSource {
   /// Save driver data (untuk role driver)
   Future<void> saveDriverData(Map<String, dynamic> driverData) async {
     await _storageService.writeJson(StorageConstants.driverDataKey, driverData);
+
+    // Extract driver specific fields for quick access
+    if (driverData['license_number'] != null) {
+      await _storageService.writeString(
+          StorageConstants.driverLicenseNumber, driverData['license_number']);
+    }
+    if (driverData['vehicle_plate'] != null) {
+      await _storageService.writeString(
+          StorageConstants.driverVehicleNumber, driverData['vehicle_plate']);
+    }
+    if (driverData['status'] != null) {
+      await _storageService.writeString(
+          StorageConstants.driverStatus, driverData['status']);
+    }
+    if (driverData['latitude'] != null) {
+      await _storageService.writeDouble(StorageConstants.driverLatitude,
+          (driverData['latitude'] as num).toDouble());
+    }
+    if (driverData['longitude'] != null) {
+      await _storageService.writeDouble(StorageConstants.driverLongitude,
+          (driverData['longitude'] as num).toDouble());
+    }
+    if (driverData['rating'] != null) {
+      await _storageService.writeDouble(
+          'driver_rating', (driverData['rating'] as num).toDouble());
+    }
+    if (driverData['reviews_count'] != null) {
+      await _storageService.writeInt(
+          'driver_reviews_count', driverData['reviews_count']);
+    }
   }
 
   /// Get driver data
@@ -69,6 +99,63 @@ class AuthLocalDataSource {
   /// Save store data (untuk role store)
   Future<void> saveStoreData(Map<String, dynamic> storeData) async {
     await _storageService.writeJson(StorageConstants.storeDataKey, storeData);
+
+    // Extract store specific fields for quick access
+    if (storeData['id'] != null) {
+      await _storageService.writeInt(StorageConstants.storeId, storeData['id']);
+    }
+    if (storeData['name'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storeName, storeData['name']);
+    }
+    if (storeData['status'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storeStatus, storeData['status']);
+    }
+    if (storeData['address'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storeAddress, storeData['address']);
+    }
+    if (storeData['description'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storeDescription, storeData['description']);
+    }
+    if (storeData['image_url'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storeImageUrl, storeData['image_url']);
+    }
+    if (storeData['phone'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storePhone, storeData['phone']);
+    }
+    if (storeData['open_time'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storeOpenTime, storeData['open_time']);
+    }
+    if (storeData['close_time'] != null) {
+      await _storageService.writeString(
+          StorageConstants.storeCloseTime, storeData['close_time']);
+    }
+    if (storeData['latitude'] != null) {
+      await _storageService.writeDouble(StorageConstants.storeLatitude,
+          (storeData['latitude'] as num).toDouble());
+    }
+    if (storeData['longitude'] != null) {
+      await _storageService.writeDouble(StorageConstants.storeLongitude,
+          (storeData['longitude'] as num).toDouble());
+    }
+    if (storeData['rating'] != null) {
+      await _storageService.writeDouble(StorageConstants.storeRating,
+          (storeData['rating'] as num).toDouble());
+    }
+    if (storeData['total_products'] != null) {
+      await _storageService.writeInt(
+          StorageConstants.storeTotalProducts, storeData['total_products']);
+    }
+    if (storeData['review_count'] != null) {
+      await _storageService.writeInt(
+          'store_review_count', storeData['review_count']);
+    }
   }
 
   /// Get store data
@@ -159,6 +246,27 @@ class AuthLocalDataSource {
       StorageConstants.fcmToken,
       StorageConstants.lastLoginTime,
       StorageConstants.rememberMe,
+      StorageConstants.driverStatus,
+      StorageConstants.driverVehicleNumber,
+      StorageConstants.driverLicenseNumber,
+      StorageConstants.driverLatitude,
+      StorageConstants.driverLongitude,
+      StorageConstants.storeId,
+      StorageConstants.storeName,
+      StorageConstants.storeStatus,
+      StorageConstants.storeAddress,
+      StorageConstants.storeDescription,
+      StorageConstants.storeImageUrl,
+      StorageConstants.storePhone,
+      StorageConstants.storeOpenTime,
+      StorageConstants.storeCloseTime,
+      StorageConstants.storeLatitude,
+      StorageConstants.storeLongitude,
+      StorageConstants.storeRating,
+      StorageConstants.storeTotalProducts,
+      'driver_rating',
+      'driver_reviews_count',
+      'store_review_count',
     ]);
     await _storageService.writeBool(StorageConstants.isLoggedIn, false);
   }
@@ -222,60 +330,229 @@ class AuthLocalDataSource {
     }
   }
 
-  /// Get complete auth data for API headers
-  Future<Map<String, String>> getAuthHeaders() async {
+  /// Get complete login session data
+  Future<Map<String, dynamic>?> getLoginSession() async {
     final token = await getAuthToken();
-    if (token != null) {
-      return {
-        'Authorization': 'Bearer $token',
-        'Content-Type': 'application/json',
-      };
-    }
-    return {'Content-Type': 'application/json'};
-  }
-
-  /// Check if token is expired (basic check)
-  Future<bool> isTokenExpired() async {
-    final lastLogin = await getLastLoginTime();
-    if (lastLogin == null) return true;
-
-    // Token expires after 7 days (sesuai backend: expiresIn: '7d')
-    final expiredTime = lastLogin.add(const Duration(days: 7));
-    return DateTime.now().isAfter(expiredTime);
-  }
-
-  /// Save temporary data for offline usage
-  Future<void> saveOfflineData(String key, dynamic data) async {
-    await _storageService.writeJson('offline_$key', data);
-  }
-
-  /// Get temporary offline data
-  Future<dynamic> getOfflineData(String key) async {
-    return _storageService.readJson('offline_$key');
-  }
-
-  /// Clear temporary offline data
-  Future<void> clearOfflineData(String key) async {
-    await _storageService.remove('offline_$key');
-  }
-
-  /// Get user session info
-  Future<Map<String, dynamic>> getSessionInfo() async {
     final user = await getUser();
-    final lastLogin = await getLastLoginTime();
-    final isExpired = await isTokenExpired();
+    final isLoggedIn = await this.isLoggedIn();
 
-    return {
-      'isLoggedIn': await isLoggedIn(),
-      'hasValidToken': await hasValidToken(),
-      'isTokenExpired': isExpired,
-      'userId': user?.id,
-      'userRole': user?.role,
-      'userName': user?.name,
-      'userEmail': user?.email,
-      'lastLogin': lastLogin?.toIso8601String(),
-      'biometricEnabled': await isBiometricEnabled(),
-      'rememberMe': await shouldRememberMe(),
+    if (!isLoggedIn || token == null || user == null) {
+      return null;
+    }
+
+    final session = {
+      'token': token,
+      'user': user.toJson(),
+      'isLoggedIn': isLoggedIn,
+      'lastLoginTime': (await getLastLoginTime())?.toIso8601String(),
     };
+
+    // Add role-specific data
+    final role = user.role;
+    if (role == 'driver') {
+      final driverData = await getDriverData();
+      if (driverData != null) {
+        session['driver'] = driverData;
+      }
+    } else if (role == 'store') {
+      final storeData = await getStoreData();
+      if (storeData != null) {
+        session['store'] = storeData;
+      }
+    }
+
+    return session;
+  }
+
+  /// Update driver location (untuk real-time tracking)
+  Future<void> updateDriverLocation(double latitude, double longitude) async {
+    await _storageService.writeDouble(
+        StorageConstants.driverLatitude, latitude);
+    await _storageService.writeDouble(
+        StorageConstants.driverLongitude, longitude);
+
+    // Update in driver data as well
+    final driverData = await getDriverData();
+    if (driverData != null) {
+      driverData['latitude'] = latitude;
+      driverData['longitude'] = longitude;
+      await _storageService.writeJson(
+          StorageConstants.driverDataKey, driverData);
+    }
+  }
+
+  /// Get driver location
+  Future<Map<String, double>?> getDriverLocation() async {
+    final lat = _storageService.readDouble(StorageConstants.driverLatitude);
+    final lng = _storageService.readDouble(StorageConstants.driverLongitude);
+
+    if (lat != null && lng != null) {
+      return {'latitude': lat, 'longitude': lng};
+    }
+    return null;
+  }
+
+  /// Update driver status (active, inactive, busy)
+  Future<void> updateDriverStatus(String status) async {
+    await _storageService.writeString(StorageConstants.driverStatus, status);
+
+    // Update in driver data as well
+    final driverData = await getDriverData();
+    if (driverData != null) {
+      driverData['status'] = status;
+      await _storageService.writeJson(
+          StorageConstants.driverDataKey, driverData);
+    }
+  }
+
+  /// Get driver status
+  Future<String?> getDriverStatus() async {
+    return _storageService.readString(StorageConstants.driverStatus);
+  }
+
+  /// Update store status (active, inactive)
+  Future<void> updateStoreStatus(String status) async {
+    await _storageService.writeString(StorageConstants.storeStatus, status);
+
+    // Update in store data as well
+    final storeData = await getStoreData();
+    if (storeData != null) {
+      storeData['status'] = status;
+      await _storageService.writeJson(StorageConstants.storeDataKey, storeData);
+    }
+  }
+
+  /// Get store status
+  Future<String?> getStoreStatus() async {
+    return _storageService.readString(StorageConstants.storeStatus);
+  }
+
+  /// Check if current session is valid (not expired)
+  Future<bool> isSessionValid() async {
+    final isLoggedIn = await this.isLoggedIn();
+    final token = await getAuthToken();
+    final lastLoginTime = await getLastLoginTime();
+
+    if (!isLoggedIn || token == null || lastLoginTime == null) {
+      return false;
+    }
+
+    // Check if session is older than 7 days (backend JWT expires in 7 days)
+    final now = DateTime.now();
+    final difference = now.difference(lastLoginTime);
+    if (difference.inDays >= 7) {
+      await clearAuthData();
+      return false;
+    }
+
+    return true;
+  }
+
+  /// Refresh session timestamp
+  Future<void> refreshSession() async {
+    if (await isLoggedIn()) {
+      await _storageService.writeDateTime(
+        StorageConstants.lastLoginTime,
+        DateTime.now(),
+      );
+    }
+  }
+
+  /// Get user's role-specific data based on their role
+  Future<Map<String, dynamic>?> getRoleSpecificData() async {
+    final user = await getUser();
+    if (user == null) return null;
+
+    switch (user.role) {
+      case 'driver':
+        return await getDriverData();
+      case 'store':
+        return await getStoreData();
+      case 'customer':
+      default:
+        return null; // Customer doesn't have additional data
+    }
+  }
+
+  /// Check if user has completed their profile setup
+  Future<bool> hasCompletedProfileSetup() async {
+    final user = await getUser();
+    if (user == null) return false;
+
+    // Basic profile completion check
+    if (user.name.isEmpty || user.email.isEmpty) {
+      return false;
+    }
+
+    // Role-specific completion check
+    switch (user.role) {
+      case 'driver':
+        final driverData = await getDriverData();
+        return driverData != null &&
+            driverData['license_number'] != null &&
+            driverData['vehicle_plate'] != null;
+
+      case 'store':
+        final storeData = await getStoreData();
+        return storeData != null &&
+            storeData['name'] != null &&
+            storeData['address'] != null &&
+            storeData['phone'] != null &&
+            storeData['latitude'] != null &&
+            storeData['longitude'] != null;
+
+      case 'customer':
+      default:
+        return user.phone != null && user.phone!.isNotEmpty;
+    }
+  }
+
+  /// Save temporary registration data (for multi-step registration)
+  Future<void> saveTemporaryRegistrationData(Map<String, dynamic> data) async {
+    await _storageService.writeJson('temp_registration_data', data);
+  }
+
+  /// Get temporary registration data
+  Future<Map<String, dynamic>?> getTemporaryRegistrationData() async {
+    return _storageService.readJson('temp_registration_data');
+  }
+
+  /// Clear temporary registration data
+  Future<void> clearTemporaryRegistrationData() async {
+    await _storageService.remove('temp_registration_data');
+  }
+
+  /// Save password reset token (if needed for offline functionality)
+  Future<void> savePasswordResetToken(String token) async {
+    await _storageService.writeString('password_reset_token', token);
+    await _storageService.writeDateTime(
+      'password_reset_token_expiry',
+      DateTime.now().add(const Duration(hours: 1)),
+    );
+  }
+
+  /// Get password reset token
+  Future<String?> getPasswordResetToken() async {
+    final token = _storageService.readString('password_reset_token');
+    final expiry = _storageService.readDateTime('password_reset_token_expiry');
+
+    if (token != null && expiry != null && DateTime.now().isBefore(expiry)) {
+      return token;
+    }
+
+    // Clear expired token
+    await _storageService
+        .removeBatch(['password_reset_token', 'password_reset_token_expiry']);
+    return null;
+  }
+
+  /// Save email verification status
+  Future<void> saveEmailVerificationStatus(bool isVerified) async {
+    await _storageService.writeBool('email_verified', isVerified);
+  }
+
+  /// Check if email is verified
+  Future<bool> isEmailVerified() async {
+    return _storageService.readBoolWithDefault('email_verified', false);
   }
 }

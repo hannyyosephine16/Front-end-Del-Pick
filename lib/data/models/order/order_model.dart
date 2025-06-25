@@ -21,7 +21,7 @@ class OrderModel {
   final DateTime? actualPickupTime;
   final DateTime? estimatedDeliveryTime;
   final DateTime? actualDeliveryTime;
-  final String? cancellationReason; // ✅ ADDED: Backend field
+  final String? cancellationReason;
   final List<dynamic>? trackingUpdates;
   final List<OrderItemModel>? items;
   final StoreModel? store;
