@@ -1,61 +1,34 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:del_pick/features/auth/controllers/auth_controller.dart';
+import 'package:del_pick/features/auth/controllers/login_controller.dart';
 import 'package:del_pick/core/widgets/custom_button.dart';
+import 'package:del_pick/core/widgets/custom_text_field.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
 
-class LoginScreen extends StatefulWidget {
+class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
 
   @override
-  State<LoginScreen> createState() => _LoginScreenState();
-}
-
-class _LoginScreenState extends State<LoginScreen> {
-  final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
-  bool _obscurePassword = true;
-
-  AuthController get _authController => Get.find<AuthController>();
-
-  @override
-  void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _handleLogin() async {
-    if (_formKey.currentState!.validate()) {
-      final success = await _authController.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text,
-      );
-
-      if (success) {
-        // Navigation is handled by AuthController
-      }
-    }
-  }
-
-  @override
   Widget build(BuildContext context) {
+    final controller = Get.find<LoginController>();
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(AppDimensions.paddingXL),
           child: Form(
-            key: _formKey,
+            key: controller.formKey,
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Logo
+                const SizedBox(height: AppDimensions.spacingHuge),
+
+                // Logo & Title
                 const Icon(
                   Icons.delivery_dining,
                   size: 80,
@@ -63,95 +36,197 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: AppDimensions.spacingXL),
 
-                // Title
                 Text(
-                  'Welcome Back',
-                  style: AppTextStyles.h3,
+                  'DelPick',
+                  style: AppTextStyles.h1.copyWith(
+                    color: AppColors.primary,
+                    fontWeight: FontWeight.bold,
+                  ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppDimensions.spacingSM),
+
                 Text(
-                  'Sign in to continue',
-                  style: AppTextStyles.bodyMedium.copyWith(
+                  'Masuk ke akun Anda',
+                  style: AppTextStyles.bodyLarge.copyWith(
                     color: AppColors.textSecondary,
                   ),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: AppDimensions.spacingHuge),
 
+                // Error Message
+                Obx(() {
+                  if (controller.hasError) {
+                    return Container(
+                      margin: const EdgeInsets.only(
+                        bottom: AppDimensions.spacingLG,
+                      ),
+                      padding: const EdgeInsets.all(AppDimensions.paddingMD),
+                      decoration: BoxDecoration(
+                        color: AppColors.error.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(
+                          AppDimensions.radiusMD,
+                        ),
+                        border: Border.all(
+                          color: AppColors.error.withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: AppColors.error,
+                            size: AppDimensions.iconSM,
+                          ),
+                          const SizedBox(width: AppDimensions.spacingSM),
+                          Expanded(
+                            child: Text(
+                              controller.errorMessage.value,
+                              style: AppTextStyles.bodyMedium.copyWith(
+                                color: AppColors.error,
+                              ),
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: controller.clearError,
+                            icon: const Icon(
+                              Icons.close,
+                              size: AppDimensions.iconSM,
+                            ),
+                            color: AppColors.error,
+                          ),
+                        ],
+                      ),
+                    );
+                  }
+                  return const SizedBox.shrink();
+                }),
+
                 // Email Field
-                TextFormField(
-                  controller: _emailController,
+                CustomTextField(
+                  controller: controller.emailController,
+                  labelText: 'Email',
+                  hintText: 'Masukkan email Anda',
+                  prefixIcon: Icons.email_outlined,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    labelText: 'Email',
-                    prefixIcon: Icon(Icons.email_outlined),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your email';
-                    }
-                    if (!GetUtils.isEmail(value)) {
-                      return 'Please enter a valid email';
-                    }
-                    return null;
-                  },
+                  textInputAction: TextInputAction.next,
+                  validator: controller.validateEmail,
+                  onChanged: (value) => controller.clearError(),
                 ),
                 const SizedBox(height: AppDimensions.spacingLG),
 
                 // Password Field
-                TextFormField(
-                  controller: _passwordController,
-                  obscureText: _obscurePassword,
-                  decoration: InputDecoration(
-                    labelText: 'Password',
-                    prefixIcon: const Icon(Icons.lock_outlined),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_outlined
-                            : Icons.visibility_off_outlined,
+                Obx(() => CustomTextField(
+                      controller: controller.passwordController,
+                      labelText: 'Password',
+                      hintText: 'Masukkan password Anda',
+                      prefixIcon: Icons.lock_outlined,
+                      isPassword: true,
+                      obscureText: !controller.isPasswordVisible.value,
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          controller.isPasswordVisible.value
+                              ? Icons.visibility_outlined
+                              : Icons.visibility_off_outlined,
+                        ),
+                        onPressed: controller.togglePasswordVisibility,
                       ),
-                      onPressed: () {
-                        setState(() {
-                          _obscurePassword = !_obscurePassword;
-                        });
-                      },
-                    ),
-                  ),
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter your password';
-                    }
-                    return null;
-                  },
-                ),
+                      validator: controller.validatePassword,
+                      onChanged: (value) => controller.clearError(),
+                      textInputAction: TextInputAction.done,
+                      onFieldSubmitted: (value) => controller.login(),
+                    )),
                 const SizedBox(height: AppDimensions.spacingMD),
 
-                // Forgot Password
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: TextButton(
-                    onPressed: () => Get.toNamed(Routes.FORGOT_PASSWORD),
-                    child: Text(
-                      'Forgot Password?',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.primary,
+                // Remember Me & Forgot Password Row
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Remember Me
+                    Obx(() => Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Checkbox(
+                              value: controller.rememberMe.value,
+                              onChanged: (value) =>
+                                  controller.toggleRememberMe(),
+                              activeColor: AppColors.primary,
+                            ),
+                            Text(
+                              'Ingat saya',
+                              style: AppTextStyles.bodyMedium,
+                            ),
+                          ],
+                        )),
+
+                    // Forgot Password
+                    TextButton(
+                      onPressed: controller.goToForgotPassword,
+                      child: Text(
+                        'Lupa Password?',
+                        style: AppTextStyles.bodyMedium.copyWith(
+                          color: AppColors.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ),
-                const SizedBox(height: AppDimensions.spacingLG),
+                const SizedBox(height: AppDimensions.spacingXL),
 
                 // Login Button
-                Obx(
-                  () => CustomButton.primary(
-                    text: 'Sign In',
-                    onPressed: _handleLogin,
-                    isLoading: _authController.isLoading,
-                    isExpanded: true,
+                Obx(() => CustomButton.primary(
+                      text: 'Masuk',
+                      onPressed:
+                          controller.isFormValid ? controller.login : null,
+                      isLoading: controller.isLoading.value,
+                      isExpanded: true,
+                      size: ButtonSize.large,
+                    )),
+                const SizedBox(height: AppDimensions.spacingXL),
+
+                // Demo Buttons (for testing)
+                if (Get.arguments?['showDemo'] == true) ...[
+                  const Divider(),
+                  const SizedBox(height: AppDimensions.spacingMD),
+                  Text(
+                    'Demo Accounts',
+                    style: AppTextStyles.bodyMedium.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
                   ),
-                ),
+                  const SizedBox(height: AppDimensions.spacingMD),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: CustomButton.outlined(
+                          text: 'Customer',
+                          onPressed: controller.fillDemoCustomer,
+                          size: ButtonSize.small,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimensions.spacingSM),
+                      Expanded(
+                        child: CustomButton.outlined(
+                          text: 'Driver',
+                          onPressed: controller.fillDemoDriver,
+                          size: ButtonSize.small,
+                        ),
+                      ),
+                      const SizedBox(width: AppDimensions.spacingSM),
+                      Expanded(
+                        child: CustomButton.outlined(
+                          text: 'Store',
+                          onPressed: controller.fillDemoStore,
+                          size: ButtonSize.small,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+
                 const SizedBox(height: AppDimensions.spacingXL),
 
                 // Register Link
@@ -159,13 +234,15 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      "Don't have an account? ",
-                      style: AppTextStyles.bodyMedium,
+                      'Belum punya akun? ',
+                      style: AppTextStyles.bodyMedium.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     TextButton(
-                      onPressed: () => Get.toNamed(Routes.REGISTER),
+                      onPressed: controller.goToRegister,
                       child: Text(
-                        'Sign Up',
+                        'Daftar Sekarang',
                         style: AppTextStyles.bodyMedium.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.w600,
@@ -174,6 +251,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ],
                 ),
+
+                const SizedBox(height: AppDimensions.spacingXL),
               ],
             ),
           ),
@@ -182,7 +261,3 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
-
-
-
-

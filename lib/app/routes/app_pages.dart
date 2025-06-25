@@ -94,13 +94,13 @@ class AppPages {
       transitionDuration: RouteConfig.transitionDuration,
     ),
 
-    GetPage(
-      name: Routes.REGISTER,
-      page: () => const RegisterScreen(),
-      binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: RouteConfig.transitionDuration,
-    ),
+    // GetPage(
+    //   name: Routes.REGISTER,
+    //   page: () => const RegisterScreen(),
+    //   binding: AuthBinding(),
+    //   transition: Transition.rightToLeft,
+    //   transitionDuration: RouteConfig.transitionDuration,
+    // ), //register
 
     GetPage(
       name: Routes.FORGOT_PASSWORD,
@@ -110,13 +110,13 @@ class AppPages {
       transitionDuration: RouteConfig.transitionDuration,
     ),
 
-    GetPage(
-      name: Routes.RESET_PASSWORD,
-      page: () => const ResetPasswordScreen(),
-      binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: RouteConfig.transitionDuration,
-    ),
+    // GetPage(
+    //   name: Routes.RESET_PASSWORD,
+    //   page: () => const ResetPasswordScreen(),
+    //   binding: AuthBinding(),
+    //   transition: Transition.rightToLeft,
+    //   transitionDuration: RouteConfig.transitionDuration,
+    // ),//Reset Password
 
     GetPage(
       name: Routes.EDIT_PROFILE,

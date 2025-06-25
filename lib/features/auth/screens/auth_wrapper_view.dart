@@ -16,17 +16,17 @@ class AuthWrapperView extends GetView<AuthController> {
   Widget build(BuildContext context) {
     return Obx(() {
       // Show splash while loading
-      if (controller.isLoading) {
+      if (controller.isLoading.value) {
         return const SplashView();
       }
 
       // Show login if not authenticated
-      if (!controller.isLoggedIn) {
+      if (!controller.isLoggedIn.value) {
         return const LoginScreen();
       }
 
       // Navigate based on user role
-      switch (controller.userRole) {
+      switch (controller.userRole.value) {
         case AppConstants.roleCustomer:
           return const CustomerHomeScreen();
         case AppConstants.roleDriver:
@@ -44,11 +44,13 @@ class AuthWrapperView extends GetView<AuthController> {
 extension AuthControllerExtension on AuthController {
   void debugPrintAuthState() {
     print('=== AUTH STATE DEBUG ===');
-    print('isLoggedIn: $isLoggedIn');
-    print('isLoading: $isLoading');
-    print('userRole: $userRole');
-    print('currentUser: ${currentUser?.toJson()}');
-    print('rawUserData: $rawUserData');
+    print('isLoggedIn: ${isLoggedIn.value}');
+    print('isLoading: ${isLoading.value}');
+    print('userRole: ${userRole.value}');
+    print('currentUser: ${currentUser.value?.toJson()}');
+    print(
+        'token: ${token.value.isNotEmpty ? "${token.value.substring(0, 20)}..." : "empty"}');
+    print('hasValidRole: $hasValidRole');
     print('========================');
   }
 }

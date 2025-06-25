@@ -21,7 +21,7 @@ class ProfileController extends GetxController {
   void onInit() {
     super.onInit();
     // Use current user from AuthController initially
-    _user.value = _authController.currentUser;
+    _user.value = _authController.currentUser.value;
     loadProfile();
   }
 
@@ -43,7 +43,7 @@ class ProfileController extends GetxController {
       }
     } catch (e) {
       _hasError.value = true;
-      _errorMessage.value = 'An error occurred while loading profile';
+      _errorMessage.value = 'An error occurred while loading profile: $e';
     } finally {
       _isLoading.value = false;
     }
@@ -61,6 +61,7 @@ class ProfileController extends GetxController {
       final result = await _authRepository.updateProfile(
         name: name,
         email: email,
+        phone: phone,
         avatar: avatar,
       );
 
@@ -86,12 +87,16 @@ class ProfileController extends GetxController {
     } catch (e) {
       Get.snackbar(
         'Error',
-        'An error occurred while updating profile',
+        'An error occurred while updating profile: $e',
         snackPosition: SnackPosition.TOP,
       );
       return false;
     } finally {
       _isLoading.value = false;
     }
+  }
+
+  void refresh() {
+    loadProfile();
   }
 }

@@ -31,7 +31,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   void _initializeData() {
-    final user = _authController.currentUser;
+    final user = _authController.currentUser.value;
     if (user != null) {
       _nameController.text = user.name;
       _emailController.text = user.email;
@@ -98,10 +98,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                   width: 3,
                                 ),
                               ),
-                              child: _authController.userAvatar != null
+                              child: _authController.userAvatar.isNotEmpty
                                   ? ClipOval(
                                       child: Image.network(
-                                        _authController.userAvatar!,
+                                        _authController.userAvatar,
                                         width: 120,
                                         height: 120,
                                         fit: BoxFit.cover,
@@ -109,14 +109,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                             (context, error, stackTrace) =>
                                                 Icon(
                                           _getRoleIcon(
-                                              _authController.userRole),
+                                              _authController.userRole.value),
                                           size: 60,
                                           color: AppColors.primary,
                                         ),
                                       ),
                                     )
                                   : Icon(
-                                      _getRoleIcon(_authController.userRole),
+                                      _getRoleIcon(
+                                          _authController.userRole.value),
                                       size: 60,
                                       color: AppColors.primary,
                                     ),
@@ -249,7 +250,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   IconData _getRoleIcon(String role) {
-    switch (role) {
+    switch (role.toLowerCase()) {
       case AppConstants.roleCustomer:
         return Icons.person;
       case AppConstants.roleDriver:
