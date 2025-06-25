@@ -1,25 +1,23 @@
-// lib/features/customer/controllers/home_controller.dart - FIXED PaginatedResponse
+// lib/features/customer/controllers/customer_home_controller.dart - FIXED
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
+import 'package:del_pick/data/repositories/order_repository_extensions.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
-import 'package:del_pick/data/models/base/paginated_response.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
+import 'package:del_pick/app/config/app_config.dart';
+import 'package:del_pick/app/routes/app_routes.dart';
 
-import '../../../app/config/app_config.dart';
-import '../../../app/routes/app_routes.dart';
-import '../../../core/utils/distance_helper.dart';
-
-class HomeController extends GetxController {
+class CustomerHomeController extends GetxController {
   final StoreRepository _storeRepository;
   final OrderRepository _orderRepository;
   final LocationService _locationService;
 
-  HomeController({
+  CustomerHomeController({
     required StoreRepository storeRepository,
     required OrderRepository orderRepository,
     required LocationService locationService,
@@ -27,7 +25,7 @@ class HomeController extends GetxController {
         _orderRepository = orderRepository,
         _locationService = locationService;
 
-  // ✅ Separate loading states for better UX
+  // Observable states
   final RxBool _isLoadingStores = false.obs;
   final RxBool _isLoadingOrders = false.obs;
   final RxList<StoreModel> _nearbyStores = <StoreModel>[].obs;
@@ -39,7 +37,7 @@ class HomeController extends GetxController {
   final RxString _currentAddress = 'Institut Teknologi Del'.obs;
   final Rx<Position?> _userLocation = Rx<Position?>(null);
 
-  // ✅ Cache timers untuk prevent multiple calls
+  // Cache management
   DateTime? _lastStoresFetch;
   DateTime? _lastOrdersFetch;
   static const Duration _cacheTimeout = Duration(minutes: 5);
@@ -66,14 +64,13 @@ class HomeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _initializeHomeData();
+  }
 
-    // ✅ IMMEDIATE: Set greeting tanpa delay
+  // Initialize home data
+  void _initializeHomeData() {
     _setGreeting();
-
-    // ✅ IMMEDIATE: Set default location
     _setDefaultLocation();
-
-    // ✅ BACKGROUND: Load data secara asynchronous
     _loadDataInBackground();
   }
 
@@ -105,17 +102,17 @@ class HomeController extends GetxController {
     _hasLocation.value = true;
   }
 
-  // ✅ Load data di background tanpa block UI
-  void _loadDataInBackground() async {
-    // Start loading location in background
+  // Background data loading with proper staggering
+  void _loadDataInBackground() {
+    // Get location first
     _getCurrentLocationInBackground();
 
-    // Load essential data with staggered loading
-    Future.delayed(const Duration(milliseconds: 100), () {
+    // Staggered loading - FIXED: Don't assign void functions
+    Future.delayed(const Duration(milliseconds: 100)).then((_) {
       _loadStoresInBackground();
     });
 
-    Future.delayed(const Duration(milliseconds: 300), () {
+    Future.delayed(const Duration(milliseconds: 300)).then((_) {
       _loadOrdersInBackground();
     });
   }
@@ -127,93 +124,81 @@ class HomeController extends GetxController {
         _userLocation.value = position;
         _hasLocation.value = true;
 
-        // Refresh stores with real location if needed
-        if (_nearbyStores.isEmpty) {
-          _loadStoresInBackground();
-        }
+        // Update address based on location
+        await _updateAddressFromLocation(position);
       }
     } catch (e) {
-      // Keep default location if error
       print('Location error (using default): $e');
     }
   }
 
-  // ✅ OPTIMIZED: Load stores with cache check
-  void _loadStoresInBackground() async {
-    // Check cache
-    if (_shouldUseCachedStores()) {
-      return;
+  Future<void> _updateAddressFromLocation(Position position) async {
+    try {
+      // You can implement reverse geocoding here if needed
+      // For now, keep default address
+      _currentAddress.value = 'Institut Teknologi Del';
+    } catch (e) {
+      print('Reverse geocoding error: $e');
     }
+  }
+
+  // Load stores using correct repository method
+  Future<void> _loadStoresInBackground() async {
+    if (_shouldUseCachedStores()) return;
 
     _isLoadingStores.value = true;
+    _clearError();
 
     try {
-      // Try nearby stores first (limit 5 for home screen)
       final result = await _storeRepository.getAllStores(
-        page: 1,
-        limit: 5,
+        params: {
+          'page': 1,
+          'limit': 5,
+          'latitude': customerLatitude,
+          'longitude': customerLongitude,
+        },
       );
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items instead of .data
-        var stores = result.data!.items;
+        var stores = result.data!;
 
-        // Calculate distances if location available
+        // Calculate distances and filter by proximity
         if (_userLocation.value != null) {
-          stores = stores.map((store) {
-            if (store.latitude != null && store.longitude != null) {
-              final distance = DistanceHelper.calculateDistance(
-                _userLocation.value!.latitude,
-                _userLocation.value!.longitude,
-                store.latitude!,
-                store.longitude!,
-              );
-              return store.copyWith(distance: distance);
-            }
-            return store.copyWith(distance: 9999.0);
-          }).toList();
-
-          // Sort by distance
-          stores.sort((a, b) {
-            final distanceA = a.distance ?? 9999.0;
-            final distanceB = b.distance ?? 9999.0;
-            return distanceA.compareTo(distanceB);
-          });
+          stores = _processStoresWithDistance(stores);
         }
 
         _nearbyStores.value = stores.take(5).toList();
         _lastStoresFetch = DateTime.now();
+      } else {
+        _setError(result.errorMessage ?? 'Failed to load stores');
       }
     } catch (e) {
+      _setError('Failed to load nearby stores');
       print('Error loading stores: $e');
     } finally {
       _isLoadingStores.value = false;
     }
   }
 
-  // ✅ OPTIMIZED: Load orders with cache check
-  void _loadOrdersInBackground() async {
-    // Check cache
-    if (_shouldUseCachedOrders()) {
-      return;
-    }
+  // Load orders using correct repository method
+  Future<void> _loadOrdersInBackground() async {
+    if (_shouldUseCachedOrders()) return;
 
     _isLoadingOrders.value = true;
 
     try {
-      final result = await _orderRepository.getOrdersByUser(
-        params: {'limit': 3, 'page': 1},
+      // Use getUserOrders method from repository
+      final result = await _orderRepository.getUserOrders(
+        page: 1,
+        limit: 3,
       );
 
       if (result.isSuccess && result.data != null) {
-        if (result.data is PaginatedResponse<OrderModel>) {
-          // ✅ FIXED: Use .items instead of .data
-          _recentOrders.value = (result.data as PaginatedResponse<OrderModel>)
-              .items
-              .take(3)
-              .toList();
-        }
+        // Fix: Access items from PaginatedResponse correctly
+        _recentOrders.value = result.data!.items.take(3).toList();
         _lastOrdersFetch = DateTime.now();
+      } else {
+        print('Error loading orders: ${result.errorMessage}');
       }
     } catch (e) {
       print('Error loading orders: $e');
@@ -222,7 +207,38 @@ class HomeController extends GetxController {
     }
   }
 
-  // ✅ Cache check helpers
+  // Process stores with distance calculation
+  List<StoreModel> _processStoresWithDistance(List<StoreModel> stores) {
+    const maxDistance = 20.0; // km
+
+    // ✅ FIXED: Separate filter and sort operations to avoid void expression
+    final filteredStores = stores
+        .where((store) => store.latitude != null && store.longitude != null)
+        .map((store) {
+          final distance = _calculateDistance(
+            _userLocation.value!.latitude,
+            _userLocation.value!.longitude,
+            store.latitude!,
+            store.longitude!,
+          );
+          return store.copyWith(distance: distance);
+        })
+        .where((store) => (store.distance ?? 0) <= maxDistance)
+        .toList();
+
+    // Sort separately
+    filteredStores.sort((a, b) => (a.distance ?? 0).compareTo(b.distance ?? 0));
+
+    return filteredStores;
+  }
+
+  // Calculate distance using Haversine formula
+  double _calculateDistance(
+      double lat1, double lon1, double lat2, double lon2) {
+    return Geolocator.distanceBetween(lat1, lon1, lat2, lon2) / 1000; // km
+  }
+
+  // Cache management
   bool _shouldUseCachedStores() {
     return _lastStoresFetch != null &&
         _nearbyStores.isNotEmpty &&
@@ -235,31 +251,109 @@ class HomeController extends GetxController {
         DateTime.now().difference(_lastOrdersFetch!) < _cacheTimeout;
   }
 
-  // ✅ OPTIMIZED: Refresh with cache invalidation
+  // Error management
+  void _setError(String message) {
+    _errorMessage.value = message;
+    _hasError.value = true;
+  }
+
+  void _clearError() {
+    _errorMessage.value = '';
+    _hasError.value = false;
+  }
+
+  // Public methods
   Future<void> refreshData() async {
     _lastStoresFetch = null;
     _lastOrdersFetch = null;
+    _clearError();
 
-    _loadStoresInBackground();
-    _loadOrdersInBackground();
+    await _loadStoresInBackground();
+    await _loadOrdersInBackground();
   }
 
-  // Navigation methods (unchanged)
-  void navigateToStores() => Get.toNamed(Routes.STORE_LIST);
-  void navigateToOrders() => Get.toNamed(Routes.ORDER_HISTORY);
-  void navigateToStoreDetail(int storeId) =>
-      Get.toNamed(Routes.STORE_DETAIL, arguments: {'storeId': storeId});
-  void navigateToOrderDetail(int orderId) =>
-      Get.toNamed(Routes.CUSTOMER_ORDER_DETAIL,
-          arguments: {'orderId': orderId});
-  void navigateToCart() => Get.toNamed(Routes.CART);
-  void navigateToProfile() => Get.toNamed(Routes.PROFILE);
+  Future<void> refreshLocation() async {
+    _getCurrentLocationInBackground();
+    await refreshData();
+  }
 
+  // Navigation methods
+  void navigateToStores() => Get.toNamed(Routes.STORE_LIST);
+
+  void navigateToOrders() => Get.toNamed(Routes.ORDER_HISTORY);
+
+  void navigateToStoreDetail(int storeId) =>
+      Get.toNamed('${Routes.STORE_DETAIL}/$storeId');
+
+  void navigateToOrderDetail(int orderId) =>
+      Get.toNamed('${Routes.CUSTOMER_ORDER_DETAIL}/$orderId');
+
+  void navigateToCart() => Get.toNamed(Routes.CART);
+
+  void navigateToProfile() => Get.toNamed(Routes.CUSTOMER_PROFILE);
+
+  void navigateToOrderTracking(int orderId) =>
+      Get.toNamed('${Routes.ORDER_TRACKING}/$orderId');
+
+  void navigateToSearch() => Get.toNamed(Routes.SEARCH);
+
+  // Utility methods
   Map<String, dynamic> getCustomerLocation() {
     return {
       'latitude': customerLatitude,
       'longitude': customerLongitude,
       'address': _currentAddress.value,
+      'hasRealLocation': _userLocation.value != null,
     };
+  }
+
+  String getDistanceText(double? distance) {
+    if (distance == null) return '';
+    if (distance < 1) {
+      return '${(distance * 1000).toInt()}m';
+    }
+    return '${distance.toStringAsFixed(1)}km';
+  }
+
+  bool isStoreOpen(StoreModel store) {
+    if (store.openTime == null || store.closeTime == null) {
+      return store.status == 'active';
+    }
+    // ✅ FIXED: Check if StoreModel has isOpenNow method, otherwise use simple check
+    try {
+      return store.isOpenNow() && store.status == 'active';
+    } catch (e) {
+      // Fallback if isOpenNow method doesn't exist
+      return store.status == 'active';
+    }
+  }
+
+  String getStoreStatusText(StoreModel store) {
+    if (store.status != 'active') return 'Closed';
+    if (isStoreOpen(store)) return 'Open';
+    return 'Closed';
+  }
+
+  // Order status helpers based on backend order statuses
+  List<OrderModel> get activeOrders =>
+      _recentOrders.where((order) => order.isActive).toList();
+
+  List<OrderModel> get trackableOrders =>
+      _recentOrders.where((order) => order.canTrack).toList();
+
+  bool get hasActiveOrders => activeOrders.isNotEmpty;
+
+  // Store filtering helpers
+  List<StoreModel> get openStores =>
+      _nearbyStores.where((store) => isStoreOpen(store)).toList();
+
+  List<StoreModel> get nearestStores => _nearbyStores.take(3).toList();
+
+  bool get hasOpenStores => openStores.isNotEmpty;
+
+  @override
+  void onClose() {
+    // Clean up any timers or subscriptions if needed
+    super.onClose();
   }
 }

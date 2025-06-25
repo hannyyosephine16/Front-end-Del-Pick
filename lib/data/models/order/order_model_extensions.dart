@@ -1,4 +1,4 @@
-// lib/data/models/order/order_model_extensions.dart - FIXED VERSION
+// lib/data/models/order/order_model_extensions.dart - BEST VERSION (Backend Compatible)
 import 'package:flutter/material.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
@@ -24,12 +24,10 @@ extension OrderModelExtensions on OrderModel {
 
   // ✅ Additional action capabilities
   bool get canReview {
-    // Can only review delivered orders
     return orderStatus == OrderStatusConstants.delivered;
   }
 
   bool get canReorder {
-    // Can reorder delivered or cancelled orders
     return orderStatus == OrderStatusConstants.delivered ||
         orderStatus == OrderStatusConstants.cancelled ||
         orderStatus == OrderStatusConstants.rejected;
@@ -45,8 +43,7 @@ extension OrderModelExtensions on OrderModel {
 
   // ✅ Total calculations - Backend Compatible
   double get grandTotal => totalAmount + deliveryFee;
-  // Alias for compatibility
-  double get total => grandTotal;
+  double get total => grandTotal; // Alias for compatibility
 
   String get formattedTotal =>
       'Rp ${grandTotal.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (Match m) => '${m[1]}.')}';
@@ -84,12 +81,11 @@ extension OrderModelExtensions on OrderModel {
     }
   }
 
-  // ✅ Timing helpers - Backend Compatible (FIXED DateTime parsing)
+  // ✅ Timing helpers - Backend Compatible
   String? get estimatedTimeRemaining {
     if (estimatedDeliveryTime == null) return null;
 
     final now = DateTime.now();
-    // ✅ FIXED: estimatedDeliveryTime is already DateTime, no need to parse
     final estimatedTime = estimatedDeliveryTime!;
 
     if (estimatedTime.isBefore(now)) {
@@ -111,13 +107,12 @@ extension OrderModelExtensions on OrderModel {
     }
 
     final now = DateTime.now();
-    // ✅ FIXED: estimatedDeliveryTime is already DateTime
     final estimatedTime = estimatedDeliveryTime!;
 
     return now.isAfter(estimatedTime);
   }
 
-  // ✅ FIXED: createdAt is already DateTime
+  // ✅ Date formatting helpers
   String get formattedCreatedAt {
     final now = DateTime.now();
     final difference = now.difference(createdAt);
@@ -133,7 +128,6 @@ extension OrderModelExtensions on OrderModel {
     }
   }
 
-  // ✅ Date formatting helpers
   String get formattedDate {
     return DateFormat('MMM dd, yyyy').format(createdAt);
   }
@@ -146,12 +140,10 @@ extension OrderModelExtensions on OrderModel {
     return DateFormat('HH:mm').format(createdAt);
   }
 
-  // ✅ Driver information - Backend Compatible (FIXED driver access)
+  // ✅ Driver information - Backend Compatible
   bool get hasDriver => driverId != null && driver != null;
 
-  // ✅ FIXED: Access driver name correctly from backend structure
   String get driverName {
-    // Backend structure: driver.user.name (not driver.user.user.name)
     return driver?.name ?? 'No Driver Assigned';
   }
 
@@ -161,8 +153,7 @@ extension OrderModelExtensions on OrderModel {
     return items!.fold(0, (sum, item) => sum + item.quantity);
   }
 
-  // ✅ ADDED: Alias for compatibility
-  int get totalItems => itemsCount;
+  int get totalItems => itemsCount; // Alias for compatibility
 
   String get itemsSummary {
     if (items == null || items!.isEmpty) return 'No items';
@@ -174,6 +165,11 @@ extension OrderModelExtensions on OrderModel {
       final totalItems = itemsCount;
       return '$totalItems items from ${items!.length} products';
     }
+  }
+
+  // ✅ Delivery address - Static sesuai backend (destinasi fixed)
+  String get deliveryAddress {
+    return 'Institut Teknologi Del, Laguboti, Toba, North Sumatra, Indonesia';
   }
 
   // ✅ Priority and attention helpers
@@ -237,21 +233,14 @@ extension OrderModelExtensions on OrderModel {
 
   // ✅ Tracking updates helper - Backend Compatible
   List<Map<String, dynamic>> get formattedTrackingUpdates {
-    if (trackingUpdates == null) return [];
-
-    return trackingUpdates!.map((update) {
-      if (update is Map<String, dynamic>) {
-        return Map<String, dynamic>.from(update);
-      }
-      return <String, dynamic>{};
-    }).toList();
+    return trackingUpdates;
   }
 
   bool get hasTrackingUpdates {
-    return trackingUpdates != null && trackingUpdates!.isNotEmpty;
+    return trackingUpdates.isNotEmpty;
   }
 
-  // ✅ Additional helpers for UI
+  // ✅ Status description for UI
   String get statusDescription {
     switch (orderStatus) {
       case 'pending':
@@ -295,6 +284,78 @@ extension OrderModelExtensions on OrderModel {
         return Icons.block;
       default:
         return Icons.help_outline;
+    }
+  }
+
+  // ✅ Special getters for customer experience
+  bool get isAwaitingStoreApproval => isPending;
+  bool get isBeingPrepared => isPreparing;
+  bool get isWaitingForDriver => isReadyForPickup;
+  bool get isInDelivery => isOnDelivery;
+  bool get isSuccessfullyCompleted => isDelivered;
+  bool get isFailed => isCancelled || isRejected;
+
+  // ✅ Time estimates
+  String? get estimatedPickupTimeFormatted {
+    if (estimatedPickupTime == null) return null;
+    return DateFormat('HH:mm').format(estimatedPickupTime!);
+  }
+
+  String? get estimatedDeliveryTimeFormatted {
+    if (estimatedDeliveryTime == null) return null;
+    return DateFormat('HH:mm').format(estimatedDeliveryTime!);
+  }
+
+  // ✅ Payment status (if needed in future)
+  bool get isPaid => true; // Assuming all orders are paid (cash on delivery)
+
+  String get paymentStatus => 'Cash on Delivery';
+
+  // ✅ Order workflow helpers
+  bool get requiresStoreAction => isPending;
+  bool get requiresDriverAction => isReadyForPickup && !hasDriver;
+  bool get requiresCustomerAction => canReview;
+
+  // ✅ Notification helpers
+  String get notificationTitle {
+    switch (orderStatus) {
+      case 'confirmed':
+        return 'Order Confirmed';
+      case 'preparing':
+        return 'Order Being Prepared';
+      case 'ready_for_pickup':
+        return 'Order Ready';
+      case 'on_delivery':
+        return 'Order On The Way';
+      case 'delivered':
+        return 'Order Delivered';
+      case 'cancelled':
+        return 'Order Cancelled';
+      case 'rejected':
+        return 'Order Rejected';
+      default:
+        return 'Order Update';
+    }
+  }
+
+  String get notificationMessage {
+    switch (orderStatus) {
+      case 'confirmed':
+        return 'Your order has been confirmed by $storeName';
+      case 'preparing':
+        return '$storeName is preparing your order';
+      case 'ready_for_pickup':
+        return 'Your order is ready for pickup';
+      case 'on_delivery':
+        return 'Your order is on the way';
+      case 'delivered':
+        return 'Your order has been delivered successfully';
+      case 'cancelled':
+        return 'Your order has been cancelled';
+      case 'rejected':
+        return 'Your order was rejected by $storeName';
+      default:
+        return 'Your order status has been updated';
     }
   }
 }

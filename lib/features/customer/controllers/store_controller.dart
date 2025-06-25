@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
-import 'package:del_pick/data/models/base/base_model.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/core/services/external/location_service.dart';
 import 'package:del_pick/core/utils/distance_helper.dart';
@@ -77,7 +76,7 @@ class StoreController extends GetxController {
     loadStores();
   }
 
-  // ✅ MAIN OPTIMIZED METHOD: Simple and fast
+  // ✅ MAIN OPTIMIZED METHOD: Fixed to match backend response
   Future<void> loadStores({bool isRefresh = false}) async {
     // Check cache unless refreshing
     if (!isRefresh && _shouldUseCache()) {
@@ -88,15 +87,12 @@ class StoreController extends GetxController {
     _hasError.value = false;
 
     try {
-      // Use simple getAllStores with reasonable limit
-      final result = await _storeRepository.getAllStores(
-        page: 1,
-        limit: 50, // Reasonable limit for mobile
-      );
+      // ✅ FIXED: Use getAllStores without page/limit parameters
+      final result = await _storeRepository.getAllStores();
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items instead of .data
-        var storesList = result.data!.items;
+        // ✅ FIXED: result.data is already List<StoreModel>
+        var storesList = result.data!;
 
         // Calculate distances and sort
         storesList = _calculateDistancesAndSort(storesList);
@@ -188,7 +184,6 @@ class StoreController extends GetxController {
     loadStores();
   }
 
-  // ✅ SIMPLIFIED: Quick sort methods
   void sortStoresByDistance() {
     _currentSortBy.value = 'distance';
     final sortedStores = List<StoreModel>.from(_stores);
@@ -211,7 +206,7 @@ class StoreController extends GetxController {
   }
 
   void filterOpenStores() {
-    final openStores = _stores.where((store) => store.isOpen ?? false).toList();
+    final openStores = _stores.where((store) => store.isOpen).toList();
     _stores.value = openStores;
   }
 

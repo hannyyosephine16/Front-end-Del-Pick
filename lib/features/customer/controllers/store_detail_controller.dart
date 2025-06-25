@@ -55,43 +55,20 @@ class StoreDetailController extends GetxController {
     _errorMessage.value = '';
 
     try {
-      // Try getStoreById first if it exists
-      try {
-        final directResult = await _storeRepository.getStoreById(storeId);
-        if (directResult.isSuccess && directResult.data != null) {
-          _store.value = directResult.data!;
-          print('Loaded store directly by ID');
-          return;
-        }
-      } catch (e) {
-        print('getStoreById not available or failed, trying getAllStores: $e');
-      }
-
-      // Fallback: Get all stores and find the one we need
-      final result = await _storeRepository.getAllStores();
+      // Sesuai dengan response backend GET /stores/{id}
+      final result = await _storeRepository.getStoreById(storeId);
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items instead of .data
-        List<StoreModel> stores = result.data!.items;
-
-        // Find the store with matching ID
-        final foundStore =
-            stores.firstWhereOrNull((store) => store.id == storeId);
-
-        if (foundStore != null) {
-          _store.value = foundStore;
-          print('Found store in getAllStores result');
-        } else {
-          _hasError.value = true;
-          _errorMessage.value = 'Store not found';
-        }
+        _store.value = result.data!;
+        print('Store loaded successfully: ${_store.value!.name}');
       } else {
         _hasError.value = true;
-        _errorMessage.value = result.message ?? 'Failed to fetch store details';
+        _errorMessage.value = result.message ?? 'Gagal memuat detail toko';
+        print('Failed to load store: ${result.message}');
       }
     } catch (e) {
       _hasError.value = true;
-      _errorMessage.value = 'An unexpected error occurred: $e';
+      _errorMessage.value = 'Terjadi kesalahan: ${e.toString()}';
       print('Error in fetchStoreDetail: $e');
     } finally {
       _isLoading.value = false;
@@ -102,48 +79,78 @@ class StoreDetailController extends GetxController {
     _isLoadingMenu.value = true;
 
     try {
+      // Sesuai dengan endpoint GET /menu/store/{store_id}
       final result = await _menuRepository.getMenuItemsByStoreId(storeId);
 
       if (result.isSuccess && result.data != null) {
-        // Handle different response types from menu repository
-        if (result.data is PaginatedResponse<MenuItemModel>) {
-          // ✅ FIXED: Use .items instead of .data
+        // Handle response from menu endpoint
+        if (result.data is List<MenuItemModel>) {
+          _menuItems.value = result.data as List<MenuItemModel>;
+        } else if (result.data is PaginatedResponse<MenuItemModel>) {
           _menuItems.value =
               (result.data as PaginatedResponse<MenuItemModel>).items;
-        } else if (result.data is List<MenuItemModel>) {
-          _menuItems.value = result.data as List<MenuItemModel>;
         } else {
+          // Handle raw list response
           _menuItems.clear();
         }
-        print('Loaded ${_menuItems.length} menu items');
+        print('Loaded ${_menuItems.length} menu items for store $storeId');
       } else {
-        // Don't show error for menu items, just empty list
+        // Tidak ada menu item atau gagal load - bukan error kritik
         _menuItems.clear();
-        print('No menu items found or failed to load: ${result.message}');
+        print('No menu items found for store $storeId: ${result.message}');
       }
     } catch (e) {
-      // Silent error for menu items
+      // Silent error untuk menu items
       _menuItems.clear();
-      print('Error loading menu items: $e');
+      print('Error loading menu items for store $storeId: $e');
     } finally {
       _isLoadingMenu.value = false;
     }
   }
 
   Future<void> addToCart(MenuItemModel menuItem, {int quantity = 1}) async {
-    if (store == null) return;
-
-    final success = await _cartController.addToCart(
-      menuItem,
-      store!,
-      quantity: quantity,
-    );
-
-    if (success) {
+    if (store == null) {
       Get.snackbar(
-        'Added to Cart',
-        '${menuItem.name} has been added to your cart',
+        'Error',
+        'Toko tidak ditemukan',
         snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    try {
+      final success = await _cartController.addToCart(
+        menuItem,
+        store!,
+        quantity: quantity,
+      );
+
+      if (success) {
+        Get.snackbar(
+          'Berhasil',
+          '${menuItem.name} telah ditambahkan ke keranjang',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+      } else {
+        Get.snackbar(
+          'Gagal',
+          'Gagal menambahkan item ke keranjang',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Terjadi kesalahan: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
       );
     }
   }
@@ -162,9 +169,30 @@ class StoreDetailController extends GetxController {
 
   Future<void> refreshStore() async {
     if (store != null) {
-      await fetchStoreDetail(store!.id);
-      await fetchMenuItems(store!.id);
+      await Future.wait([
+        fetchStoreDetail(store!.id),
+        fetchMenuItems(store!.id),
+      ]);
     }
+  }
+
+  void retryLoadStore() {
+    if (store != null) {
+      fetchStoreDetail(store!.id);
+    } else {
+      // Jika store null, ambil dari arguments
+      final arguments = Get.arguments as Map<String, dynamic>?;
+      if (arguments != null && arguments['storeId'] != null) {
+        final storeId = arguments['storeId'] as int;
+        fetchStoreDetail(storeId);
+      }
+    }
+  }
+
+  @override
+  void onClose() {
+    // Cleanup jika diperlukan
+    super.onClose();
   }
 }
 
@@ -188,59 +216,148 @@ class _AddToCartDialogState extends State<AddToCartDialog> {
   final notesController = TextEditingController();
 
   @override
+  void dispose() {
+    notesController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.menuItem.name),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(widget.menuItem.formattedPrice),
-          if (widget.menuItem.description != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              child: Text(widget.menuItem.description!),
-            ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              IconButton(
-                onPressed:
-                    quantity > 1 ? () => setState(() => quantity--) : null,
-                icon: const Icon(Icons.remove),
+      title: Text(
+        widget.menuItem.name,
+        style: const TextStyle(
+          fontSize: 18,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      content: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Harga
+            Text(
+              widget.menuItem.formattedPrice,
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: Colors.green,
               ),
+            ),
+
+            // Deskripsi
+            if (widget.menuItem.description != null &&
+                widget.menuItem.description!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Text('$quantity'),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                child: Text(
+                  widget.menuItem.description!,
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
               ),
-              IconButton(
-                onPressed: () => setState(() => quantity++),
-                icon: const Icon(Icons.add),
+
+            const SizedBox(height: 16),
+
+            // Quantity selector
+            const Text(
+              'Jumlah:',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w500,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          TextField(
-            controller: notesController,
-            decoration: const InputDecoration(
-              labelText: 'Special instructions (optional)',
-              border: OutlineInputBorder(),
             ),
-            maxLines: 2,
-          ),
-        ],
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    onPressed:
+                        quantity > 1 ? () => setState(() => quantity--) : null,
+                    icon: const Icon(Icons.remove),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
+                  ),
+                ),
+                Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Text(
+                    '$quantity',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: IconButton(
+                    onPressed: () => setState(() => quantity++),
+                    icon: const Icon(Icons.add),
+                    constraints: const BoxConstraints(
+                      minWidth: 40,
+                      minHeight: 40,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // Notes field
+            TextField(
+              controller: notesController,
+              decoration: const InputDecoration(
+                labelText: 'Catatan khusus (opsional)',
+                hintText: 'Contoh: Tidak pedas, tanpa bawang...',
+                border: OutlineInputBorder(),
+                contentPadding: EdgeInsets.all(12),
+              ),
+              maxLines: 2,
+              maxLength: 100,
+            ),
+          ],
+        ),
       ),
       actions: [
         TextButton(
           onPressed: () => Get.back(),
-          child: const Text('Cancel'),
+          child: const Text('Batal'),
         ),
         ElevatedButton(
           onPressed: () => widget.onAddToCart(
             quantity,
-            notesController.text.isEmpty ? null : notesController.text,
+            notesController.text.trim().isEmpty
+                ? null
+                : notesController.text.trim(),
           ),
-          child: const Text('Add to Cart'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.blue,
+            foregroundColor: Colors.white,
+          ),
+          child: const Text('Tambah ke Keranjang'),
         ),
       ],
     );

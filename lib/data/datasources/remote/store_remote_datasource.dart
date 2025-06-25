@@ -7,6 +7,7 @@ class StoreRemoteDataSource {
 
   StoreRemoteDataSource(this._apiService);
 
+  // ✅ Get all stores - tetap menggunakan endpoint yang sama
   Future<Response> getAllStores({Map<String, dynamic>? params}) async {
     return await _apiService.get(
       ApiEndpoints.getAllStores,
@@ -14,6 +15,7 @@ class StoreRemoteDataSource {
     );
   }
 
+  // ✅ Get nearby stores - menggunakan endpoint yang sama dengan parameter location
   Future<Response> getNearbyStores({
     required double latitude,
     required double longitude,
@@ -28,5 +30,10 @@ class StoreRemoteDataSource {
       ApiEndpoints.getAllStores,
       queryParameters: queryParams,
     );
+  }
+
+  // ✅ Get store by ID
+  Future<Response> getStoreById(int storeId) async {
+    return await _apiService.get('${ApiEndpoints.getStoreById}');
   }
 }
