@@ -1,3 +1,4 @@
+// lib/app/bindings/auth_binding.dart - CORRECT VERSION
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/auth_repository.dart';
 import 'package:del_pick/data/providers/auth_provider.dart';
@@ -24,23 +25,34 @@ class AuthBinding extends Bindings {
       ),
     );
 
-    // Repository
-    Get.lazyPut<AuthRepository>(() => AuthRepository(Get.find()));
+    // Repository - CORRECT: AuthRepository constructor needs 2 positional parameters
+    // AuthRepository(this._remoteDataSource, this._localDataSource)
+    Get.lazyPut<AuthRepository>(
+      () => AuthRepository(
+        Get.find<AuthRemoteDataSource>(), // Parameter 1: _remoteDataSource
+        Get.find<AuthLocalDataSource>(), // Parameter 2: _localDataSource
+      ),
+    );
 
-    // Controllers - Fix the constructor parameter name
+    // Controllers
     Get.lazyPut<AuthController>(
-        () => AuthController(Get.find<AuthRepository>()));
+      () => AuthController(Get.find<AuthRepository>()),
+    );
+
     Get.lazyPut<LoginController>(
-        () => LoginController(Get.find<AuthRepository>()));
+      () => LoginController(Get.find<AuthRepository>()),
+    );
+
     Get.lazyPut<RegisterController>(
-        () => RegisterController(Get.find<AuthRepository>()));
+      () => RegisterController(Get.find<AuthRepository>()),
+    );
+
     Get.lazyPut<ForgetPasswordController>(
       () => ForgetPasswordController(Get.find<AuthRepository>()),
     );
-    // Get.lazyPut<ProfileController>(() => ProfileController());
 
-// ProfileController perlu AuthRepository
-//     Get.lazyPut<ProfileController>(
-//         () => ProfileController(Get.find<AuthRepository>()));
+    // Get.lazyPut<ProfileController>(
+    //       () => ProfileController(Get.find<AuthRepository>()),
+    // );
   }
 }

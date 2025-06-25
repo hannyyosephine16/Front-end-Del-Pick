@@ -1,4 +1,3 @@
-// lib/data/providers/driver_provider.dart - FIXED VERSION
 import 'package:del_pick/data/datasources/remote/driver_remote_datasource.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
 import 'package:del_pick/data/models/driver/driver_request_model.dart';
@@ -11,11 +10,9 @@ import 'package:dio/dio.dart';
 class DriverProvider {
   final DriverRemoteDataSource _remoteDataSource;
 
-  DriverProvider({
-    required DriverRemoteDataSource remoteDataSource,
-  }) : _remoteDataSource = remoteDataSource;
+  DriverProvider(this._remoteDataSource);
 
-  // ✅ Update driver status - Backend: PATCH /drivers/:id/status
+  /// Update driver status - PATCH /drivers/:id/status
   Future<Result<DriverModel>> updateDriverStatus(
     int driverId,
     String status,
@@ -31,51 +28,40 @@ class DriverProvider {
         final driver = DriverModel.fromJson(driverData);
         return Result.success(driver);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message =
-            responseData?['message'] as String? ?? 'Failed to update status';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to update driver status');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Update driver location - Backend: PATCH /drivers/:id/location
+  /// Update driver location - PATCH /drivers/:id/location
   Future<Result<Map<String, dynamic>>> updateDriverLocation(
     int driverId,
     double latitude,
     double longitude,
   ) async {
     try {
-      final data = {
-        'latitude': latitude,
-        'longitude': longitude,
-      };
-
+      final data = {'latitude': latitude, 'longitude': longitude};
       final response =
           await _remoteDataSource.updateDriverLocation(driverId, data);
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final locationData = responseData['data'] as Map<String, dynamic>;
-        return Result.success(locationData);
+        return Result.success(responseData['data'] as Map<String, dynamic>);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message =
-            responseData?['message'] as String? ?? 'Failed to update location';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to update driver location');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Get driver profile - Backend: GET /auth/profile (for driver user)
+  /// Get driver profile - GET /auth/profile
   Future<Result<UserModel>> getDriverProfile() async {
     try {
       final response = await _remoteDataSource.getDriverProfile();
@@ -86,22 +72,18 @@ class DriverProvider {
         final user = UserModel.fromJson(userData);
         return Result.success(user);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message =
-            responseData?['message'] as String? ?? 'Failed to get profile';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to get driver profile');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Update driver profile - Backend: PUT /auth/profile
+  /// Update driver profile - PUT /auth/profile
   Future<Result<UserModel>> updateDriverProfile(
-    Map<String, dynamic> data,
-  ) async {
+      Map<String, dynamic> data) async {
     try {
       final response = await _remoteDataSource.updateDriverProfile(data);
 
@@ -111,19 +93,16 @@ class DriverProvider {
         final user = UserModel.fromJson(userData);
         return Result.success(user);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message =
-            responseData?['message'] as String? ?? 'Failed to update profile';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to update driver profile');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Get driver requests - Backend: GET /driver-requests
+  /// Get driver requests - GET /driver-requests
   Future<Result<PaginatedResponse<DriverRequestModel>>> getDriverRequests({
     int? page,
     int? limit,
@@ -145,19 +124,16 @@ class DriverProvider {
         );
         return Result.success(paginatedResponse);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message = responseData?['message'] as String? ??
-            'Failed to get driver requests';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to get driver requests');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Get driver request by ID - Backend: GET /driver-requests/:id
+  /// Get driver request by ID - GET /driver-requests/:id
   Future<Result<DriverRequestModel>> getDriverRequestById(int requestId) async {
     try {
       final response = await _remoteDataSource.getDriverRequestById(requestId);
@@ -168,22 +144,19 @@ class DriverProvider {
         final driverRequest = DriverRequestModel.fromJson(requestData);
         return Result.success(driverRequest);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message =
-            responseData?['message'] as String? ?? 'Driver request not found';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to get driver request');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Respond to driver request - Backend: POST /driver-requests/:id/respond
+  /// Respond to driver request - POST /driver-requests/:id/respond
   Future<Result<DriverRequestModel>> respondToDriverRequest(
     int requestId,
-    String action, // 'accept' or 'reject'
+    String action,
   ) async {
     try {
       final data = {'action': action};
@@ -196,19 +169,16 @@ class DriverProvider {
         final driverRequest = DriverRequestModel.fromJson(requestData);
         return Result.success(driverRequest);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message = responseData?['message'] as String? ??
-            'Failed to respond to request';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to respond to driver request');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Get all drivers (for admin) - Backend: GET /drivers
+  /// Get all drivers (admin only) - GET /drivers
   Future<Result<PaginatedResponse<DriverModel>>> getAllDrivers({
     int? page,
     int? limit,
@@ -231,57 +201,45 @@ class DriverProvider {
         );
         return Result.success(paginatedResponse);
       } else {
-        final responseData = response.data as Map<String, dynamic>?;
-        final message =
-            responseData?['message'] as String? ?? 'Failed to get drivers';
-        return Result.failure(message);
+        return Result.failure(_extractErrorMessage(response.data));
       }
     } on DioException catch (e) {
-      return _handleDioError(e, 'Failed to get drivers');
+      return Result.failure(_handleDioError(e));
     } catch (e) {
       return Result.failure('Unexpected error: ${e.toString()}');
     }
   }
 
-  // ✅ Handle Dio errors with proper backend error parsing
-  Result<T> _handleDioError<T>(DioException e, String defaultMessage) {
+  String _extractErrorMessage(dynamic responseData) {
+    if (responseData is Map<String, dynamic>) {
+      return responseData['message'] ?? 'Unknown error';
+    }
+    return 'Unknown error';
+  }
+
+  String _handleDioError(DioException e) {
     final statusCode = e.response?.statusCode;
     final responseData = e.response?.data as Map<String, dynamic>?;
 
-    // Extract backend error message
-    String errorMessage = defaultMessage;
+    String errorMessage = responseData?['message'] ?? 'Network error';
 
-    if (responseData != null) {
-      if (responseData['message'] != null) {
-        errorMessage = responseData['message'] as String;
-      } else if (responseData['errors'] != null) {
-        final errors = responseData['errors'];
-        if (errors is List && errors.isNotEmpty) {
-          errorMessage = errors.join(', ');
-        } else if (errors is Map) {
-          errorMessage = errors.values.join(', ');
-        }
-      }
-    }
-
-    // Handle specific HTTP status codes
     switch (statusCode) {
       case 400:
-        return Result.failure('Invalid request: $errorMessage');
+        return 'Invalid request: $errorMessage';
       case 401:
-        return Result.failure('Unauthorized: Please login again');
+        return 'Unauthorized: Please login again';
       case 403:
-        return Result.failure('Forbidden: $errorMessage');
+        return 'Forbidden: $errorMessage';
       case 404:
-        return Result.failure('Not found: $errorMessage');
+        return 'Not found: $errorMessage';
       case 422:
-        return Result.failure('Validation error: $errorMessage');
+        return 'Validation error: $errorMessage';
       case 429:
-        return Result.failure('Too many requests. Please try again later');
+        return 'Too many requests. Please try again later';
       case 500:
-        return Result.failure('Server error. Please try again later');
+        return 'Server error. Please try again later';
       default:
-        return Result.failure(errorMessage);
+        return errorMessage;
     }
   }
 }

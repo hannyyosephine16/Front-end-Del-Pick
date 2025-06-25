@@ -1,14 +1,13 @@
-// lib/data/providers/review_provider.dart
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
-import 'package:get/get.dart' as getx;
 
 class ReviewProvider {
-  final ApiService _apiService = getx.Get.find<ApiService>();
+  final ApiService _apiService;
 
-  /// Create review for order (both order and driver review)
-  /// Backend endpoint: POST /orders/{orderId}/review
+  ReviewProvider(this._apiService);
+
+  /// Create review for order - POST /orders/:id/review
   Future<Response> createReview(int orderId, Map<String, dynamic> data) async {
     return await _apiService.post(
       ApiEndpoints.createOrderReview(orderId),
@@ -16,20 +15,20 @@ class ReviewProvider {
     );
   }
 
-  /// Get reviews for a store (if needed in future)
+  /// Get store reviews (if implemented in backend)
   Future<Response> getStoreReviews(int storeId,
       {Map<String, dynamic>? params}) async {
     return await _apiService.get(
-      '/stores/$storeId/reviews', // Custom endpoint if implemented
+      '/stores/$storeId/reviews',
       queryParameters: params,
     );
   }
 
-  /// Get reviews for a driver (if needed in future)
+  /// Get driver reviews (if implemented in backend)
   Future<Response> getDriverReviews(int driverId,
       {Map<String, dynamic>? params}) async {
     return await _apiService.get(
-      '/drivers/$driverId/reviews', // Custom endpoint if implemented
+      '/drivers/$driverId/reviews',
       queryParameters: params,
     );
   }

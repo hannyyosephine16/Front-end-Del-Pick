@@ -1,4 +1,3 @@
-// lib/data/providers/auth_provider.dart - FIXED VERSION
 import 'package:del_pick/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
@@ -16,7 +15,6 @@ class AuthProvider {
   })  : _remoteDataSource = remoteDataSource,
         _localDataSource = localDataSource;
 
-  // ✅ Login - Sesuai backend response format
   Future<Result<LoginResponseModel>> login({
     required String email,
     required String password,
@@ -27,10 +25,8 @@ class AuthProvider {
         password: password,
       );
 
-      // Parse login response model
       final loginResponse = LoginResponseModel.fromJson(loginData);
 
-      // Save token and user data locally
       await _localDataSource.saveAuthToken(loginResponse.token);
       await _localDataSource.saveUser(loginResponse.user);
 
@@ -42,7 +38,6 @@ class AuthProvider {
     }
   }
 
-  // ✅ Register - Sesuai backend response
   Future<Result<UserModel>> register({
     required String name,
     required String email,
@@ -68,13 +63,11 @@ class AuthProvider {
     }
   }
 
-  // ✅ Get Profile - Returns UserModel
   Future<Result<UserModel>> getProfile() async {
     try {
       final profileData = await _remoteDataSource.getProfile();
       final user = UserModel.fromJson(profileData);
 
-      // Update local storage
       await _localDataSource.saveUser(user);
 
       return Result.success(user);
@@ -85,7 +78,6 @@ class AuthProvider {
     }
   }
 
-  // ✅ Update Profile - Returns UserModel
   Future<Result<UserModel>> updateProfile({
     String? name,
     String? email,
@@ -101,8 +93,6 @@ class AuthProvider {
       );
 
       final user = UserModel.fromJson(updatedData);
-
-      // Update local storage
       await _localDataSource.saveUser(user);
 
       return Result.success(user);
@@ -113,14 +103,10 @@ class AuthProvider {
     }
   }
 
-  // ✅ Update FCM Token
   Future<Result<void>> updateFcmToken(String fcmToken) async {
     try {
       await _remoteDataSource.updateFcmToken(fcmToken);
-
-      // Update local storage FCM token
       await _localDataSource.updateUserProfile(fcmToken: fcmToken);
-
       return Result.success(null);
     } on AppException catch (e) {
       return Result.failure(e.message);
@@ -129,7 +115,6 @@ class AuthProvider {
     }
   }
 
-  // ✅ Forgot Password
   Future<Result<void>> forgotPassword(String email) async {
     try {
       await _remoteDataSource.forgotPassword(email);
@@ -141,7 +126,6 @@ class AuthProvider {
     }
   }
 
-  // ✅ Reset Password
   Future<Result<void>> resetPassword({
     required String token,
     required String password,
@@ -159,28 +143,20 @@ class AuthProvider {
     }
   }
 
-  // ✅ Logout
   Future<Result<void>> logout() async {
     try {
-      // Call remote logout (clear server session if needed)
       await _remoteDataSource.logout();
-
-      // Clear local data
       await _localDataSource.clearAuthData();
-
       return Result.success(null);
     } on AppException catch (e) {
-      // Even if remote logout fails, clear local data
       await _localDataSource.clearAuthData();
       return Result.failure(e.message);
     } catch (e) {
-      // Even if remote logout fails, clear local data
       await _localDataSource.clearAuthData();
       return Result.failure('Logout failed: ${e.toString()}');
     }
   }
 
-  // ✅ Check if user is logged in
   Future<bool> isLoggedIn() async {
     try {
       return await _localDataSource.hasValidToken();
@@ -189,7 +165,6 @@ class AuthProvider {
     }
   }
 
-  // ✅ Get current user from local storage
   Future<UserModel?> getCurrentUser() async {
     try {
       return await _localDataSource.getUser();
@@ -198,7 +173,6 @@ class AuthProvider {
     }
   }
 
-  // ✅ Get auth token
   Future<String?> getAuthToken() async {
     try {
       return await _localDataSource.getAuthToken();
@@ -207,12 +181,11 @@ class AuthProvider {
     }
   }
 
-  // ✅ Clear all auth data (for emergency logout)
   Future<void> clearAllAuthData() async {
     try {
       await _localDataSource.clearAuthData();
     } catch (e) {
-      // Silent fail for cleanup
+      // Silent fail
     }
   }
 }

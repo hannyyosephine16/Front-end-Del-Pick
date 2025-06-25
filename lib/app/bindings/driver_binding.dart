@@ -1,4 +1,4 @@
-// lib/app/bindings/driver_binding.dart - FIXED VERSION
+// lib/app/bindings/driver_binding.dart - CORRECTED VERSION
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/tracking_repository.dart';
 import 'package:del_pick/data/repositories/driver_repository.dart';
@@ -8,7 +8,6 @@ import 'package:del_pick/data/providers/driver_provider.dart';
 import 'package:del_pick/data/providers/order_provider.dart';
 import 'package:del_pick/data/datasources/remote/driver_remote_datasource.dart';
 import 'package:del_pick/data/datasources/remote/order_remote_datasource.dart';
-import 'package:del_pick/data/datasources/remote/tracking_remote_datasource.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/features/driver/controllers/driver_home_controller.dart';
@@ -20,10 +19,10 @@ class DriverBinding extends Bindings {
   @override
   void dependencies() {
     // ========================================================================
-    // DATA SOURCES - dengan parameter yang benar
+    // DATA SOURCES - dengan named parameters sesuai constructor
     // ========================================================================
 
-    // Driver Remote DataSource
+    // Driver Remote DataSource - menggunakan named parameters
     Get.lazyPut<DriverRemoteDataSource>(
       () => DriverRemoteDataSource(
         apiService: Get.find<ApiService>(),
@@ -31,42 +30,55 @@ class DriverBinding extends Bindings {
       ),
     );
 
-    // Order Remote DataSource
+    // Order Remote DataSource - menggunakan positional parameter
     Get.lazyPut<OrderRemoteDataSource>(
-      () => OrderRemoteDataSource(
-        apiService: Get.find<ApiService>(),
-        authLocalDataSource: Get.find<AuthLocalDataSource>(),
+      () => OrderRemoteDataSource(Get.find<ApiService>()),
+    );
+
+    // ========================================================================
+    // PROVIDERS - dengan positional parameters sesuai constructor
+    // ========================================================================
+
+    // DriverProvider(this._remoteDataSource)
+    Get.lazyPut<DriverProvider>(
+      () => DriverProvider(Get.find<DriverRemoteDataSource>()),
+    );
+
+    // OrderProvider(this._apiService)
+    Get.lazyPut<OrderProvider>(
+      () => OrderProvider(Get.find<ApiService>()),
+    );
+
+    // TrackingProvider() - tanpa parameter
+    Get.lazyPut<TrackingProvider>(
+      () => TrackingProvider(),
+    );
+
+    // ========================================================================
+    // REPOSITORIES - dengan parameter yang benar sesuai constructor
+    // ========================================================================
+
+    // DriverRepository(this._remoteDataSource, this._localDataSource)
+    Get.lazyPut<DriverRepository>(
+      () => DriverRepository(
+        Get.find<DriverRemoteDataSource>(),
+        Get.find<AuthLocalDataSource>(),
       ),
     );
 
-    // Tracking Remote DataSource (jika diperlukan)
-    // Get.lazyPut<TrackingRemoteDataSource>(
-    //   () => TrackingRemoteDataSource(
-    //     apiService: Get.find<ApiService>(),
-    //     authLocalDataSource: Get.find<AuthLocalDataSource>(),
-    //   ),
-    // );
-
-    Get.lazyPut<TrackingRepository>(
-      () => TrackingRepository(Get.find<TrackingProvider>()),
-    );
-
-    Get.lazyPut<DriverProvider>(() => DriverProvider(
-          remoteDataSource: Get.find<DriverRemoteDataSource>(),
-        ));
-
-    Get.lazyPut<OrderProvider>(() => OrderProvider());
-    Get.lazyPut<TrackingProvider>(() => TrackingProvider());
-
-    Get.lazyPut<DriverRepository>(
-      () => DriverRepository(Get.find<DriverProvider>()),
-    );
+    // OrderRepository(this._remoteDataSource)
     Get.lazyPut<OrderRepository>(
-      () => OrderRepository(Get.find<OrderProvider>()),
+      () => OrderRepository(Get.find<OrderRemoteDataSource>()),
     );
+
+    // TrackingRepository(this._trackingProvider)
     Get.lazyPut<TrackingRepository>(
       () => TrackingRepository(Get.find<TrackingProvider>()),
     );
+
+    // ========================================================================
+    // CONTROLLERS
+    // ========================================================================
 
     Get.lazyPut<DriverHomeController>(
       () => DriverHomeController(
@@ -82,15 +94,13 @@ class DriverBinding extends Bindings {
           DriverOrdersController(orderRepository: Get.find<OrderRepository>()),
     );
 
-    // Profile Controller dengan dependency yang benar
+    // ProfileController() - tanpa parameter berdasarkan error
     Get.lazyPut<ProfileController>(
-      () => ProfileController(
-          // authRepository: Get.find<AuthRepository>(), // uncomment when available
-          // driverRepository: Get.find<DriverRepository>(), // uncomment when needed
-          ),
+      () => ProfileController(),
     );
 
     /*
+    // Uncomment jika controller ini dibutuhkan
     Get.lazyPut<DriverRequestController>(
       () => DriverRequestController(
         driverRepository: Get.find<DriverRepository>(),

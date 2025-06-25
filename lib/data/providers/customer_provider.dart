@@ -1,13 +1,16 @@
+// ================================================================
 // lib/data/providers/customer_provider.dart - FIXED
+// ================================================================
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
-import 'package:get/get.dart' as getx;
 
 class CustomerProvider {
-  final ApiService _apiService = getx.Get.find<ApiService>();
+  final ApiService _apiService;
 
-  // GET /customers (admin only)
+  CustomerProvider(this._apiService);
+
+  /// GET /customers - Admin only (not used in mobile app)
   Future<Response> getAllCustomers({Map<String, dynamic>? params}) async {
     return await _apiService.get(
       ApiEndpoints.getAllCustomers,
@@ -15,17 +18,17 @@ class CustomerProvider {
     );
   }
 
-  // GET /customers/:id (admin only)
+  /// GET /customers/:id - Admin only (not used in mobile app)
   Future<Response> getCustomerById(int customerId) async {
     return await _apiService.get(ApiEndpoints.getCustomerById(customerId));
   }
 
-  //POST /customers (admin only)
+  /// POST /customers - Admin only (not used in mobile app)
   Future<Response> createCustomer(Map<String, dynamic> data) async {
     return await _apiService.post(ApiEndpoints.createCustomer, data: data);
   }
 
-  //PUT /customers/:id (admin only)
+  /// PUT /customers/:id - Admin only (not used in mobile app)
   Future<Response> updateCustomer(
     int customerId,
     Map<String, dynamic> data,
@@ -36,7 +39,7 @@ class CustomerProvider {
     );
   }
 
-  // DELETE /customers/:id (admin only)
+  /// DELETE /customers/:id - Admin only (not used in mobile app)
   Future<Response> deleteCustomer(int customerId) async {
     return await _apiService.delete(ApiEndpoints.deleteCustomer(customerId));
   }

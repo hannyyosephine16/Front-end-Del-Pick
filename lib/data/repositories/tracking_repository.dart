@@ -10,7 +10,6 @@ import '../../core/errors/error_handler.dart';
 
 class TrackingRepository {
   final TrackingProvider _trackingProvider;
-
   TrackingRepository(this._trackingProvider);
   Future<Result<TrackingInfoModel>> getTrackingInfo(int orderId) async {
     try {

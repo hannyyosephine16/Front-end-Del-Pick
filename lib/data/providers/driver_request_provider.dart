@@ -1,30 +1,33 @@
-// lib/data/providers/notification_provider.dart
+// lib/data/providers/driver_request_provider.dart - FIXED
 import 'package:dio/dio.dart';
 import 'package:del_pick/core/services/api/api_service.dart';
 import 'package:del_pick/core/constants/api_endpoints.dart';
 import 'package:get/get.dart' as getx;
 
-class NotificationProvider {
+class DriverRequestProvider {
   final ApiService _apiService = getx.Get.find<ApiService>();
 
-  Future<Response> getNotifications() async {
-    return await _apiService.get(ApiEndpoints.notifications);
+  /// Get driver requests - GET /driver-requests
+  Future<Response> getDriverRequests({Map<String, dynamic>? params}) async {
+    return await _apiService.get(
+      ApiEndpoints.getDriverRequests,
+      queryParameters: params,
+    );
   }
 
-  Future<Response> markNotificationAsRead(int notificationId) async {
-    return await _apiService
-        .patch(ApiEndpoints.markNotificationAsRead(notificationId));
+  /// Get driver request detail - GET /driver-requests/{id}
+  Future<Response> getDriverRequestById(int requestId) async {
+    return await _apiService.get(
+      ApiEndpoints.getDriverRequestById(requestId),
+    );
   }
 
-  Future<Response> deleteNotification(int notificationId) async {
-    return await _apiService
-        .delete(ApiEndpoints.deleteNotification(notificationId));
-  }
-
-  Future<Response> updateFcmToken(String fcmToken) async {
-    return await _apiService.put(
-      ApiEndpoints.updateFcmToken,
-      data: {'fcm_token': fcmToken},
+  /// Respond to driver request - POST /driver-requests/{id}/respond
+  Future<Response> respondToDriverRequest(
+      int requestId, Map<String, dynamic> data) async {
+    return await _apiService.post(
+      ApiEndpoints.respondToDriverRequest(requestId),
+      data: data,
     );
   }
 }
