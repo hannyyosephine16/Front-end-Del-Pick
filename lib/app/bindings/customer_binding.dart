@@ -24,7 +24,7 @@ import '../../data/datasources/remote/tracking_remote_datasource.dart';
 // Core services
 import '../../core/services/api/api_service.dart';
 import '../../core/services/external/location_service.dart';
-import '../../core/services/cart_service.dart';
+// import '../../core/services/cart_service.dart';
 
 class CustomerBinding extends Bindings {
   @override

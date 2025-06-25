@@ -2,7 +2,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/order/cart_item_model.dart';
-import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/core/services/api/order_service.dart';
 import 'package:del_pick/features/customer/controllers/cart_controller.dart';
 import 'package:del_pick/app/routes/app_routes.dart';

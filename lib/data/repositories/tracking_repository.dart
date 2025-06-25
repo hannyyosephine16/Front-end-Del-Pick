@@ -3,7 +3,6 @@ import 'package:del_pick/data/providers/tracking_provider.dart';
 import 'package:del_pick/data/models/tracking/tracking_info_model.dart';
 import 'package:del_pick/core/utils/result.dart';
 import 'package:del_pick/data/providers/tracking_provider.dart';
-import 'package:del_pick/core/utils/result.dart';
 import 'package:dio/dio.dart';
 
 import '../../core/errors/error_handler.dart';

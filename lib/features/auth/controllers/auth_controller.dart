@@ -1,7 +1,6 @@
 // lib/features/auth/controllers/auth_controller.dart - FIXED
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
-import 'package:del_pick/data/models/auth/login_response_model.dart';
 import 'package:del_pick/data/repositories/auth_repository.dart';
 import 'package:del_pick/core/services/external/notification_service.dart';
 import 'package:del_pick/core/services/external/connectivity_service.dart';

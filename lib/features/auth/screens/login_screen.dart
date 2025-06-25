@@ -6,7 +6,6 @@ import 'package:del_pick/core/widgets/custom_text_field.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
-import 'package:del_pick/app/routes/app_routes.dart';
 
 class LoginScreen extends StatelessWidget {
   const LoginScreen({super.key});
