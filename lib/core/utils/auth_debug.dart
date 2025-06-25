@@ -51,25 +51,24 @@ class AuthDebug {
         print('Token Status: ❌ NULL OR EMPTY');
       }
 
-      // Check user data - getUser returns Map<String, dynamic>
-      final userData = await authDataSource.getUser();
-      if (userData != null) {
+      // ✅ FIXED: getUser() returns UserModel, not Map<String, dynamic>
+      final user = await authDataSource.getUser();
+      if (user != null) {
         print('User Status: ✅ Available');
-        print('User ID: ${userData['id']}');
-        print('User Name: ${userData['name']}');
-        print('User Email: ${userData['email']}');
-        print('User Role: ${userData['role']}');
+        print('User ID: ${user.id}');
+        print('User Name: ${user.name}');
+        print('User Email: ${user.email}');
+        print('User Role: ${user.role}');
 
         // Validate role for different apps
-        final userRole = userData['role'];
-        if (userRole == 'driver') {
+        if (user.role == 'driver') {
           print('Role Check: ✅ Valid driver role');
-        } else if (userRole == 'customer') {
+        } else if (user.role == 'customer') {
           print('Role Check: ✅ Valid customer role');
-        } else if (userRole == 'store') {
+        } else if (user.role == 'store') {
           print('Role Check: ✅ Valid store role');
         } else {
-          print('Role Check: ⚠️ WARNING - Unknown role ($userRole)');
+          print('Role Check: ⚠️ WARNING - Unknown role (${user.role})');
         }
       } else {
         print('User Status: ❌ NULL');
@@ -235,16 +234,15 @@ class AuthDebug {
         return false;
       }
 
-      // Check user data
-      final userData = await authDataSource.getUser();
-      if (userData == null) {
+      // ✅ FIXED: Check user data using UserModel
+      final user = await authDataSource.getUser();
+      if (user == null) {
         print('❌ No user data');
         return false;
       }
 
-      final userRole = userData['role'];
-      if (expectedRole != null && userRole != expectedRole) {
-        print('❌ Invalid role: $userRole (expected: $expectedRole)');
+      if (expectedRole != null && user.role != expectedRole) {
+        print('❌ Invalid role: ${user.role} (expected: $expectedRole)');
         return false;
       }
 
@@ -261,7 +259,7 @@ class AuthDebug {
       }
 
       print('✅ Auth validation passed');
-      print('User: ${userData['name']} (${userData['role']})');
+      print('User: ${user.name} (${user.role})');
       print('=== END VALIDATION ===\n');
       return true;
     } catch (e) {
