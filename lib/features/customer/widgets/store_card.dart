@@ -2,15 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:del_pick/data/models/store/store_model.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
+import 'package:del_pick/core/widgets/network_image_widget.dart';
+
+import '../../shared/widgets/netwrok_image_widget.dart';
 
 class StoreCard extends StatelessWidget {
   final StoreModel store;
   final VoidCallback onTap;
+  final bool showDistance;
+  final bool isCompact;
 
   const StoreCard({
     super.key,
     required this.store,
     required this.onTap,
+    this.showDistance = true,
+    this.isCompact = false,
   });
 
   @override
@@ -26,7 +33,7 @@ class StoreCard extends StatelessWidget {
           children: [
             // Store Image
             Container(
-              height: 150,
+              height: isCompact ? 120 : 150,
               width: double.infinity,
               decoration: BoxDecoration(
                 borderRadius: const BorderRadius.vertical(
@@ -34,36 +41,28 @@ class StoreCard extends StatelessWidget {
                 ),
                 color: AppColors.primary.withOpacity(0.1),
               ),
-              child: store.imageUrl != null
-                  ? ClipRRect(
-                      borderRadius: const BorderRadius.vertical(
-                        top: Radius.circular(12),
-                      ),
-                      child: Image.network(
-                        store.imageUrl!,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) =>
-                            const Center(
-                          child: Icon(
-                            Icons.store,
-                            size: 60,
-                            color: AppColors.primary,
-                          ),
-                        ),
-                      ),
-                    )
-                  : const Center(
-                      child: Icon(
-                        Icons.store,
-                        size: 60,
-                        color: AppColors.primary,
-                      ),
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12),
+                ),
+                child: NetworkImageWidget(
+                  imageUrl: store.imageUrl,
+                  fit: BoxFit.cover,
+                  placeholder: Container(
+                    color: AppColors.primary.withOpacity(0.1),
+                    child: const Icon(
+                      Icons.store,
+                      size: 80,
+                      color: AppColors.primary,
                     ),
+                  ),
+                ),
+              ),
             ),
 
             // Store Details
             Padding(
-              padding: const EdgeInsets.all(12),
+              padding: EdgeInsets.all(isCompact ? 8 : 12),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -73,7 +72,9 @@ class StoreCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           store.name,
-                          style: AppTextStyles.h6,
+                          style: isCompact
+                              ? AppTextStyles.bodyLarge
+                              : AppTextStyles.h6,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -100,19 +101,21 @@ class StoreCard extends StatelessWidget {
                     ],
                   ),
 
-                  const SizedBox(height: 4),
+                  if (!isCompact) ...[
+                    const SizedBox(height: 4),
 
-                  // Store Address
-                  Text(
-                    store.address,
-                    style: AppTextStyles.bodySmall.copyWith(
-                      color: AppColors.textSecondary,
+                    // Store Address
+                    Text(
+                      store.address,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
                     ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
+                  ],
 
-                  const SizedBox(height: 8),
+                  SizedBox(height: isCompact ? 4 : 8),
 
                   // Rating, Distance, and Operating Hours
                   Row(
@@ -129,7 +132,7 @@ class StoreCard extends StatelessWidget {
                           store.displayRating,
                           style: AppTextStyles.bodySmall,
                         ),
-                        if (store.reviewCount != null) ...[
+                        if (store.reviewCount != null && !isCompact) ...[
                           const SizedBox(width: 2),
                           Text(
                             '(${store.reviewCount})',
@@ -142,7 +145,7 @@ class StoreCard extends StatelessWidget {
                       ],
 
                       // Distance
-                      if (store.distance != null) ...[
+                      if (showDistance && store.distance != null) ...[
                         const Icon(
                           Icons.location_on,
                           color: AppColors.textSecondary,
@@ -159,8 +162,10 @@ class StoreCard extends StatelessWidget {
 
                       const Spacer(),
 
-                      // Operating Hours (if available)
-                      if (store.openTime != null && store.closeTime != null)
+                      // Operating Hours (if available and not compact)
+                      if (!isCompact &&
+                          store.openTime != null &&
+                          store.closeTime != null)
                         Text(
                           '${store.openTime} - ${store.closeTime}',
                           style: AppTextStyles.bodySmall.copyWith(
@@ -170,8 +175,9 @@ class StoreCard extends StatelessWidget {
                     ],
                   ),
 
-                  // Description (if available)
-                  if (store.description != null &&
+                  // Description (if available and not compact)
+                  if (!isCompact &&
+                      store.description != null &&
                       store.description!.isNotEmpty) ...[
                     const SizedBox(height: 8),
                     Text(

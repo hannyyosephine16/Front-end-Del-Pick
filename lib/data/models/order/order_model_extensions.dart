@@ -17,10 +17,10 @@ extension OrderModelExtensions on OrderModel {
   bool get isRejected => orderStatus == OrderStatusConstants.rejected;
 
   // ✅ Helper status methods using constants
-  bool get isActive => OrderStatusConstants.isActive(orderStatus);
-  bool get isCompleted => OrderStatusConstants.isCompleted(orderStatus);
-  bool get canCancel => OrderStatusConstants.canCancel(orderStatus);
-  bool get canTrack => OrderStatusConstants.canTrack(orderStatus);
+  // bool get isActive => OrderStatusConstants.isActive(orderStatus);
+  // bool get isCompleted => OrderStatusConstants.isCompleted(orderStatus);
+  // bool get canCancel => OrderStatusConstants.canCancel(orderStatus);
+  // bool get canTrack => OrderStatusConstants.canTrack(orderStatus);
 
   // ✅ Additional action capabilities
   bool get canReview {
@@ -128,9 +128,9 @@ extension OrderModelExtensions on OrderModel {
     }
   }
 
-  String get formattedDate {
-    return DateFormat('MMM dd, yyyy').format(createdAt);
-  }
+  // String get formattedDate {
+  //   return DateFormat('MMM dd, yyyy').format(createdAt);
+  // }
 
   String get formattedOrderDate {
     return DateFormat('MMM dd, yyyy • HH:mm').format(createdAt);
@@ -141,7 +141,7 @@ extension OrderModelExtensions on OrderModel {
   }
 
   // ✅ Driver information - Backend Compatible
-  bool get hasDriver => driverId != null && driver != null;
+  // bool get hasDriver => driverId != null && driver != null;
 
   String get driverName {
     return driver?.name ?? 'No Driver Assigned';
@@ -238,6 +238,223 @@ extension OrderModelExtensions on OrderModel {
 
   bool get hasTrackingUpdates {
     return trackingUpdates.isNotEmpty;
+  }
+
+  /// Format tanggal pembuatan order
+  String get formattedDate {
+    if (createdAt == null) return '';
+    return DateFormat('dd MMM yyyy, HH:mm').format(createdAt!);
+  }
+
+  /// Format tanggal pembuatan order (hanya tanggal)
+  String get formattedDateOnly {
+    if (createdAt == null) return '';
+    return DateFormat('dd MMM yyyy').format(createdAt!);
+  }
+
+  /// Format waktu pembuatan order (hanya waktu)
+  String get formattedTimeOnly {
+    if (createdAt == null) return '';
+    return DateFormat('HH:mm').format(createdAt!);
+  }
+
+  /// Format estimasi waktu pickup
+  String get formattedEstimatedPickupTime {
+    if (estimatedPickupTime == null) return '';
+    return DateFormat('HH:mm').format(estimatedPickupTime!);
+  }
+
+  /// Format estimasi waktu delivery
+  String get formattedEstimatedDeliveryTime {
+    if (estimatedDeliveryTime == null) return '';
+    return DateFormat('HH:mm').format(estimatedDeliveryTime!);
+  }
+
+  /// Format waktu pickup aktual
+  String get formattedActualPickupTime {
+    if (actualPickupTime == null) return '';
+    return DateFormat('dd MMM yyyy, HH:mm').format(actualPickupTime!);
+  }
+
+  /// Format waktu delivery aktual
+  String get formattedActualDeliveryTime {
+    if (actualDeliveryTime == null) return '';
+    return DateFormat('dd MMM yyyy, HH:mm').format(actualDeliveryTime!);
+  }
+
+  /// Cek apakah order bisa di-track
+  bool get canTrack {
+    if (orderStatus == null) return false;
+
+    final trackableStatuses = [
+      OrderStatusConstants.confirmed,
+      OrderStatusConstants.preparing,
+      OrderStatusConstants.readyForPickup,
+      OrderStatusConstants.onDelivery,
+    ];
+
+    return trackableStatuses.contains(orderStatus!.toLowerCase());
+  }
+
+  /// Cek apakah order masih aktif (belum selesai)
+  bool get isActive {
+    if (orderStatus == null) return false;
+
+    final activeStatuses = [
+      OrderStatusConstants.pending,
+      OrderStatusConstants.confirmed,
+      OrderStatusConstants.preparing,
+      OrderStatusConstants.readyForPickup,
+      OrderStatusConstants.onDelivery,
+    ];
+
+    return activeStatuses.contains(orderStatus!.toLowerCase());
+  }
+
+  // /// Cek apakah order sudah selesai
+  // bool get isCompleted {
+  //   return orderStatus?.toLowerCase() == OrderStatusConstants.delivered;
+  // }
+  //
+  // /// Cek apakah order dibatalkan
+  // bool get isCancelled {
+  //   final cancelledStatuses = [
+  //     OrderStatusConstants.cancelled,
+  //     OrderStatusConstants.rejected,
+  //   ];
+  //
+  //   return cancelledStatuses.contains(orderStatus?.toLowerCase());
+  // }
+
+  /// Cek apakah order bisa direview
+  // bool get canReview {
+  //   return isCompleted && driverId != null;
+  // }
+
+  /// Cek apakah order bisa dibatalkan
+  bool get canCancel {
+    if (orderStatus == null) return false;
+
+    final cancellableStatuses = [
+      OrderStatusConstants.pending,
+      OrderStatusConstants.confirmed,
+    ];
+
+    return cancellableStatuses.contains(orderStatus!.toLowerCase());
+  }
+
+  /// Get status display text
+  String get statusDisplayText {
+    if (orderStatus == null) return 'Unknown';
+
+    switch (orderStatus!.toLowerCase()) {
+      case OrderStatusConstants.pending:
+        return 'Waiting for confirmation';
+      case OrderStatusConstants.confirmed:
+        return 'Order confirmed';
+      case OrderStatusConstants.preparing:
+        return 'Being prepared';
+      case OrderStatusConstants.readyForPickup:
+        return 'Ready for pickup';
+      case OrderStatusConstants.onDelivery:
+        return 'On the way';
+      case OrderStatusConstants.delivered:
+        return 'Delivered';
+      case OrderStatusConstants.cancelled:
+        return 'Cancelled';
+      case OrderStatusConstants.rejected:
+        return 'Rejected';
+      default:
+        return orderStatus!.toUpperCase();
+    }
+  }
+
+  /// Get next expected status
+  String? get nextExpectedStatus {
+    if (orderStatus == null) return null;
+
+    switch (orderStatus!.toLowerCase()) {
+      case OrderStatusConstants.pending:
+        return 'confirmed';
+      case OrderStatusConstants.confirmed:
+        return 'preparing';
+      case OrderStatusConstants.preparing:
+        return 'ready_for_pickup';
+      case OrderStatusConstants.readyForPickup:
+        return 'on_delivery';
+      case OrderStatusConstants.onDelivery:
+        return 'delivered';
+      default:
+        return null;
+    }
+  }
+
+  /// Get estimated time remaining
+  // String get estimatedTimeRemaining {
+  //   if (estimatedDeliveryTime == null) return '';
+  //
+  //   final now = DateTime.now();
+  //   final difference = estimatedDeliveryTime!.difference(now);
+  //
+  //   if (difference.isNegative) {
+  //     return 'Overdue';
+  //   }
+  //
+  //   if (difference.inHours > 0) {
+  //     return '${difference.inHours}h ${difference.inMinutes % 60}m remaining';
+  //   } else {
+  //     return '${difference.inMinutes}m remaining';
+  //   }
+  // }
+
+  /// Get order progress percentage (0.0 to 1.0)
+  // double get progressPercentage {
+  //   if (orderStatus == null) return 0.0;
+  //
+  //   switch (orderStatus!.toLowerCase()) {
+  //     case OrderStatusConstants.pending:
+  //       return 0.1;
+  //     case OrderStatusConstants.confirmed:
+  //       return 0.25;
+  //     case OrderStatusConstants.preparing:
+  //       return 0.5;
+  //     case OrderStatusConstants.readyForPickup:
+  //       return 0.75;
+  //     case OrderStatusConstants.onDelivery:
+  //       return 0.9;
+  //     case OrderStatusConstants.delivered:
+  //       return 1.0;
+  //     default:
+  //       return 0.0;
+  //   }
+  // }
+
+  /// Get total items count
+  int get totalItemsCount {
+    if (items == null || items!.isEmpty) return 0;
+    return items!.fold(0, (sum, item) => sum + item.quantity);
+  }
+
+  /// Get display price with delivery fee
+  double get totalAmountWithDelivery {
+    return totalAmount + (deliveryFee ?? 0);
+  }
+
+  /// Check if order has driver assigned
+  bool get hasDriver {
+    return driverId != null;
+  }
+
+  /// Check if order has store info
+  bool get hasStore {
+    return store != null;
+  }
+
+  /// Get short order summary
+  String get orderSummary {
+    final itemCount = totalItemsCount;
+    final storeName = store?.name ?? 'Unknown Store';
+    return '$itemCount items from $storeName';
   }
 
   // ✅ Status description for UI

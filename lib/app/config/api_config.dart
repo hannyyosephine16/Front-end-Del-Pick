@@ -7,13 +7,19 @@ class ApiConfig {
   static const Duration connectTimeout = Duration(seconds: 30);
   static const Duration receiveTimeout = Duration(seconds: 30);
 
-  static const Map<String, String> defaultHeaders = {
-    'Content-Type': 'application/json',
-    'Accept': 'application/json',
-  };
+  static Map<String, String> get defaultHeaders => {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'X-Requested-With': 'XMLHttpRequest',
+      };
 
-  static Map<String, String> authHeaders(String token) => {
-    ...defaultHeaders,
-    'Authorization': 'Bearer $token',
-  };
+  static Map<String, String> getAuthHeaders(String token) => {
+        ...defaultHeaders,
+        'Authorization': 'Bearer $token',
+      };
+
+  static Map<String, String> get multipartHeaders => {
+        'Content-Type': 'multipart/form-data',
+        'Accept': 'application/json',
+      };
 }

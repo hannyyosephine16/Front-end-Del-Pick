@@ -1,13 +1,16 @@
+// lib/features/customer/screens/customer_home_screen.dart
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/features/customer/controllers/home_controller.dart';
 import 'package:del_pick/features/customer/widgets/store_card.dart';
-import 'package:del_pick/features/customer/widgets/order_card.dart';
 import 'package:del_pick/core/widgets/loading_widget.dart';
 import 'package:del_pick/core/widgets/empty_state_widget.dart';
+import 'package:del_pick/core/widgets/error_widget.dart' as app_error;
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
+
+import '../widgets/recent_order_card.dart';
 
 class CustomerHomeScreen extends StatelessWidget {
   const CustomerHomeScreen({super.key});
@@ -22,49 +25,325 @@ class CustomerHomeScreen extends StatelessWidget {
       ),
       builder: (controller) => Scaffold(
         backgroundColor: AppColors.background,
-        body: SafeArea(
-          child: Stack(
-            children: [
-              // Main Content
-              RefreshIndicator(
-                onRefresh: controller.refreshData,
-                child: SingleChildScrollView(
-                  physics: const AlwaysScrollableScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppDimensions.paddingLG,
+        body: RefreshIndicator(
+          onRefresh: controller.refreshData,
+          child: CustomScrollView(
+            slivers: [
+              // App Bar
+              SliverAppBar(
+                floating: true,
+                backgroundColor: AppColors.primary,
+                foregroundColor: AppColors.textOnPrimary,
+                title: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Obx(() => Text(
+                          controller.greeting,
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.textOnPrimary.withOpacity(0.8),
+                          ),
+                        )),
+                    const Text(
+                      'DelPick',
+                      style: TextStyle(
+                        color: AppColors.textOnPrimary,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ],
+                ),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.shopping_cart_outlined),
+                    onPressed: controller.navigateToCart,
                   ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  IconButton(
+                    icon: const Icon(Icons.person_outline),
+                    onPressed: controller.navigateToProfile,
+                  ),
+                ],
+              ),
+
+              // Location Section
+              SliverToBoxAdapter(
+                child: Container(
+                  color: AppColors.primary,
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                  child: Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: AppColors.textOnPrimary.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          color: AppColors.textOnPrimary,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Obx(() => Text(
+                                controller.currentAddress,
+                                style: AppTextStyles.bodyMedium.copyWith(
+                                  color: AppColors.textOnPrimary,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              )),
+                        ),
+                        TextButton(
+                          onPressed: controller.refreshLocation,
+                          child: Text(
+                            'Change',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: AppColors.textOnPrimary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+
+              // Quick Actions
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      const SizedBox(height: AppDimensions.spacingLG),
-
-                      // Header Section
-                      _buildHeader(controller),
-
-                      const SizedBox(height: AppDimensions.spacingXL),
-
-                      // Location Section
-                      _buildLocationSection(controller),
-
-                      const SizedBox(height: AppDimensions.spacingXL),
-
-                      // Quick Actions
-                      _buildQuickActions(controller),
-
-                      const SizedBox(height: AppDimensions.spacingXL),
-
-                      // Recent Orders Section (moved up since stores are now in draggable sheet)
-                      _buildRecentOrdersSection(controller),
-
-                      // Spacer for draggable sheet
-                      const SizedBox(height: 300),
+                      Expanded(
+                        child: _buildQuickAction(
+                          icon: Icons.store,
+                          label: 'Browse Stores',
+                          onTap: controller.navigateToStores,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildQuickAction(
+                          icon: Icons.history,
+                          label: 'Order History',
+                          onTap: controller.navigateToOrders,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildQuickAction(
+                          icon: Icons.search,
+                          label: 'Search',
+                          onTap: controller.navigateToSearch,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
 
-              // Draggable "Nearby Stores" Section
-              _buildDraggableNearYouSection(controller),
+              // Nearby Stores Section
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text('Nearby Stores', style: AppTextStyles.h5),
+                      TextButton(
+                        onPressed: controller.navigateToStores,
+                        child: const Text('See All'),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Stores Loading/Error/Content
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  if (controller.isLoadingStores) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: LoadingWidget(message: 'Loading stores...'),
+                    );
+                  }
+
+                  if (controller.hasError && !controller.hasStores) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: app_error.ErrorWidget(
+                        message: controller.errorMessage,
+                        onRetry: controller.refreshData,
+                      ),
+                    );
+                  }
+
+                  if (!controller.hasStores) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: EmptyStateWidget(
+                        message: 'No stores nearby',
+                        icon: Icons.store_outlined,
+                      ),
+                    );
+                  }
+
+                  return SizedBox(
+                    height: 240,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemCount: controller.nearbyStores.length,
+                      itemBuilder: (context, index) {
+                        final store = controller.nearbyStores[index];
+                        return Container(
+                          width: 200,
+                          margin: const EdgeInsets.only(right: 12),
+                          child: StoreCard(
+                            store: store,
+                            onTap: () =>
+                                controller.navigateToStoreDetail(store.id),
+                            showDistance: true,
+                            isCompact: true,
+                          ),
+                        );
+                      },
+                    ),
+                  );
+                }),
+              ),
+
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 24),
+              ),
+
+              // Recent Orders Section
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  if (!controller.hasOrders && !controller.isLoadingOrders) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text('Recent Orders', style: AppTextStyles.h5),
+                        TextButton(
+                          onPressed: controller.navigateToOrders,
+                          child: const Text('See All'),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+
+              // Orders Loading/Content
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  if (controller.isLoadingOrders) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: LoadingWidget(message: 'Loading your orders...'),
+                    );
+                  }
+
+                  if (!controller.hasOrders) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: controller.recentOrders.length,
+                    itemBuilder: (context, index) {
+                      final order = controller.recentOrders[index];
+                      return Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: RecentOrderCard(
+                          order: order,
+                          onTap: () =>
+                              controller.navigateToOrderDetail(order.id),
+                          onTrack: order.canTrack
+                              ? () =>
+                                  controller.navigateToOrderTracking(order.id)
+                              : null,
+                        ),
+                      );
+                    },
+                  );
+                }),
+              ),
+
+              // Active Orders Section (if any)
+              SliverToBoxAdapter(
+                child: Obx(() {
+                  if (!controller.hasActiveOrders) {
+                    return const SizedBox.shrink();
+                  }
+
+                  return Container(
+                    margin: const EdgeInsets.all(16),
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.warning.withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: AppColors.warning.withOpacity(0.3),
+                      ),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Icon(
+                              Icons.schedule,
+                              color: AppColors.warning,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Active Orders',
+                              style: AppTextStyles.h6.copyWith(
+                                color: AppColors.warning,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'You have ${controller.activeOrders.length} active order(s)',
+                          style: AppTextStyles.bodyMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton(
+                            onPressed: controller.navigateToOrders,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.warning,
+                              foregroundColor: AppColors.textOnPrimary,
+                            ),
+                            child: const Text('Track Orders'),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }),
+              ),
+
+              // Bottom padding
+              const SliverToBoxAdapter(
+                child: SizedBox(height: 100),
+              ),
             ],
           ),
         ),
@@ -72,396 +351,51 @@ class CustomerHomeScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildHeader(CustomerHomeController controller) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Obx(() => Text(controller.greeting, style: AppTextStyles.h4)),
-            const SizedBox(height: AppDimensions.spacingXS),
-            Text(
-              'What would you like to eat?',
-              style: AppTextStyles.bodyLarge.copyWith(
-                color: AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-        Row(
-          children: [
-            IconButton(
-              onPressed: controller.navigateToCart,
-              icon: const Icon(Icons.shopping_cart_outlined),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.primaryLight.withOpacity(0.1),
-                foregroundColor: AppColors.primary,
-              ),
-            ),
-            const SizedBox(width: AppDimensions.spacingSM),
-            IconButton(
-              onPressed: controller.navigateToProfile,
-              icon: const Icon(Icons.person_outline),
-              style: IconButton.styleFrom(
-                backgroundColor: AppColors.primaryLight.withOpacity(0.1),
-                foregroundColor: AppColors.primary,
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
-  Widget _buildLocationSection(CustomerHomeController controller) {
-    return Container(
-      padding: const EdgeInsets.all(AppDimensions.paddingLG),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.shadow,
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(AppDimensions.paddingSM),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(AppDimensions.radiusSM),
-            ),
-            child: const Icon(
-              Icons.location_on,
-              color: AppColors.primary,
-              size: AppDimensions.iconMD,
-            ),
-          ),
-          const SizedBox(width: AppDimensions.spacingMD),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Deliver to',
-                  style: AppTextStyles.bodySmall.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                ),
-                Obx(
-                  () => Text(
-                    controller.currentAddress,
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      fontWeight: FontWeight.w600,
-                    ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Icon(
-            Icons.keyboard_arrow_down,
-            color: AppColors.textSecondary,
-            size: AppDimensions.iconMD,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickActions(CustomerHomeController controller) {
-    return Row(
-      children: [
-        Expanded(
-          child: _buildQuickActionCard(
-            icon: Icons.restaurant,
-            title: 'Browse Restaurants',
-            subtitle: 'Find nearby food',
-            color: AppColors.primary,
-            onTap: controller.navigateToStores,
-          ),
-        ),
-        const SizedBox(width: AppDimensions.spacingMD),
-        Expanded(
-          child: _buildQuickActionCard(
-            icon: Icons.history,
-            title: 'Order History',
-            subtitle: 'Track your orders',
-            color: AppColors.secondary,
-            onTap: controller.navigateToOrders,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildQuickActionCard({
+  Widget _buildQuickAction({
     required IconData icon,
-    required String title,
-    required String subtitle,
-    required Color color,
+    required String label,
     required VoidCallback onTap,
   }) {
     return GestureDetector(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.all(AppDimensions.paddingLG),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(AppDimensions.radiusLG),
-          border: Border.all(color: color.withOpacity(0.2), width: 1),
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.shadow,
+              blurRadius: 4,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, color: color, size: AppDimensions.iconLG),
-            const SizedBox(height: AppDimensions.spacingSM),
-            Text(
-              title,
-              style: AppTextStyles.labelLarge.copyWith(
-                color: color,
-                fontWeight: FontWeight.w600,
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: AppColors.primary,
+                size: 24,
               ),
             ),
+            const SizedBox(height: 8),
             Text(
-              subtitle,
+              label,
               style: AppTextStyles.bodySmall.copyWith(
-                color: AppColors.textSecondary,
+                fontWeight: FontWeight.w500,
               ),
+              textAlign: TextAlign.center,
             ),
           ],
         ),
       ),
-    );
-  }
-
-  Widget _buildRecentOrdersSection(CustomerHomeController controller) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Recent Orders', style: AppTextStyles.h5),
-            TextButton(
-              onPressed: controller.navigateToOrders,
-              child: Text(
-                'View All',
-                style: AppTextStyles.bodyMedium.copyWith(
-                  color: AppColors.primary,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppDimensions.spacingMD),
-        Obx(() {
-          if (controller.isLoading) {
-            return const SizedBox(
-              height: 100,
-              child: Center(child: LoadingWidget()),
-            );
-          }
-
-          if (!controller.hasOrders) {
-            return const EmptyStateWidget(
-              message: 'No recent orders',
-              icon: Icons.receipt_long_outlined,
-            );
-          }
-
-          return ListView.builder(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            itemCount: controller.recentOrders.length,
-            itemBuilder: (context, index) {
-              final order = controller.recentOrders[index];
-              return Container(
-                margin: EdgeInsets.only(
-                  bottom: index < controller.recentOrders.length - 1
-                      ? AppDimensions.spacingMD
-                      : 0,
-                ),
-                child: OrderCard(
-                  order: order,
-                  onTap: () => controller.navigateToOrderDetail(order.id),
-                ),
-              );
-            },
-          );
-        }),
-      ],
-    );
-  }
-
-  Widget _buildDraggableNearYouSection(CustomerHomeController controller) {
-    return DraggableScrollableSheet(
-      initialChildSize: 0.4, // 40% of screen height initially
-      minChildSize: 0.15, // Minimum 15% when collapsed
-      maxChildSize: 0.85, // Maximum 85% when expanded
-      builder: (context, scrollController) {
-        return Container(
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: const BorderRadius.vertical(
-              top: Radius.circular(AppDimensions.radiusXL),
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.shadow,
-                blurRadius: 10,
-                offset: const Offset(0, -2),
-              ),
-            ],
-          ),
-          child: CustomScrollView(
-            controller: scrollController,
-            slivers: [
-              // Handle and Header
-              SliverToBoxAdapter(
-                child: Column(
-                  children: [
-                    // Drag Handle
-                    Container(
-                      margin: const EdgeInsets.only(top: 12, bottom: 8),
-                      width: 40,
-                      height: 4,
-                      decoration: BoxDecoration(
-                        color: AppColors.textSecondary.withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-
-                    // Section Header
-                    Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.paddingLG, vertical: 8),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Nearby Restaurants',
-                            style: AppTextStyles.h5,
-                          ),
-                          TextButton(
-                            onPressed: controller.navigateToStores,
-                            style: TextButton.styleFrom(
-                              padding: EdgeInsets.zero,
-                              minimumSize: const Size(50, 30),
-                            ),
-                            child: Text(
-                              'See All',
-                              style: AppTextStyles.bodyMedium.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-
-              // Nearby Stores Horizontal List
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 220,
-                  child: Obx(() {
-                    if (controller.isLoading) {
-                      return const Center(child: LoadingWidget());
-                    }
-
-                    if (!controller.hasStores) {
-                      return const EmptyStateWidget(
-                        message: 'No restaurants found nearby',
-                        icon: Icons.store_mall_directory_outlined,
-                      );
-                    }
-
-                    return ListView.builder(
-                      scrollDirection: Axis.horizontal,
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: AppDimensions.paddingLG),
-                      itemCount: controller.nearbyStores.length,
-                      itemBuilder: (context, index) {
-                        final store = controller.nearbyStores[index];
-                        return Container(
-                          width: 280,
-                          margin: EdgeInsets.only(
-                            right: index < controller.nearbyStores.length - 1
-                                ? AppDimensions.spacingMD
-                                : 0,
-                          ),
-                          child: StoreCard(
-                            store: store,
-                            onTap: () =>
-                                controller.navigateToStoreDetail(store.id),
-                          ),
-                        );
-                      },
-                    );
-                  }),
-                ),
-              ),
-
-              // Additional Quick Actions in Draggable Sheet
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.all(AppDimensions.paddingLG),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Quick Actions',
-                        style: AppTextStyles.h6,
-                      ),
-                      const SizedBox(height: AppDimensions.spacingMD),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _buildQuickActionCard(
-                              icon: Icons.search,
-                              title: 'Search Food',
-                              subtitle: 'Find specific dishes',
-                              color: AppColors.accent,
-                              onTap: () => Get.toNamed('/search'),
-                            ),
-                          ),
-                          const SizedBox(width: AppDimensions.spacingMD),
-                          Expanded(
-                            child: _buildQuickActionCard(
-                              icon: Icons.favorite,
-                              title: 'Favorites',
-                              subtitle: 'Your liked items',
-                              color: AppColors.error,
-                              onTap: () => Get.toNamed('/favorites'),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Bottom Padding
-              const SliverToBoxAdapter(
-                child: SizedBox(height: AppDimensions.spacingXXL),
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }
