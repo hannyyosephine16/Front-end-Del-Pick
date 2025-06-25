@@ -22,12 +22,24 @@ class AuthRepository {
         password: password,
       );
 
-      final loginResponse = LoginResponseModel.fromJson(response);
-
+      // final loginResponse = LoginResponseModel.fromJson(response);
+      final loginResponse = LoginResponseModel.fromBackendResponse(response);
       // Save to local storage
       await _localDataSource.saveAuthToken(loginResponse.token);
       await _localDataSource.saveUser(loginResponse.user);
 
+      // ✅ Save role-specific data jika ada
+      if (loginResponse.hasDriver && loginResponse.driver != null) {
+        // Simpan driver data ke local storage jika diperlukan
+        await _localDataSource
+            .saveDriverData(loginResponse.driver! as Map<String, dynamic>);
+      }
+
+      if (loginResponse.hasStore && loginResponse.store != null) {
+        // Simpan store data ke local storage jika diperlukan
+        await _localDataSource
+            .saveStoreData(loginResponse.store! as Map<String, dynamic>);
+      }
       return Result.success(loginResponse);
     } on AppException catch (e) {
       return Result.failure(e.message);
