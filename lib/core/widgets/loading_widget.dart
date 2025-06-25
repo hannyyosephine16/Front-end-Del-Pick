@@ -1,7 +1,7 @@
-// lib/core/widgets/loading_widget.dart - UPDATE
+// 3. lib/core/widgets/loading_widget.dart (FIXED - update sesuai penggunaan)
 import 'package:flutter/material.dart';
-import 'package:del_pick/app/themes/app_colors.dart';
-import 'package:del_pick/app/themes/app_text_styles.dart';
+import '../../app/themes/app_colors.dart';
+import '../../app/themes/app_text_styles.dart';
 
 class LoadingWidget extends StatelessWidget {
   final String? message;
@@ -17,7 +17,7 @@ class LoadingWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // ✅ Jika ada skeleton, tampilkan skeleton instead of spinner
+    // Jika ada skeleton, tampilkan skeleton instead of spinner
     if (showSkeletons && skeletonWidget != null) {
       return skeletonWidget!;
     }
@@ -26,7 +26,7 @@ class LoadingWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // ✅ Spinner yang lebih ringan
+          // Spinner yang lebih ringan
           const SizedBox(
             width: 24,
             height: 24,
@@ -51,7 +51,7 @@ class LoadingWidget extends StatelessWidget {
   }
 }
 
-// ✅ Loading overlay yang tidak blocking UI
+// Loading overlay yang tidak blocking UI
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final Widget child;

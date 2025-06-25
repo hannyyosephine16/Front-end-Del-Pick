@@ -13,6 +13,11 @@ class PermissionService extends getx.GetxService {
     return status.isGranted;
   }
 
+  // Tambah method yang diperlukan splash controller
+  Future<bool> hasLocationPermission() async {
+    return await checkLocationPermission();
+  }
+
   Future<bool> requestLocationAlwaysPermission() async {
     final status = await Permission.locationAlways.request();
     return status.isGranted;
@@ -191,8 +196,6 @@ class PermissionService extends getx.GetxService {
         return 'Permission denied';
       case PermissionStatus.restricted:
         return 'Permission restricted';
-      // case PermissionStatus.limitedPermission:
-      //   return 'Limited permission granted';
       case PermissionStatus.permanentlyDenied:
         return 'Permission permanently denied. Please enable in settings.';
       default:

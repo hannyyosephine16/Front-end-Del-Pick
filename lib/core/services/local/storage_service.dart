@@ -1,7 +1,9 @@
+// 2. lib/core/services/local/storage_service.dart (UPDATED untuk menambah method helper)
 import 'dart:convert';
 import 'package:del_pick/app/config/storage_config.dart';
 import 'package:get_storage/get_storage.dart';
 import 'package:get/get.dart' as getx;
+import '../../../core/constants/storage_constants.dart';
 
 class StorageService extends getx.GetxService {
   late GetStorage _box;
@@ -14,55 +16,80 @@ class StorageService extends getx.GetxService {
   }
 
   // Basic storage operations
-
-  /// Write data to storage
   Future<void> write(String key, dynamic value) async {
     await _box.write(key, value);
   }
 
-  /// Read data from storage
   T? read<T>(String key) {
     return _box.read<T>(key);
   }
 
-  /// Read data with default value
   T readWithDefault<T>(String key, T defaultValue) {
     return _box.read<T>(key) ?? defaultValue;
   }
 
-  /// Check if key exists
   bool hasData(String key) {
     return _box.hasData(key);
   }
 
-  /// Remove specific key
   Future<void> remove(String key) async {
     await _box.remove(key);
   }
 
-  /// Clear all data
   Future<void> clearAll() async {
     await _box.erase();
   }
 
-  /// Get all keys
-  Iterable<String> getKeys() {
-    return _box.getKeys().cast<String>();
+  // Convenience methods
+  Future<void> writeString(String key, String value) async {
+    await _box.write(key, value);
   }
 
-  /// Get all values
-  Iterable<dynamic> getValues() {
-    return _box.getValues();
+  String? readString(String key) {
+    return _box.read<String>(key);
+  }
+
+  Future<void> writeBool(String key, bool value) async {
+    await _box.write(key, value);
+  }
+
+  bool? readBool(String key) {
+    return _box.read<bool>(key);
+  }
+
+  bool readBoolWithDefault(String key, bool defaultValue) {
+    return _box.read<bool>(key) ?? defaultValue;
+  }
+
+  Future<void> writeInt(String key, int value) async {
+    await _box.write(key, value);
+  }
+
+  int? readInt(String key) {
+    return _box.read<int>(key);
+  }
+
+  int readIntWithDefault(String key, int defaultValue) {
+    return _box.read<int>(key) ?? defaultValue;
+  }
+
+  Future<void> writeDouble(String key, double value) async {
+    await _box.write(key, value);
+  }
+
+  double? readDouble(String key) {
+    return _box.read<double>(key);
+  }
+
+  double readDoubleWithDefault(String key, double defaultValue) {
+    return _box.read<double>(key) ?? defaultValue;
   }
 
   // JSON operations
-
-  /// Write JSON object to storage
   Future<void> writeJson(String key, Map<String, dynamic> json) async {
     await _box.write(key, jsonEncode(json));
   }
 
-  /// Read JSON object from storage
   Map<String, dynamic>? readJson(String key) {
     final String? jsonString = _box.read<String>(key);
     if (jsonString != null) {
@@ -75,15 +102,11 @@ class StorageService extends getx.GetxService {
     return null;
   }
 
-  /// Write JSON list to storage
   Future<void> writeJsonList(
-    String key,
-    List<Map<String, dynamic>> jsonList,
-  ) async {
+      String key, List<Map<String, dynamic>> jsonList) async {
     await _box.write(key, jsonEncode(jsonList));
   }
 
-  /// Read JSON list from storage
   List<Map<String, dynamic>>? readJsonList(String key) {
     final String? jsonString = _box.read<String>(key);
     if (jsonString != null) {
@@ -97,293 +120,245 @@ class StorageService extends getx.GetxService {
     return null;
   }
 
-  // List operations
-
-  /// Write list to storage
-  Future<void> writeList<T>(String key, List<T> list) async {
-    await _box.write(key, list);
-  }
-
-  /// Read list from storage
-  List<T>? readList<T>(String key) {
-    final dynamic data = _box.read(key);
-    if (data is List) {
-      return data.cast<T>();
-    }
-    return null;
-  }
-
-  /// Add item to list
-  Future<void> addToList<T>(String key, T item) async {
-    List<T> list = readList<T>(key) ?? <T>[];
-    list.add(item);
-    await writeList<T>(key, list);
-  }
-
-  /// Remove item from list
-  Future<void> removeFromList<T>(String key, T item) async {
-    List<T> list = readList<T>(key) ?? <T>[];
-    list.remove(item);
-    await writeList<T>(key, list);
-  }
-
-  /// Clear list
-  Future<void> clearList(String key) async {
-    await _box.write(key, <dynamic>[]);
-  }
-
-  // Map operations
-
-  /// Write map to storage
-  Future<void> writeMap<K, V>(String key, Map<K, V> map) async {
-    await _box.write(key, map);
-  }
-
-  /// Read map from storage
-  Map<K, V>? readMap<K, V>(String key) {
-    final dynamic data = _box.read(key);
-    if (data is Map) {
-      return data.cast<K, V>();
-    }
-    return null;
-  }
-
-  /// Add item to map
-  Future<void> addToMap<K, V>(String key, K mapKey, V value) async {
-    Map<K, V> map = readMap<K, V>(key) ?? <K, V>{};
-    map[mapKey] = value;
-    await writeMap<K, V>(key, map);
-  }
-
-  /// Remove item from map
-  Future<void> removeFromMap<K, V>(String key, K mapKey) async {
-    Map<K, V> map = readMap<K, V>(key) ?? <K, V>{};
-    map.remove(mapKey);
-    await writeMap<K, V>(key, map);
-  }
-
-  /// Clear map
-  Future<void> clearMap(String key) async {
-    await _box.write(key, <dynamic, dynamic>{});
-  }
-
-  // Convenience methods for common data types
-
-  /// Write string
-  Future<void> writeString(String key, String value) async {
-    await _box.write(key, value);
-  }
-
-  /// Read string
-  String? readString(String key) {
-    return _box.read<String>(key);
-  }
-
-  /// Write boolean
-  Future<void> writeBool(String key, bool value) async {
-    await _box.write(key, value);
-  }
-
-  /// Read boolean
-  bool? readBool(String key) {
-    return _box.read<bool>(key);
-  }
-
-  /// Read boolean with default value
-  bool readBoolWithDefault(String key, bool defaultValue) {
-    return _box.read<bool>(key) ?? defaultValue;
-  }
-
-  /// Write integer
-  Future<void> writeInt(String key, int value) async {
-    await _box.write(key, value);
-  }
-
-  /// Read integer
-  int? readInt(String key) {
-    return _box.read<int>(key);
-  }
-
-  /// Read integer with default value
-  int readIntWithDefault(String key, int defaultValue) {
-    return _box.read<int>(key) ?? defaultValue;
-  }
-
-  /// Write double
-  Future<void> writeDouble(String key, double value) async {
-    await _box.write(key, value);
-  }
-
-  /// Read double
-  double? readDouble(String key) {
-    return _box.read<double>(key);
-  }
-
-  /// Read double with default value
-  double readDoubleWithDefault(String key, double defaultValue) {
-    return _box.read<double>(key) ?? defaultValue;
-  }
-
-  /// Write DateTime
-  Future<void> writeDateTime(String key, DateTime value) async {
-    await _box.write(key, value.toIso8601String());
-  }
-
-  /// Read DateTime
-  DateTime? readDateTime(String key) {
-    final String? dateString = _box.read<String>(key);
-    if (dateString != null) {
-      try {
-        return DateTime.parse(dateString);
-      } catch (e) {
-        return null;
-      }
-    }
-    return null;
-  }
-
-  // Cache operations with expiration
-
-  /// Write data with expiration
-  Future<void> writeWithExpiration(
-    String key,
-    dynamic value,
-    Duration expiration,
-  ) async {
-    final expirationTime = DateTime.now().add(expiration);
-    final cacheData = {
-      'value': value,
-      'expiration': expirationTime.toIso8601String(),
-    };
-    await _box.write(key, jsonEncode(cacheData));
-  }
-
-  /// Read data with expiration check
-  T? readWithExpiration<T>(String key) {
-    final String? cacheString = _box.read<String>(key);
-    if (cacheString != null) {
-      try {
-        final Map<String, dynamic> cacheData = jsonDecode(cacheString);
-        final DateTime expiration = DateTime.parse(cacheData['expiration']);
-
-        if (DateTime.now().isBefore(expiration)) {
-          return cacheData['value'] as T;
-        } else {
-          // Data expired, remove it
-          _box.remove(key);
-          return null;
-        }
-      } catch (e) {
-        // Invalid cache format, remove it
-        _box.remove(key);
-        return null;
-      }
-    }
-    return null;
-  }
-
-  /// Check if cached data is still valid
-  bool isCacheValid(String key) {
-    final String? cacheString = _box.read<String>(key);
-    if (cacheString != null) {
-      try {
-        final Map<String, dynamic> cacheData = jsonDecode(cacheString);
-        final DateTime expiration = DateTime.parse(cacheData['expiration']);
-        return DateTime.now().isBefore(expiration);
-      } catch (e) {
-        return false;
-      }
-    }
-    return false;
-  }
-
-  /// Clear expired cache entries
-  Future<void> clearExpiredCache() async {
-    final keys = _box.getKeys().toList();
-    for (final key in keys) {
-      final String? cacheString = _box.read<String>(key as String);
-      if (cacheString != null) {
-        try {
-          final Map<String, dynamic> cacheData = jsonDecode(cacheString);
-          if (cacheData.containsKey('expiration')) {
-            final DateTime expiration = DateTime.parse(cacheData['expiration']);
-            if (DateTime.now().isAfter(expiration)) {
-              await _box.remove(key);
-            }
-          }
-        } catch (e) {
-          // Invalid format, remove it
-          await _box.remove(key);
-        }
-      }
-    }
-  }
-
-  // Batch operations
-
-  /// Write multiple key-value pairs
-  Future<void> writeBatch(Map<String, dynamic> data) async {
-    for (final entry in data.entries) {
-      await _box.write(entry.key, entry.value);
-    }
-  }
-
-  /// Read multiple keys
-  Map<String, dynamic> readBatch(List<String> keys) {
-    final Map<String, dynamic> result = {};
-    for (final key in keys) {
-      final value = _box.read(key);
-      if (value != null) {
-        result[key] = value;
-      }
-    }
-    return result;
-  }
-
-  /// Remove multiple keys
-  Future<void> removeBatch(List<String> keys) async {
-    for (final key in keys) {
-      await _box.remove(key);
-    }
-  }
-
-  // Storage info
-
-  /// Get storage size (approximate)
-  int getStorageSize() {
-    return _box.getKeys().length;
-  }
-
-  /// Check if storage is empty
-  bool isEmpty() {
-    return _box.getKeys().isEmpty;
-  }
-
-  /// Listen to storage changes
-  void listenToKey(String key, Function(dynamic) callback) {
-    _box.listenKey(key, callback);
-  }
-
-  /// Listen to all storage changes
-  void listenToAll(Function() callback) {
-    _box.listen(callback);
-  }
-
-  // Tambahkan di StorageService
+  // Auth specific methods
   Future<void> saveLoginSession(
       String token, Map<String, dynamic> user, String role) async {
-    await writeString(StorageKeys.authToken, token);
-    await writeJson(StorageKeys.authUser, user);
-    await writeString(StorageKeys.authUserRole, role);
-    await writeBool(StorageKeys.isLoggedIn, true);
+    await writeString(StorageConstants.authToken, token);
+    await writeJson(StorageConstants.userId.toString(), user);
+    await writeString(StorageConstants.userRole, role);
+    await writeBool(StorageConstants.isLoggedIn, true);
+    await writeString(
+        StorageConstants.lastLoginTime, DateTime.now().toIso8601String());
+
+    // Save individual user data for easy access
+    await writeInt(StorageConstants.userId, user['id'] ?? 0);
+    await writeString(StorageConstants.userName, user['name'] ?? '');
+    await writeString(StorageConstants.userEmail, user['email'] ?? '');
+    await writeString(StorageConstants.userPhone, user['phone'] ?? '');
+    await writeString(StorageConstants.userAvatar, user['avatar'] ?? '');
   }
 
   Future<void> clearLoginSession() async {
-    await removeBatch([
-      StorageKeys.authToken,
-      StorageKeys.authUser,
-      StorageKeys.authUserRole,
-      StorageKeys.isLoggedIn,
-    ]);
+    final keysToRemove = [
+      StorageConstants.authToken,
+      StorageConstants.refreshToken,
+      StorageConstants.userId,
+      StorageConstants.userRole,
+      StorageConstants.userEmail,
+      StorageConstants.userName,
+      StorageConstants.userPhone,
+      StorageConstants.userAvatar,
+      StorageConstants.isLoggedIn,
+      StorageConstants.lastLoginTime,
+      // Clear role-specific data
+      StorageConstants.driverStatus,
+      StorageConstants.storeStatus,
+      StorageKeys.lastActiveTab,
+    ];
+
+    for (final key in keysToRemove) {
+      await remove(key);
+    }
+  }
+
+  // Onboarding methods
+  Future<void> markOnboardingAsSeen() async {
+    await writeBool(StorageConstants.hasSeenOnboarding, true);
+    await writeBool(StorageConstants.isFirstTime, false);
+  }
+
+  bool hasSeenOnboarding() {
+    return readBoolWithDefault(StorageConstants.hasSeenOnboarding, false);
+  }
+
+  bool isFirstTime() {
+    return readBoolWithDefault(StorageConstants.isFirstTime, true);
+  }
+
+  // User data getters
+  String? getCurrentUserToken() {
+    return readString(StorageConstants.authToken);
+  }
+
+  Map<String, dynamic>? getCurrentUser() {
+    final userId = readInt(StorageConstants.userId);
+    if (userId != null) {
+      return {
+        'id': userId,
+        'name': readString(StorageConstants.userName) ?? '',
+        'email': readString(StorageConstants.userEmail) ?? '',
+        'phone': readString(StorageConstants.userPhone) ?? '',
+        'role': readString(StorageConstants.userRole) ?? '',
+        'avatar': readString(StorageConstants.userAvatar) ?? '',
+      };
+    }
+    return null;
+  }
+
+  String? getCurrentUserRole() {
+    return readString(StorageConstants.userRole);
+  }
+
+  bool isUserLoggedIn() {
+    return readBoolWithDefault(StorageConstants.isLoggedIn, false);
+  }
+
+  // FCM Token methods
+  Future<void> saveFCMToken(String token) async {
+    await writeString(StorageConstants.fcmToken, token);
+  }
+
+  String? getFCMToken() {
+    return readString(StorageConstants.fcmToken);
+  }
+
+  // Theme methods
+  Future<void> setDarkMode(bool isDark) async {
+    await writeBool(StorageConstants.isDarkMode, isDark);
+  }
+
+  bool isDarkMode() {
+    return readBoolWithDefault(StorageConstants.isDarkMode, false);
+  }
+
+  // Location methods
+  Future<void> saveLastKnownLocation(double latitude, double longitude) async {
+    await writeDouble(StorageConstants.lastKnownLatitude, latitude);
+    await writeDouble(StorageConstants.lastKnownLongitude, longitude);
+  }
+
+  Map<String, double>? getLastKnownLocation() {
+    final lat = readDouble(StorageConstants.lastKnownLatitude);
+    final lng = readDouble(StorageConstants.lastKnownLongitude);
+
+    if (lat != null && lng != null) {
+      return {'latitude': lat, 'longitude': lng};
+    }
+    return null;
+  }
+
+  // Cart methods
+  Future<void> saveCartItems(List<Map<String, dynamic>> items) async {
+    await writeJsonList(StorageConstants.cartItems, items);
+    await writeString(
+        StorageConstants.cartUpdatedAt, DateTime.now().toIso8601String());
+  }
+
+  List<Map<String, dynamic>> getCartItems() {
+    return readJsonList(StorageConstants.cartItems) ?? [];
+  }
+
+  Future<void> saveCartStore(int storeId, String storeName) async {
+    await writeInt(StorageConstants.cartStoreId, storeId);
+    await writeString(StorageConstants.cartStoreName, storeName);
+  }
+
+  Future<void> clearCart() async {
+    await remove(StorageConstants.cartItems);
+    await remove(StorageConstants.cartStoreId);
+    await remove(StorageConstants.cartStoreName);
+    await remove(StorageConstants.cartTotal);
+    await remove(StorageConstants.cartUpdatedAt);
+  }
+
+  // Preferences methods
+  Future<void> updateNotificationPreferences({
+    bool? orderNotifications,
+    bool? deliveryNotifications,
+    bool? promotionNotifications,
+    bool? soundEnabled,
+    bool? vibrationEnabled,
+  }) async {
+    if (orderNotifications != null) {
+      await writeBool(StorageConstants.orderNotifications, orderNotifications);
+    }
+    if (deliveryNotifications != null) {
+      await writeBool(
+          StorageConstants.deliveryNotifications, deliveryNotifications);
+    }
+    if (promotionNotifications != null) {
+      await writeBool(
+          StorageConstants.promotionNotifications, promotionNotifications);
+    }
+    if (soundEnabled != null) {
+      await writeBool(StorageConstants.soundEnabled, soundEnabled);
+    }
+    if (vibrationEnabled != null) {
+      await writeBool(StorageConstants.vibrationEnabled, vibrationEnabled);
+    }
+  }
+
+  Map<String, bool> getNotificationPreferences() {
+    return {
+      'orderNotifications':
+          readBoolWithDefault(StorageConstants.orderNotifications, true),
+      'deliveryNotifications':
+          readBoolWithDefault(StorageConstants.deliveryNotifications, true),
+      'promotionNotifications':
+          readBoolWithDefault(StorageConstants.promotionNotifications, false),
+      'soundEnabled': readBoolWithDefault(StorageConstants.soundEnabled, true),
+      'vibrationEnabled':
+          readBoolWithDefault(StorageConstants.vibrationEnabled, true),
+    };
+  }
+
+  // Driver specific methods
+  Future<void> updateDriverSettings({
+    String? status,
+    String? vehicleNumber,
+    int? locationUpdateInterval,
+    bool? acceptOrdersAutomatically,
+    String? workingHoursStart,
+    String? workingHoursEnd,
+  }) async {
+    if (status != null) {
+      await writeString(StorageConstants.driverStatus, status);
+    }
+    if (vehicleNumber != null) {
+      await writeString(StorageConstants.driverVehicleNumber, vehicleNumber);
+    }
+    if (locationUpdateInterval != null) {
+      await writeInt(StorageConstants.driverLocationUpdateInterval,
+          locationUpdateInterval);
+    }
+    if (acceptOrdersAutomatically != null) {
+      await writeBool(StorageConstants.acceptOrdersAutomatically,
+          acceptOrdersAutomatically);
+    }
+    if (workingHoursStart != null) {
+      await writeString(StorageConstants.workingHoursStart, workingHoursStart);
+    }
+    if (workingHoursEnd != null) {
+      await writeString(StorageConstants.workingHoursEnd, workingHoursEnd);
+    }
+  }
+
+  // Store specific methods
+  Future<void> updateStoreSettings({
+    String? name,
+    String? status,
+    String? openTime,
+    String? closeTime,
+    bool? autoAcceptOrders,
+    int? preparationTime,
+  }) async {
+    if (name != null) {
+      await writeString(StorageConstants.storeName, name);
+    }
+    if (status != null) {
+      await writeString(StorageConstants.storeStatus, status);
+    }
+    if (openTime != null) {
+      await writeString(StorageConstants.storeOpenTime, openTime);
+    }
+    if (closeTime != null) {
+      await writeString(StorageConstants.storeCloseTime, closeTime);
+    }
+    if (autoAcceptOrders != null) {
+      await writeBool(StorageConstants.autoAcceptOrders, autoAcceptOrders);
+    }
+    if (preparationTime != null) {
+      await writeInt(StorageConstants.preparationTime, preparationTime);
+    }
   }
 }

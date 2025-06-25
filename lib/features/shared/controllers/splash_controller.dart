@@ -1,295 +1,254 @@
-// lib/features/shared/controllers/splash_controller.dart - OPTIMIZED untuk struktur existing
-import 'dart:async';
-import 'package:flutter/foundation.dart';
+// 1. lib/features/shared/controllers/splash_controller.dart (UPDATED)
+import 'package:del_pick/app/config/storage_config.dart';
 import 'package:get/get.dart';
-import 'package:del_pick/core/services/local/storage_service.dart';
-import 'package:del_pick/core/constants/storage_constants.dart';
-import 'package:del_pick/app/routes/app_routes.dart';
+import '../../../app/routes/app_routes.dart';
+import '../../../core/services/external/permission_service.dart';
+import '../../../core/services/external/notification_service.dart';
+import '../../../data/repositories/auth_repository.dart';
+import '../../../core/constants/storage_constants.dart';
+import '../../../core/services/local/storage_service.dart';
 
 class SplashController extends GetxController {
+  final AuthRepository _authRepository = Get.find<AuthRepository>();
+  final PermissionService _permissionService = Get.find<PermissionService>();
+  final NotificationService _notificationService =
+      Get.find<NotificationService>();
   final StorageService _storageService = Get.find<StorageService>();
 
-  // ✅ Observable states untuk UI feedback
   final RxBool isLoading = true.obs;
-  final RxString loadingMessage = 'Initializing...'.obs;
-  final RxDouble loadingProgress = 0.0.obs;
-
-  Timer? _timeoutTimer;
-  Timer? _progressTimer;
-  final int maxInitializationTime = 10; // seconds
+  final RxString loadingText = 'Memulai aplikasi...'.obs;
 
   @override
   void onInit() {
     super.onInit();
-    // ✅ Menggunakan microtask untuk avoid blocking main thread
-    scheduleMicrotask(() => _initializeApp());
+    _initializeApp();
   }
 
   Future<void> _initializeApp() async {
     try {
-      // ✅ Set timeout protection
-      _setInitializationTimeout();
+      // Simulate splash screen delay
+      await Future.delayed(const Duration(seconds: 2));
 
-      // ✅ Start progress animation
-      _startProgressAnimation();
+      // Update loading text
+      loadingText.value = 'Memeriksa koneksi...';
+      await Future.delayed(const Duration(milliseconds: 500));
 
-      loadingMessage.value = 'Loading services...';
-      loadingProgress.value = 0.1;
+      // Initialize services
+      loadingText.value = 'Menginisialisasi layanan...';
+      await _initializeServices();
 
-      // ✅ OPTIMIZED: Parallel execution untuk non-dependent operations
-      await Future.wait([
-        _minimumSplashDuration(), // UX minimum duration
-        _initializeCoreServices(),
-      ]);
+      // Check permissions
+      loadingText.value = 'Memeriksa izin...';
+      await _checkPermissions();
 
-      loadingMessage.value = 'Checking authentication...';
-      loadingProgress.value = 0.6;
-
-      // ✅ Check authentication setelah services ready
-      await _checkAuthenticationStatus();
-
-      loadingProgress.value = 1.0;
+      // Check authentication status
+      loadingText.value = 'Memeriksa autentikasi...';
+      await _checkAuthStatus();
     } catch (e) {
-      debugPrint('❌ Error initializing app: $e');
-      _handleInitializationError(e);
-    } finally {
-      _cleanup();
+      print('Error during initialization: $e');
+      _navigateToOnboarding();
     }
   }
 
-  // ✅ OPTIMIZED: Minimum splash duration untuk UX
-  Future<void> _minimumSplashDuration() async {
-    await Future.delayed(const Duration(milliseconds: 1500));
-  }
-
-  // ✅ OPTIMIZED: Initialize services efficiently
-  Future<void> _initializeCoreServices() async {
+  Future<void> _initializeServices() async {
     try {
-      // ✅ Storage service sudah di-init dari GetStorage.init() di onInit
-      // Pastikan storage berfungsi dengan test read
-      final testKey = 'app_init_test';
-      await _storageService.writeString(testKey, 'test');
-      final testValue = _storageService.readString(testKey);
+      // Initialize analytics if enabled
+      final analyticsEnabled = _storageService.readBoolWithDefault(
+          StorageConstants.analyticsEnabled, true);
 
-      if (testValue != 'test') {
-        throw Exception('Storage service not working properly');
+      if (analyticsEnabled) {
+        // Initialize analytics service here if needed
+        print('Analytics initialized');
       }
 
-      // Clean up test data
-      await _storageService.remove(testKey);
+      // Update session count
+      final sessionCount =
+          _storageService.readIntWithDefault(StorageConstants.sessionCount, 0);
+      await _storageService.writeInt(
+          StorageConstants.sessionCount, sessionCount + 1);
 
-      // ✅ Clear expired cache to free up space
-      await _storageService.clearExpiredCache();
-
-      // ✅ Update app version tracking
-      await _updateAppVersionTracking();
-
-      debugPrint('✅ Core services initialized successfully');
+      // Clean up expired cache if needed
+      await _cleanupExpiredData();
     } catch (e) {
-      debugPrint('❌ Error initializing services: $e');
-      rethrow;
+      print('Error initializing services: $e');
     }
   }
 
-  // ✅ Update app version for tracking
-  Future<void> _updateAppVersionTracking() async {
+  Future<void> _cleanupExpiredData() async {
     try {
-      const currentVersion = '1.0.0'; // Ganti dengan actual app version
-      final lastVersion =
-          _storageService.readString(StorageConstants.lastAppVersion);
+      // Clear temporary data from previous session
+      await _storageService.remove(StorageConstants.tempImagePath);
+      await _storageService.remove(StorageConstants.tempOrderData);
+      await _storageService.remove(StorageConstants.tempFilterSettings);
+      await _storageService.remove(StorageConstants.tempSearchQuery);
 
-      if (lastVersion != currentVersion) {
-        await _storageService.writeString(
-            StorageConstants.currentAppVersion, currentVersion);
-        await _storageService.writeString(
-            StorageConstants.lastAppVersion, currentVersion);
+      print('Temporary data cleaned up');
+    } catch (e) {
+      print('Error cleaning up temporary data: $e');
+    }
+  }
 
-        if (lastVersion == null) {
-          // First time install
-          await _storageService.writeDateTime(
-              StorageConstants.installDate, DateTime.now());
-        } else {
-          // App update
-          await _storageService.writeDateTime(
-              StorageConstants.lastUpdateDate, DateTime.now());
-        }
+  Future<void> _checkPermissions() async {
+    try {
+      // Request notification permission
+      await _notificationService.requestPermission();
+
+      // Check location permission status
+      final hasLocationPermission =
+          await _permissionService.hasLocationPermission();
+      await _storageService.writeBool(
+          StorageConstants.locationPermissionGranted, hasLocationPermission);
+
+      if (!hasLocationPermission) {
+        print(
+            'Location permission not granted, will request later when needed');
       }
     } catch (e) {
-      debugPrint('❌ Error updating app version: $e');
+      print('Error checking permissions: $e');
     }
   }
 
-  Future<void> _checkAuthenticationStatus() async {
+  Future<void> _checkAuthStatus() async {
     try {
-      // ✅ OPTIMIZED: Single read untuk semua auth data
-      final authData = _getStoredAuthData();
+      // Check if this is first time opening the app
+      final isFirstTime = _storageService.readBoolWithDefault(
+          StorageConstants.isFirstTime, true);
 
-      if (_isValidAuthData(authData)) {
-        loadingMessage.value = 'Welcome back!';
+      // Check if user has seen onboarding
+      final hasSeenOnboarding = _storageService.readBoolWithDefault(
+          StorageConstants.hasSeenOnboarding, false);
 
-        // ✅ Update last login time
-        await _storageService.writeDateTime(
-            StorageConstants.lastLoginTime, DateTime.now());
+      // If first time or hasn't seen onboarding, show onboarding
+      if (isFirstTime || !hasSeenOnboarding) {
+        _navigateToOnboarding();
+        return;
+      }
 
-        // ✅ Navigate based on role
-        await _navigateBasedOnRole(authData['userRole']);
+      // Check if user is logged in
+      final isLoggedIn = _storageService.readBoolWithDefault(
+          StorageConstants.isLoggedIn, false);
+
+      final token = _storageService.readString(StorageConstants.authToken);
+
+      if (isLoggedIn && token != null && token.isNotEmpty) {
+        // Verify token with backend
+        loadingText.value = 'Memverifikasi sesi...';
+        final result = await _authRepository.getProfile();
+
+        result.fold(
+          (failure) {
+            // Token invalid, clear session and navigate to login
+            _clearInvalidSession();
+            _navigateToLogin();
+          },
+          (user) {
+            // Token valid, update user data and navigate based on role
+            _updateUserSession(user);
+            _navigateBasedOnRole(user.role);
+          },
+        );
       } else {
-        loadingMessage.value = 'Please login';
-        await _clearInvalidAuthAndNavigate();
+        _navigateToLogin();
       }
     } catch (e) {
-      debugPrint('❌ Error checking auth status: $e');
-      await _clearInvalidAuthAndNavigate();
+      print('Error checking auth status: $e');
+      _navigateToLogin();
     }
   }
 
-  // ✅ OPTIMIZED: Single storage read untuk semua auth data menggunakan existing methods
-  Map<String, dynamic> _getStoredAuthData() {
-    return {
-      'isLoggedIn': _storageService.readBoolWithDefault(
-          StorageConstants.isLoggedIn, false),
-      'token': _storageService.readString(StorageConstants.authToken),
-      'userRole': _storageService.readString(StorageConstants.userRole),
-      'userId': _storageService.readString(StorageConstants.userId),
-      'userEmail': _storageService.readString(StorageConstants.userEmail),
-      'userName': _storageService.readString(StorageConstants.userName),
-    };
+  void _clearInvalidSession() {
+    _storageService.clearLoginSession();
   }
 
-  // ✅ OPTIMIZED: Efficient validation
-  bool _isValidAuthData(Map<String, dynamic> authData) {
-    return authData['isLoggedIn'] == true &&
-        authData['token'] != null &&
-        authData['token'].toString().isNotEmpty &&
-        authData['userRole'] != null &&
-        ['customer', 'driver', 'store'].contains(authData['userRole']) &&
-        authData['userId'] != null &&
-        authData['userId'].toString().isNotEmpty;
+  void _updateUserSession(dynamic user) {
+    // Update last login time
+    _storageService.writeString(
+        StorageConstants.lastLoginTime, DateTime.now().toIso8601String());
+
+    // Update user data in storage
+    _storageService.writeInt(StorageConstants.userId, user.id);
+    _storageService.writeString(StorageConstants.userName, user.name);
+    _storageService.writeString(StorageConstants.userEmail, user.email);
+    _storageService.writeString(StorageConstants.userRole, user.role);
+    _storageService.writeString(StorageConstants.userPhone, user.phone ?? '');
+    _storageService.writeString(StorageConstants.userAvatar, user.avatar ?? '');
   }
 
-  Future<void> _navigateBasedOnRole(String? userRole) async {
-    try {
-      loadingMessage.value = 'Loading dashboard...';
-
-      // ✅ Small delay untuk smooth transition
-      await Future.delayed(const Duration(milliseconds: 300));
-
-      switch (userRole) {
-        case 'customer':
-          await Get.offAllNamed(Routes.CUSTOMER_HOME);
-          break;
-        case 'driver':
-          await Get.offAllNamed(Routes.DRIVER_MAIN);
-          break;
-        case 'store':
-          await Get.offAllNamed(Routes.STORE_DASHBOARD);
-          break;
-        default:
-          debugPrint('⚠️ Unknown user role: $userRole');
-          await _clearInvalidAuthAndNavigate();
-      }
-    } catch (e) {
-      debugPrint('❌ Navigation error: $e');
-      await _clearInvalidAuthAndNavigate();
-    }
-  }
-
-  Future<void> _clearInvalidAuthAndNavigate() async {
-    try {
-      // ✅ Clear semua auth-related data menggunakan batch operation
-      final authKeys = [
-        StorageConstants.authToken,
-        StorageConstants.refreshToken,
-        StorageConstants.userId,
-        StorageConstants.userRole,
-        StorageConstants.userEmail,
-        StorageConstants.userName,
-        StorageConstants.userPhone,
-        StorageConstants.userAvatar,
-        StorageConstants.isLoggedIn,
-      ];
-
-      await _storageService.removeBatch(authKeys);
-
-      // ✅ Navigate to login
-      await Get.offAllNamed(Routes.LOGIN);
-    } catch (e) {
-      debugPrint('❌ Error clearing auth data: $e');
-      // ✅ Force navigate to login even if clearing fails
-      await Get.offAllNamed(Routes.LOGIN);
-    }
-  }
-
-  // ✅ Progress animation untuk better UX
-  void _startProgressAnimation() {
-    _progressTimer = Timer.periodic(const Duration(milliseconds: 100), (timer) {
-      if (loadingProgress.value < 0.5) {
-        loadingProgress.value += 0.02;
-      }
-    });
-  }
-
-  // ✅ Timeout protection
-  void _setInitializationTimeout() {
-    _timeoutTimer = Timer(Duration(seconds: maxInitializationTime), () {
-      if (isLoading.value) {
-        debugPrint('⚠️ Initialization timeout, forcing navigation to login');
-        _handleInitializationError('Initialization timeout');
-      }
-    });
-  }
-
-  void _handleInitializationError(dynamic error) {
+  void _navigateToOnboarding() {
     isLoading.value = false;
-    loadingMessage.value = 'Loading failed';
-    loadingProgress.value = 0.0;
-
-    // ✅ Log error for debugging
-    debugPrint('❌ Initialization error: $error');
-
-    // ✅ Navigate to login dengan delay untuk user feedback
-    Timer(const Duration(milliseconds: 1000), () {
-      Get.offAllNamed(Routes.LOGIN);
-    });
+    Get.offAllNamed(Routes.ONBOARDING);
   }
 
-  // ✅ Cleanup resources
-  void _cleanup() {
-    _timeoutTimer?.cancel();
-    _progressTimer?.cancel();
+  void _navigateToLogin() {
     isLoading.value = false;
-  }
-
-  // ✅ Emergency navigation methods
-  void forceNavigateToLogin() {
-    _cleanup();
     Get.offAllNamed(Routes.LOGIN);
   }
 
-  Future<void> retryInitialization() async {
-    isLoading.value = true;
-    loadingProgress.value = 0.0;
-    loadingMessage.value = 'Retrying...';
+  void _navigateBasedOnRole(String role) {
+    isLoading.value = false;
 
-    await _initializeApp();
+    // Clear last active tab when switching roles
+    _storageService.remove(StorageKeys.lastActiveTab);
+
+    switch (role.toLowerCase()) {
+      case 'customer':
+        Get.offAllNamed(Routes.CUSTOMER_HOME);
+        break;
+      case 'driver':
+        // Check driver status and navigate accordingly
+        _navigateToDriverHome();
+        break;
+      case 'store':
+        // Check store status and navigate accordingly
+        _navigateToStoreHome();
+        break;
+      default:
+        print('Unknown role: $role, navigating to login');
+        Get.offAllNamed(Routes.LOGIN);
+    }
   }
 
-  // ✅ Utility methods untuk debugging
-  Map<String, dynamic> getStorageInfo() {
-    return {
-      'storageSize': _storageService.getStorageSize(),
-      'isEmpty': _storageService.isEmpty(),
-      'hasAuthToken': _storageService.hasData(StorageConstants.authToken),
-      'userRole': _storageService.readString(StorageConstants.userRole),
-      'lastLogin': _storageService
-          .readDateTime(StorageConstants.lastLoginTime)
-          ?.toIso8601String(),
-    };
+  void _navigateToDriverHome() {
+    // Check if driver has set working hours
+    final workingHoursStart =
+        _storageService.readString(StorageConstants.workingHoursStart);
+    final workingHoursEnd =
+        _storageService.readString(StorageConstants.workingHoursEnd);
+
+    if (workingHoursStart == null || workingHoursEnd == null) {
+      // First time driver, might need to set up profile
+      Get.offAllNamed(Routes.DRIVER_HOME);
+    } else {
+      Get.offAllNamed(Routes.DRIVER_HOME);
+    }
   }
 
-  @override
-  void onClose() {
-    _cleanup();
-    super.onClose();
+  void _navigateToStoreHome() {
+    // Check if store has basic setup
+    final storeName = _storageService.readString(StorageConstants.storeName);
+    final storeOpenTime =
+        _storageService.readString(StorageConstants.storeOpenTime);
+    final storeCloseTime =
+        _storageService.readString(StorageConstants.storeCloseTime);
+
+    if (storeName == null || storeOpenTime == null || storeCloseTime == null) {
+      // First time store, might need to set up profile
+      Get.offAllNamed(Routes.PROFILE);
+    } else {
+      Get.offAllNamed(Routes.STORE_DASHBOARD);
+    }
+  }
+
+  // Method to be called when app becomes active (for debugging)
+  void onAppResumed() {
+    final sessionCount =
+        _storageService.readIntWithDefault(StorageConstants.sessionCount, 0);
+    print('App resumed - Session count: $sessionCount');
+  }
+
+  // Method to handle app going to background
+  void onAppPaused() {
+    // Save any pending data
+    print('App paused - Saving state');
   }
 }

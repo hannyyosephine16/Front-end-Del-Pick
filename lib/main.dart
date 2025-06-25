@@ -1,28 +1,45 @@
+// lib/main.dart
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'package:del_pick/app/config/app_config.dart';
-import 'package:del_pick/app/themes/app_theme.dart';
-import 'package:del_pick/app/routes/app_pages.dart';
-import 'package:del_pick/app/bindings/initial_binding.dart';
-import 'package:del_pick/core/services/local/storage_service.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+
+import 'app/bindings/initial_binding.dart';
+import 'app/routes/app_pages.dart';
+import 'app/routes/app_routes.dart';
+import 'app/themes/app_theme.dart';
+import 'core/services/external/notification_service.dart';
+import 'core/services/external/location_service.dart';
+import 'core/services/external/permission_service.dart';
+
+// ✅ Firebase messaging background handler
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  debugPrint('Handling a background message: ${message.messageId}');
+}
 
 void main() async {
-  // ✅ OPTIMIZED: Comprehensive error handling untuk initialization
+  // ✅ Comprehensive error handling untuk initialization
   try {
     WidgetsFlutterBinding.ensureInitialized();
 
-    // OPTIMIZED: Configure system UI untuk better performance
+    // ✅ Configure system UI untuk better performance
     await _configureSystemUI();
 
-    // OPTIMIZED: Setup global error handling sebelum app initialization
+    // ✅ Setup global error handling sebelum app initialization
     _setupErrorHandling();
 
-    // OPTIMIZED: Initialize app configuration dengan timeout protection
-    await _initializeAppWithTimeout();
+    // ✅ Initialize Firebase dengan timeout protection
+    await _initializeFirebaseWithTimeout();
 
-    // ✅ OPTIMIZED: Run optimized app
+    // ✅ Initialize app services dengan timeout protection
+    await _initializeServicesWithTimeout();
+
+    debugPrint('✅ App initialization completed successfully');
+
+    // ✅ Run optimized app
     runApp(const DelPickApp());
   } catch (e, stackTrace) {
     debugPrint('❌ Fatal error during app initialization: $e');
@@ -36,7 +53,7 @@ void main() async {
   }
 }
 
-// ✅ OPTIMIZED: Configure system UI untuk better performance
+// ✅ Configure system UI untuk better performance
 Future<void> _configureSystemUI() async {
   try {
     // ✅ Set preferred orientations
@@ -58,9 +75,7 @@ Future<void> _configureSystemUI() async {
     );
 
     // ✅ Enable edge-to-edge mode
-    SystemChrome.setEnabledSystemUIMode(
-      SystemUiMode.edgeToEdge,
-    );
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
 
     debugPrint('✅ System UI configured successfully');
   } catch (e) {
@@ -69,7 +84,7 @@ Future<void> _configureSystemUI() async {
   }
 }
 
-// ✅ OPTIMIZED: Global error handling
+// ✅ Global error handling
 void _setupErrorHandling() {
   // ✅ Handle Flutter framework errors
   FlutterError.onError = (FlutterErrorDetails details) {
@@ -99,30 +114,74 @@ void _setupErrorHandling() {
   };
 }
 
-// ✅ OPTIMIZED: Initialize app dengan timeout protection
-Future<void> _initializeAppWithTimeout() async {
+// ✅ Initialize Firebase dengan timeout protection
+Future<void> _initializeFirebaseWithTimeout() async {
   try {
-    final storageService = Get.put(StorageService());
-    await storageService.onInit();
-
     await Future.any([
-      AppConfig.initialize(),
-      Future.delayed(const Duration(seconds: 30))
-          .then((_) => throw TimeoutException('App initialization timeout')),
+      Firebase.initializeApp(),
+      Future.delayed(const Duration(seconds: 15)).then(
+          (_) => throw TimeoutException('Firebase initialization timeout')),
     ]);
 
-    debugPrint('✅ App configuration initialized successfully');
+    // Set Firebase messaging background handler
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+    debugPrint('✅ Firebase initialized successfully');
   } catch (e) {
-    debugPrint('❌ App initialization error: $e');
+    debugPrint('❌ Firebase initialization error: $e');
 
     if (e.toString().contains('timeout')) {
-      throw Exception('App initialization timed out. Please restart the app.');
+      throw Exception(
+          'Firebase initialization timed out. Please check your internet connection.');
+    }
+
+    // For DelPick, Firebase is not critical, so we can continue without it
+    debugPrint('⚠️ Continuing without Firebase services');
+  }
+}
+
+// ✅ Initialize app services dengan timeout protection
+Future<void> _initializeServicesWithTimeout() async {
+  try {
+    await Future.any([
+      _initializeServices(),
+      Future.delayed(const Duration(seconds: 15)).then(
+          (_) => throw TimeoutException('Services initialization timeout')),
+    ]);
+
+    debugPrint('✅ Services initialized successfully');
+  } catch (e) {
+    debugPrint('❌ Services initialization error: $e');
+
+    if (e.toString().contains('timeout')) {
+      throw Exception(
+          'Services initialization timed out. Please restart the app.');
     }
     rethrow;
   }
 }
 
-// ✅ OPTIMIZED: Main app class dengan comprehensive error handling
+// ✅ Initialize core services
+Future<void> _initializeServices() async {
+  try {
+    // Initialize notification service
+    // Get.put(NotificationService(), permanent: true);
+    // await Get.find<NotificationService>().initialize();
+
+    // Initialize location service
+    Get.put(LocationService(), permanent: true);
+
+    // Initialize permission service
+    Get.put(PermissionService(), permanent: true);
+
+    debugPrint('✅ Core services initialized');
+  } catch (e) {
+    debugPrint('❌ Error initializing services: $e');
+    throw Exception('Failed to initialize core services: $e');
+  }
+}
+
+// ✅ Main app class dengan comprehensive error handling
 class DelPickApp extends StatelessWidget {
   const DelPickApp({Key? key}) : super(key: key);
 
@@ -132,48 +191,48 @@ class DelPickApp extends StatelessWidget {
       title: 'DelPick',
       debugShowCheckedModeBanner: false,
 
-      // ✅ OPTIMIZED: Themes
+      // ✅ Themes
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
       themeMode: ThemeMode.system,
 
-      // ✅ OPTIMIZED: Routes
-      initialRoute: AppPages.INITIAL,
+      // ✅ Routes
+      initialRoute: Routes.SPLASH,
       getPages: AppPages.routes,
 
-      // ✅ OPTIMIZED: Initial binding
+      // ✅ Initial binding
       initialBinding: InitialBinding(),
 
-      // ✅ OPTIMIZED: Localization
+      // ✅ Localization
       locale: const Locale('id', 'ID'),
       fallbackLocale: const Locale('en', 'US'),
 
-      // ✅ OPTIMIZED: Performance optimizations
+      // ✅ Performance optimizations
       defaultTransition: Transition.cupertino,
       transitionDuration: const Duration(milliseconds: 250),
 
-      // ✅ OPTIMIZED: Memory management
+      // ✅ Memory management
       smartManagement: SmartManagement.keepFactory,
 
-      // ✅ OPTIMIZED: Unknown route handling
+      // ✅ Unknown route handling
       unknownRoute: GetPage(
         name: '/unknown',
         page: () => const _ErrorPage(
-          title: 'Page Not Found',
-          message: 'The requested page could not be found.',
+          title: 'Halaman Tidak Ditemukan',
+          message: 'Halaman yang Anda cari tidak dapat ditemukan.',
           showRetryButton: false,
         ),
       ),
 
-      // ✅ OPTIMIZED: Global app builder dengan error handling
+      // ✅ Global app builder dengan error handling
       builder: (context, child) {
         // ✅ Configure global error widget
         ErrorWidget.builder = (FlutterErrorDetails details) {
           return _ErrorPage(
-            title: 'Something went wrong',
+            title: 'Terjadi Kesalahan',
             message: kDebugMode
                 ? '${details.exception}\n\n${details.stack?.toString().split('\n').take(3).join('\n')}'
-                : 'An unexpected error occurred. Please restart the app.',
+                : 'Terjadi kesalahan yang tidak terduga. Silakan restart aplikasi.',
             showRetryButton: true,
           );
         };
@@ -188,12 +247,11 @@ class DelPickApp extends StatelessWidget {
         );
       },
 
-      // ✅ OPTIMIZED: Global navigation observer untuk debugging
-      navigatorObservers: kDebugMode
-          ? [
-              _CustomNavigatorObserver(),
-            ]
-          : [],
+      // ✅ Global navigation observer untuk debugging
+      navigatorObservers: kDebugMode ? [_CustomNavigatorObserver()] : [],
+
+      // ✅ Enable logging
+      enableLog: kDebugMode,
     );
   }
 }
@@ -217,21 +275,25 @@ class _CustomNavigatorObserver extends NavigatorObserver {
   }
 }
 
-// ✅ OPTIMIZED: Recovery app untuk emergency cases
+// ✅ Recovery app untuk emergency cases
 Widget _createRecoveryApp(String errorMessage) {
   return MaterialApp(
     title: 'DelPick - Recovery',
     debugShowCheckedModeBanner: false,
+    theme: ThemeData(
+      primarySwatch: Colors.green,
+      fontFamily: 'Inter',
+    ),
     home: _ErrorPage(
-      title: 'App Initialization Failed',
-      message: 'Failed to start DelPick properly.\n\nError: $errorMessage',
+      title: 'Gagal Memulai Aplikasi',
+      message: 'DelPick gagal dimulai dengan benar.\n\nError: $errorMessage',
       showRetryButton: true,
       isRecoveryMode: true,
     ),
   );
 }
 
-// ✅ OPTIMIZED: Comprehensive error page widget
+// ✅ Comprehensive error page widget
 class _ErrorPage extends StatelessWidget {
   final String title;
   final String message;
@@ -340,9 +402,9 @@ class _ErrorPage extends StatelessWidget {
                         onPressed: () => _handleRetryAction(),
                         icon: const Icon(Icons.refresh),
                         label:
-                            Text(isRecoveryMode ? 'Restart App' : 'Try Again'),
+                            Text(isRecoveryMode ? 'Restart App' : 'Coba Lagi'),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF1976D2),
+                          backgroundColor: const Color(0xFF2E7D3E),
                           foregroundColor: Colors.white,
                           elevation: 2,
                           shape: RoundedRectangleBorder(
@@ -354,32 +416,14 @@ class _ErrorPage extends StatelessWidget {
 
                     const SizedBox(height: 16),
 
-                    // ✅ Secondary action button untuk recovery mode
-                    if (isRecoveryMode) ...[
-                      SizedBox(
-                        width: double.infinity,
-                        height: 48,
-                        child: OutlinedButton.icon(
-                          onPressed: () => _handleClearDataAction(),
-                          icon: const Icon(Icons.delete_outline),
-                          label: const Text('Clear App Data'),
-                          style: OutlinedButton.styleFrom(
-                            foregroundColor: Colors.red.shade600,
-                            side: BorderSide(color: Colors.red.shade300),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ] else ...[
-                      // ✅ Normal mode - navigate to safe screen
+                    // ✅ Secondary action button
+                    if (!isRecoveryMode) ...[
                       TextButton(
                         onPressed: () => _handleNavigateToSafeScreen(),
                         child: const Text(
-                          'Go to Login',
+                          'Ke Halaman Login',
                           style: TextStyle(
-                            color: Color(0xFF1976D2),
+                            color: Color(0xFF2E7D3E),
                             fontSize: 16,
                           ),
                         ),
@@ -431,45 +475,20 @@ class _ErrorPage extends StatelessWidget {
     } else {
       // ✅ Try to navigate back atau retry operation
       try {
-        Get.offAllNamed('/splash');
+        if (Get.isRegistered<GetxController>()) {
+          Get.offAllNamed(Routes.SPLASH);
+        } else {
+          _restartApp();
+        }
       } catch (e) {
         _restartApp();
       }
     }
   }
 
-  void _handleClearDataAction() {
-    // ✅ Show confirmation dialog
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Clear App Data'),
-        content: const Text(
-          'This will remove all stored data including login information. Are you sure?',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('Cancel'),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              Get.back();
-              await _clearAppDataAndRestart();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Clear & Restart'),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _handleNavigateToSafeScreen() {
     try {
-      Get.offAllNamed('/login');
+      Get.offAllNamed(Routes.LOGIN);
     } catch (e) {
       _restartApp();
     }
@@ -479,43 +498,14 @@ class _ErrorPage extends StatelessWidget {
     // ✅ In a real app, you might use restart_app package
     // For now, we'll try to reinitialize
     try {
+      Get.deleteAll(force: true);
       main();
     } catch (e) {
       debugPrint('❌ Failed to restart app: $e');
     }
   }
 
-  Future<void> _clearAppDataAndRestart() async {
-    try {
-      // ✅ Clear storage if available
-      try {
-        final storage = Get.find<StorageService>();
-        await storage.clearAll();
-      } catch (e) {
-        debugPrint('Storage service not available: $e');
-      }
-
-      // ✅ Clear GetX services
-      Get.deleteAll(force: true);
-
-      // ✅ Restart app
-      _restartApp();
-    } catch (e) {
-      debugPrint('❌ Failed to clear data: $e');
-      _restartApp();
-    }
-  }
-
   void _showDebugInfo() {
-    // ✅ FIXED: Get registered services count safely
-    int servicesCount = 0;
-    try {
-      // Try to access GetX internal data safely
-      servicesCount = Get.isRegistered<StorageService>() ? 1 : 0;
-    } catch (e) {
-      servicesCount = 0;
-    }
-
     Get.dialog(
       AlertDialog(
         title: const Text('Debug Information'),
@@ -528,7 +518,8 @@ class _ErrorPage extends StatelessWidget {
               _buildDebugRow('Error', title),
               _buildDebugRow('Message', message),
               _buildDebugRow('Recovery Mode', isRecoveryMode.toString()),
-              _buildDebugRow('Services', servicesCount.toString()),
+              _buildDebugRow(
+                  'GetX Ready', Get.isRegistered<GetxController>().toString()),
             ],
           ),
         ),
@@ -571,12 +562,14 @@ class _ErrorPage extends StatelessWidget {
         'Title: $title\nMessage: $message\nRecovery Mode: $isRecoveryMode';
     Clipboard.setData(ClipboardData(text: errorText));
 
-    Get.snackbar(
-      'Copied',
-      'Error information copied to clipboard',
-      snackPosition: SnackPosition.BOTTOM,
-      duration: const Duration(seconds: 2),
-    );
+    if (Get.isRegistered<GetxController>()) {
+      Get.snackbar(
+        'Tersalin',
+        'Informasi error berhasil disalin ke clipboard',
+        snackPosition: SnackPosition.BOTTOM,
+        duration: const Duration(seconds: 2),
+      );
+    }
   }
 }
 

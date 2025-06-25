@@ -145,7 +145,7 @@ class AppPages {
       name: Routes.RESET_PASSWORD,
       page: () => const ResetPasswordScreen(),
       binding: AuthBinding(),
-      middlewares: [AuthMiddleware()], // ✅ Butuh auth tapi tidak spesifik role
+      middlewares: [AuthMiddleware()],
     ),
     GetPage(
       name: Routes.PROFILE,
