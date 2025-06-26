@@ -1,13 +1,12 @@
-import 'package:del_pick/core/utils/parsing_helper.dart';
-
+// lib/data/models/auth/user_model.dart
 class UserModel {
   final int id;
   final String name;
   final String email;
-  final String? phone;
   final String role;
-  final String? avatar;
+  final String? phone;
   final String? fcmToken;
+  final String? avatar;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -15,28 +14,28 @@ class UserModel {
     required this.id,
     required this.name,
     required this.email,
-    this.phone,
     required this.role,
-    this.avatar,
+    this.phone,
     this.fcmToken,
+    this.avatar,
     this.createdAt,
     this.updatedAt,
   });
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: ParsingHelper.parseIntWithDefault(json['id'], 0),
-      name: json['name'] as String? ?? '',
-      email: json['email'] as String? ?? '',
+      id: json['id'] as int,
+      name: json['name'] as String,
+      email: json['email'] as String,
+      role: json['role'] as String,
       phone: json['phone'] as String?,
-      role: json['role'] as String? ?? 'customer',
-      avatar: json['avatar'] as String?,
       fcmToken: json['fcm_token'] as String?,
+      avatar: json['avatar'] as String?,
       createdAt: json['created_at'] != null
-          ? DateTime.tryParse(json['created_at'] as String)
+          ? DateTime.parse(json['created_at'] as String)
           : null,
       updatedAt: json['updated_at'] != null
-          ? DateTime.tryParse(json['updated_at'] as String)
+          ? DateTime.parse(json['updated_at'] as String)
           : null,
     );
   }
@@ -46,10 +45,10 @@ class UserModel {
       'id': id,
       'name': name,
       'email': email,
-      'phone': phone,
       'role': role,
-      'avatar': avatar,
+      'phone': phone,
       'fcm_token': fcmToken,
+      'avatar': avatar,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -59,10 +58,10 @@ class UserModel {
     int? id,
     String? name,
     String? email,
-    String? phone,
     String? role,
-    String? avatar,
+    String? phone,
     String? fcmToken,
+    String? avatar,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -70,10 +69,10 @@ class UserModel {
       id: id ?? this.id,
       name: name ?? this.name,
       email: email ?? this.email,
-      phone: phone ?? this.phone,
       role: role ?? this.role,
-      avatar: avatar ?? this.avatar,
+      phone: phone ?? this.phone,
       fcmToken: fcmToken ?? this.fcmToken,
+      avatar: avatar ?? this.avatar,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -111,18 +110,18 @@ class UserModel {
   }
 
   @override
-  bool operator ==(Object other) =>
-      identical(this, other) ||
-          other is UserModel && runtimeType == other.runtimeType && id == other.id;
-
-  @override
-  int get hashCode => id.hashCode;
-
-  @override
   String toString() {
     return 'UserModel{id: $id, name: $name, email: $email, role: $role}';
   }
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UserModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id &&
+          email == other.email;
+
+  @override
+  int get hashCode => id.hashCode ^ email.hashCode;
 }
-
-
-
