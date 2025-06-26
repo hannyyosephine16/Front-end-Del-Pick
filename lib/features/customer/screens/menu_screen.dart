@@ -1,4 +1,4 @@
-// lib/features/customer/views/menu_screen.dart
+// lib/features/customer/screens/menu_screen.dart
 import 'package:flutter/material.dart' hide MenuController;
 import 'package:get/get.dart';
 import 'package:del_pick/features/customer/controllers/menu_controller.dart';
@@ -237,20 +237,17 @@ class MenuScreen extends GetView<MenuController> {
   Widget _buildSearchBar() {
     return Container(
       padding: const EdgeInsets.all(AppDimensions.paddingMD),
-      child: CustomTextField(
-        hintText: 'Cari menu...',
-        prefixIcon: Icons.search,
-        onChanged: controller.searchMenuItems,
-        suffixIcon: Obx(() {
-          if (controller.searchQuery.isNotEmpty) {
-            return IconButton(
-              icon: const Icon(Icons.clear),
-              onPressed: controller.clearSearch,
-            );
-          }
-          return null;
-        }),
-      ),
+      child: Obx(() => CustomTextField(
+            hintText: 'Cari menu...',
+            prefixIcon: Icons.search,
+            onChanged: controller.searchMenuItems,
+            suffixIcon: controller.searchQuery.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    onPressed: controller.clearSearch,
+                  )
+                : null, // ✅ FIXED: suffixIcon can be null
+          )),
     );
   }
 
@@ -329,7 +326,7 @@ class MenuScreen extends GetView<MenuController> {
 
   Widget _buildCartFAB() {
     return Obx(() {
-      if (!controller.hasItemsInCart) return const SizedBox.shrink();
+      if (!controller.hasItemsInCart) ;
 
       return FloatingActionButton.extended(
         onPressed: controller.navigateToCart,
