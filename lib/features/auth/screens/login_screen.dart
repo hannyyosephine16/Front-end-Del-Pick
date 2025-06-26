@@ -1,3 +1,4 @@
+// lib/features/auth/screens/login_screen.dart - FIXED
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/features/auth/controllers/login_controller.dart';
@@ -174,57 +175,108 @@ class LoginScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: AppDimensions.spacingXL),
 
-                // Login Button
-                Obx(() => CustomButton.primary(
-                      text: 'Masuk',
-                      onPressed:
-                          controller.isFormValid ? controller.login : null,
-                      isLoading: controller.isLoading.value,
-                      isExpanded: true,
-                      size: ButtonSize.large,
+                // ✅ LOGIN BUTTON - Always accessible
+                Obx(() => SizedBox(
+                      width: double.infinity,
+                      height: 56,
+                      child: ElevatedButton(
+                        onPressed: controller.isLoading.value
+                            ? null
+                            : controller.login,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.primary,
+                          foregroundColor: Colors.white,
+                          disabledBackgroundColor:
+                              AppColors.primary.withOpacity(0.6),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 2,
+                        ),
+                        child: controller.isLoading.value
+                            ? const SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  valueColor: AlwaysStoppedAnimation<Color>(
+                                    Colors.white,
+                                  ),
+                                ),
+                              )
+                            : Text(
+                                'Masuk',
+                                style: AppTextStyles.bodyLarge.copyWith(
+                                  color: Colors.white,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                      ),
                     )),
                 const SizedBox(height: AppDimensions.spacingXL),
 
-                // Demo Buttons (for testing)
-                if (Get.arguments?['showDemo'] == true) ...[
-                  const Divider(),
-                  const SizedBox(height: AppDimensions.spacingMD),
-                  Text(
-                    'Demo Accounts',
-                    style: AppTextStyles.bodyMedium.copyWith(
-                      color: AppColors.textSecondary,
+                // Demo Buttons (for testing) - Always show for now
+                const Divider(),
+                const SizedBox(height: AppDimensions.spacingMD),
+                Text(
+                  'Demo Accounts (untuk testing)',
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppDimensions.spacingMD),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: controller.fillDemoCustomer,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Customer',
+                          style: TextStyle(color: AppColors.primary),
+                        ),
+                      ),
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: AppDimensions.spacingMD),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: CustomButton.outlined(
-                          text: 'Customer',
-                          onPressed: controller.fillDemoCustomer,
-                          size: ButtonSize.small,
+                    const SizedBox(width: AppDimensions.spacingSM),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: controller.fillDemoDriver,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Driver',
+                          style: TextStyle(color: AppColors.primary),
                         ),
                       ),
-                      const SizedBox(width: AppDimensions.spacingSM),
-                      Expanded(
-                        child: CustomButton.outlined(
-                          text: 'Driver',
-                          onPressed: controller.fillDemoDriver,
-                          size: ButtonSize.small,
+                    ),
+                    const SizedBox(width: AppDimensions.spacingSM),
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: controller.fillDemoStore,
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: AppColors.primary),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Store',
+                          style: TextStyle(color: AppColors.primary),
                         ),
                       ),
-                      const SizedBox(width: AppDimensions.spacingSM),
-                      Expanded(
-                        child: CustomButton.outlined(
-                          text: 'Store',
-                          onPressed: controller.fillDemoStore,
-                          size: ButtonSize.small,
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+                    ),
+                  ],
+                ),
 
                 const SizedBox(height: AppDimensions.spacingXL),
 

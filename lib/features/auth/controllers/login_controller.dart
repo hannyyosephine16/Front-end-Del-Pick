@@ -56,23 +56,24 @@ class LoginController extends GetxController {
     // TODO: Load from storage if remember me was enabled
   }
 
-  // ✅ Login dengan AuthController integration
+  // ✅ Login dengan validasi minimal
   Future<void> login() async {
     try {
-      // ✅ Validate form
-      if (!formKey.currentState!.validate()) {
-        return;
-      }
-
       clearError();
       isLoading.value = true;
 
       final email = emailController.text.trim();
       final password = passwordController.text.trim();
 
-      // ✅ Basic validation
-      if (email.isEmpty || password.isEmpty) {
-        errorMessage.value = 'Email dan password harus diisi';
+      // ✅ Minimal validation - hanya cek kosong
+      if (email.isEmpty) {
+        errorMessage.value = 'Email harus diisi';
+        _showErrorSnackbar(errorMessage.value);
+        return;
+      }
+
+      if (password.isEmpty) {
+        errorMessage.value = 'Password harus diisi';
         _showErrorSnackbar(errorMessage.value);
         return;
       }
@@ -92,9 +93,21 @@ class LoginController extends GetxController {
 
         // ✅ Navigation akan ditangani oleh AuthController
         _clearForm();
+
+        // Show success message
+        Get.snackbar(
+          'Berhasil',
+          'Login berhasil!',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 2),
+        );
       } else {
         // ✅ Error handling sudah ditangani oleh AuthController
         errorMessage.value = authController.errorMessage.value;
+        if (errorMessage.value.isNotEmpty) {
+          _showErrorSnackbar(errorMessage.value);
+        }
       }
     } catch (e) {
       print('❌ LoginController error: $e');
@@ -109,14 +122,10 @@ class LoginController extends GetxController {
   String _getDisplayErrorMessage(String error) {
     final lowercaseError = error.toLowerCase();
 
-    if (lowercaseError.contains('invalid') ||
-        lowercaseError.contains('salah') ||
-        lowercaseError.contains('incorrect') ||
-        lowercaseError.contains('email atau password salah')) {
+    if (lowercaseError.contains('email atau password salah') ||
+        lowercaseError.contains('invalid credentials') ||
+        lowercaseError.contains('unauthorized')) {
       return 'Email atau password salah';
-    } else if (lowercaseError.contains('not found') ||
-        lowercaseError.contains('tidak ditemukan')) {
-      return 'Akun tidak ditemukan';
     } else if (lowercaseError.contains('network') ||
         lowercaseError.contains('connection') ||
         lowercaseError.contains('internet')) {
@@ -126,39 +135,53 @@ class LoginController extends GetxController {
     } else if (lowercaseError.contains('server') ||
         lowercaseError.contains('500')) {
       return 'Server bermasalah. Silakan coba lagi nanti';
-    } else if (lowercaseError.contains('validation') ||
-        lowercaseError.contains('required')) {
-      return 'Periksa input Anda dan coba lagi';
     } else if (lowercaseError.contains('too many requests') ||
         lowercaseError.contains('rate limit')) {
       return 'Terlalu banyak percobaan. Tunggu sebentar';
-    } else if (lowercaseError.contains('unauthorized')) {
-      return 'Email atau password salah';
-    } else if (lowercaseError.contains('forbidden')) {
-      return 'Akses ditolak';
     }
 
-    // Return original error if it's short enough, otherwise generic message
-    return error.length > 100 ? 'Terjadi kesalahan saat login' : error;
+    // Return user-friendly generic message
+    return 'Terjadi kesalahan saat login. Silakan coba lagi.';
   }
 
   // ✅ Show error snackbar
   void _showErrorSnackbar(String message) {
-    Helpers.showErrorSnackbar(
-      'Login Error',
+    Get.snackbar(
+      'Error',
       message,
-      Get.context!,
+      backgroundColor: Colors.red,
+      colorText: Colors.white,
+      duration: const Duration(seconds: 3),
+      snackPosition: SnackPosition.TOP,
     );
   }
 
-  // ✅ Email validator using Validators utility
+  // ✅ Minimal email validator - hanya cek kosong dan format dasar
   String? validateEmail(String? value) {
-    return Validators.validateEmail(value);
+    if (value == null || value.trim().isEmpty) {
+      return 'Email harus diisi';
+    }
+
+    // Basic email format check
+    if (!value.contains('@') || !value.contains('.')) {
+      return 'Format email tidak valid';
+    }
+
+    return null;
   }
 
-  // ✅ Password validator using Validators utility
+  // ✅ Minimal password validator - hanya cek kosong
   String? validatePassword(String? value) {
-    return Validators.validatePassword(value);
+    if (value == null || value.trim().isEmpty) {
+      return 'Password harus diisi';
+    }
+
+    // Minimal length check (optional)
+    if (value.length < 6) {
+      return 'Password minimal 6 karakter';
+    }
+
+    return null;
   }
 
   // ✅ Clear form
@@ -181,30 +204,39 @@ class LoginController extends GetxController {
 
   bool get hasError => errorMessage.value.isNotEmpty;
   bool get isFormValid =>
-      emailController.text.isNotEmpty && passwordController.text.isNotEmpty;
+      emailController.text.trim().isNotEmpty &&
+      passwordController.text.trim().isNotEmpty;
 
   // ✅ Navigation methods
   void goToRegister() {
+    clearError();
     Get.toNamed(Routes.REGISTER);
   }
 
   void goToForgotPassword() {
+    clearError();
     Get.toNamed(Routes.FORGOT_PASSWORD);
   }
 
-  // ✅ Auto-fill methods for testing/demo
-  void fillDemoCustomer() {
-    emailController.text = 'customer@delpick.com';
+  // ✅ Testing methods untuk development
+  void testWithRealData() {
+    // Gunakan data real dari database admin seed
+    emailController.text = 'admin@delpick.com';
     passwordController.text = 'password';
+    clearError();
+  }
+
+  // ✅ Clear demo methods - tidak ada lagi auto-fill
+  void fillDemoCustomer() {
+    // Kosongkan form dan biarkan user isi manual
+    clearForm();
   }
 
   void fillDemoDriver() {
-    emailController.text = 'driver@delpick.com';
-    passwordController.text = 'password';
+    clearForm();
   }
 
   void fillDemoStore() {
-    emailController.text = 'store@delpick.com';
-    passwordController.text = 'password';
+    clearForm();
   }
 }
