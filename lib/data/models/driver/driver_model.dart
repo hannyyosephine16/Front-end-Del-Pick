@@ -30,7 +30,7 @@ class DriverModel {
     required this.updatedAt,
   });
 
-  // ✅ FIXED: Safe parsing using ParsingHelper
+  // ✅ FIXED: Handle backend DelPick response format
   factory DriverModel.fromJson(Map<String, dynamic> json) {
     return DriverModel(
       id: ParsingHelper.parseIntWithDefault(json['id'], 0),
@@ -38,13 +38,29 @@ class DriverModel {
       licenseNumber: json['license_number'] as String? ?? '',
       vehiclePlate: json['vehicle_plate'] as String? ?? '',
       status: json['status'] as String? ?? 'inactive',
-      rating: ParsingHelper.parseDoubleWithDefault(json['rating'], 5.0),
+
+      // ⚠️ FIXED: Backend sends rating as STRING "5.00"
+      rating: ParsingHelper.parseDoubleWithDefault(
+          json['rating'] is String
+              ? double.tryParse(json['rating'] as String)
+              : json['rating'],
+          5.0),
+
       reviewsCount: ParsingHelper.parseIntWithDefault(json['reviews_count'], 0),
-      latitude: ParsingHelper.parseDouble(json['latitude']),
-      longitude: ParsingHelper.parseDouble(json['longitude']),
+
+      // ⚠️ FIXED: Backend sends coordinates as STRING
+      latitude: json['latitude'] is String
+          ? double.tryParse(json['latitude'] as String)
+          : ParsingHelper.parseDouble(json['latitude']),
+      longitude: json['longitude'] is String
+          ? double.tryParse(json['longitude'] as String)
+          : ParsingHelper.parseDouble(json['longitude']),
+
       user: json['user'] != null
           ? UserModel.fromJson(json['user'] as Map<String, dynamic>)
           : null,
+
+      // ⚠️ FIXED: Use current time if not provided (driver data doesn't have timestamps)
       createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
       updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
@@ -61,8 +77,8 @@ class DriverModel {
       'status': status,
       'rating': rating,
       'reviews_count': reviewsCount,
-      'latitude': latitude,
-      'longitude': longitude,
+      'latitude': latitude?.toString(), // Convert back to string for API
+      'longitude': longitude?.toString(),
       'user': user?.toJson(),
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),

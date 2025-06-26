@@ -1,6 +1,7 @@
-import '../auth/user_model.dart';
+// lib/data/models/auth/login_response_model.dart - SESUAI BACKEND
+import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
-import '../store/store_model.dart';
+import 'package:del_pick/data/models/store/store_model.dart';
 
 class LoginResponseModel {
   final String token;
@@ -15,12 +16,12 @@ class LoginResponseModel {
     this.store,
   });
 
-  /// Creates LoginResponseModel from backend response
-  /// Backend returns: { message, data: { token, user, driver?, store? } }
-  factory LoginResponseModel.fromJson(Map<String, dynamic> json) {
+  // ✅ Factory untuk backend DelPick response format
+  factory LoginResponseModel.fromBackendResponse(Map<String, dynamic> json) {
+    // Backend DelPick format: { token, user, driver?, store? }
     return LoginResponseModel(
-      token: json['token'] as String? ?? '',
-      user: UserModel.fromJson(json['user'] as Map<String, dynamic>? ?? {}),
+      token: json['token'] as String,
+      user: UserModel.fromJson(json['user'] as Map<String, dynamic>),
       driver: json['driver'] != null
           ? DriverModel.fromJson(json['driver'] as Map<String, dynamic>)
           : null,
@@ -30,27 +31,28 @@ class LoginResponseModel {
     );
   }
 
-  /// Creates LoginResponseModel from complete backend response (including message)
-  factory LoginResponseModel.fromBackendResponse(Map<String, dynamic> json) {
-    final data = json['data'] as Map<String, dynamic>? ?? {};
-    return LoginResponseModel.fromJson(data);
+  // ✅ Alternative factory untuk format lain
+  factory LoginResponseModel.fromJson(Map<String, dynamic> json) {
+    return LoginResponseModel.fromBackendResponse(json);
   }
 
   Map<String, dynamic> toJson() {
     return {
       'token': token,
       'user': user.toJson(),
-      if (driver != null) 'driver': driver!.toJson(),
-      if (store != null) 'store': store!.toJson(),
+      'driver': driver?.toJson(),
+      'store': store?.toJson(),
     };
   }
 
   // Helper getters
   bool get hasDriver => driver != null;
   bool get hasStore => store != null;
-  bool get isDriver => user.isDriver && hasDriver;
-  bool get isStore => user.isStore && hasStore;
-  bool get isCustomer => user.isCustomer;
+
+  String get userRole => user.role;
+  bool get isCustomer => user.role == 'customer';
+  bool get isDriver => user.role == 'driver';
+  bool get isStore => user.role == 'store';
 
   /// Returns the appropriate role-specific data
   Map<String, dynamic>? get roleSpecificData {
@@ -84,7 +86,7 @@ class LoginResponseModel {
 
   @override
   String toString() {
-    return 'LoginResponseModel{token: ${token.substring(0, 10)}..., user: ${user.name}, role: ${user.role}}';
+    return 'LoginResponseModel{token: ${token.substring(0, 20)}..., user: ${user.name}, role: ${user.role}}';
   }
 
   @override

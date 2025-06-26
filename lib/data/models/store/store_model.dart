@@ -48,7 +48,7 @@ class StoreModel {
     this.updatedAt,
   });
 
-  // ✅ FIXED: Safe parsing using ParsingHelper
+  // ✅ FIXED: Handle backend DelPick response format
   factory StoreModel.fromJson(Map<String, dynamic> json) {
     return StoreModel(
       id: ParsingHelper.parseIntWithDefault(json['id'], 0),
@@ -63,8 +63,15 @@ class StoreModel {
       imageUrl: json['image_url'] as String?,
       phone: json['phone'] as String?,
       reviewCount: ParsingHelper.parseInt(json['review_count']),
-      latitude: ParsingHelper.parseDouble(json['latitude']),
-      longitude: ParsingHelper.parseDouble(json['longitude']),
+
+      // ⚠️ FIXED: Backend sends coordinates as STRING
+      latitude: json['latitude'] is String
+          ? double.tryParse(json['latitude'] as String)
+          : ParsingHelper.parseDouble(json['latitude']),
+      longitude: json['longitude'] is String
+          ? double.tryParse(json['longitude'] as String)
+          : ParsingHelper.parseDouble(json['longitude']),
+
       distance: ParsingHelper.parseDouble(json['distance']),
       status: json['status'] as String? ?? 'active',
       owner: json['owner'] != null
@@ -76,6 +83,8 @@ class StoreModel {
                   MenuItemModel.fromJson(item as Map<String, dynamic>))
               .toList()
           : null,
+
+      // ⚠️ FIXED: Use current time if not provided (store data doesn't have timestamps)
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -99,8 +108,8 @@ class StoreModel {
       'image_url': imageUrl,
       'phone': phone,
       'review_count': reviewCount,
-      'latitude': latitude,
-      'longitude': longitude,
+      'latitude': latitude?.toString(), // Convert back to string for API
+      'longitude': longitude?.toString(),
       'distance': distance,
       'status': status,
       'owner': owner?.toJson(),

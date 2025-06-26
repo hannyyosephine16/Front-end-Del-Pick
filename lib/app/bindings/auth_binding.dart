@@ -78,11 +78,6 @@ class AuthBinding extends Bindings {
       fenix: true,
     );
 
-    Get.lazyPut<RegisterController>(
-      () => RegisterController(Get.find<AuthRepository>()),
-      fenix: true,
-    );
-
     Get.lazyPut<ProfileController>(
       () => ProfileController(),
       fenix: true,

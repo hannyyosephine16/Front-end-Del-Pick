@@ -1,9 +1,10 @@
-// lib/features/auth/controllers/auth_controller.dart - No Notification Service
+// lib/features/auth/controllers/auth_controller.dart - FIXED
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
 import 'package:del_pick/data/repositories/auth_repository.dart';
 import 'package:del_pick/core/services/external/connectivity_service.dart';
 import 'package:del_pick/core/services/local/storage_service.dart';
+import 'package:del_pick/core/services/api/api_service.dart'; // ✅ Add this import
 import 'package:del_pick/app/routes/app_routes.dart';
 import 'package:del_pick/core/constants/app_constants.dart';
 import 'package:del_pick/core/constants/storage_constants.dart';
@@ -15,12 +16,15 @@ class AuthController extends GetxController {
   final AuthRepository _authRepository;
   final ConnectivityService _connectivityService;
   final StorageService _storageService;
+  late final ApiService _apiService; // ✅ Add ApiService
 
   AuthController(
     this._authRepository,
     this._connectivityService,
     this._storageService,
-  );
+  ) {
+    _apiService = Get.find<ApiService>(); // ✅ Initialize ApiService
+  }
 
   // Observable properties
   final RxBool isLoggedIn = false.obs;
@@ -40,7 +44,7 @@ class AuthController extends GetxController {
     checkAuthStatus();
   }
 
-  // ✅ Check auth status
+  // ✅ Check auth status - FIXED
   Future<void> checkAuthStatus() async {
     try {
       isLoading.value = true;
@@ -63,6 +67,11 @@ class AuthController extends GetxController {
         token.value = storedToken;
         isLoggedIn.value = true;
 
+        // ✅ SET TOKEN TO API SERVICE - CRITICAL FIX
+        _apiService.setAuthToken(storedToken);
+        print(
+            '✅ Token restored from storage and set to ApiService: ${storedToken.substring(0, 20)}...');
+
         // Load role-specific data
         await _loadRoleSpecificData();
 
@@ -77,6 +86,7 @@ class AuthController extends GetxController {
       }
 
       // Tidak ada data valid, ke login
+      print('❌ No valid auth data found, redirecting to login');
       Get.offAllNamed(Routes.LOGIN);
     } catch (e) {
       print('❌ CheckAuthStatus error: $e');
@@ -86,7 +96,7 @@ class AuthController extends GetxController {
     }
   }
 
-  // ✅ Login method - minimal validation
+  // ✅ Login method - FIXED WITH TOKEN SETTING
   Future<bool> login({required String email, required String password}) async {
     try {
       isLoading.value = true;
@@ -108,12 +118,17 @@ class AuthController extends GetxController {
         final authToken = loginResponse.token;
 
         print('✅ Login success: ${user.name} (${user.role})');
+        print('✅ Token received: ${authToken.substring(0, 20)}...');
 
         // Update state
         currentUser.value = user;
         userRole.value = user.role;
         isLoggedIn.value = true;
         token.value = authToken;
+
+        // ✅ CRITICAL FIX: SET TOKEN TO API SERVICE IMMEDIATELY
+        _apiService.setAuthToken(authToken);
+        print('✅ Token set to ApiService headers');
 
         // Store role-specific data
         if (loginResponse.hasDriver) {
@@ -132,6 +147,8 @@ class AuthController extends GetxController {
           storeData: loginResponse.store?.toJson(),
         );
 
+        print('✅ Login session saved to storage');
+
         // Navigate ke home
         _navigateToHome(user.role);
 
@@ -139,6 +156,7 @@ class AuthController extends GetxController {
         return true;
       } else {
         errorMessage.value = result.errorMessage;
+        print('❌ Login failed: ${result.errorMessage}');
         _showErrorSnackbar('Login Gagal', result.errorMessage);
         return false;
       }
@@ -152,61 +170,7 @@ class AuthController extends GetxController {
     }
   }
 
-  // ✅ Register method
-  Future<bool> register({
-    required String name,
-    required String email,
-    required String password,
-    required String phone,
-    required String role,
-  }) async {
-    try {
-      isLoading.value = true;
-      errorMessage.value = '';
-
-      if (!_connectivityService.isConnected) {
-        _showErrorSnackbar('No Internet', 'Periksa koneksi internet Anda');
-        return false;
-      }
-
-      // Validasi role minimal
-      if (!AppConstants.validRoles.contains(role)) {
-        _showErrorSnackbar('Invalid Role', 'Pilih role yang valid');
-        return false;
-      }
-
-      print('🔄 Register attempt: $email ($role)');
-
-      final result = await _authRepository.register(
-        name: name,
-        email: email,
-        password: password,
-        phone: phone,
-        role: role,
-      );
-
-      if (result.isSuccess) {
-        print('✅ Register success');
-        _showSuccessSnackbar('Registrasi Berhasil', 'Akun berhasil dibuat');
-        Get.offAllNamed(Routes.LOGIN);
-        return true;
-      } else {
-        errorMessage.value = result.errorMessage;
-        _showErrorSnackbar('Registrasi Gagal', result.errorMessage);
-        return false;
-      }
-    } catch (e) {
-      print('❌ Register error: $e');
-      errorMessage.value = e.toString();
-      _showErrorSnackbar(
-          'Registration Error', 'Terjadi kesalahan saat registrasi');
-      return false;
-    } finally {
-      isLoading.value = false;
-    }
-  }
-
-  // ✅ Logout method
+  // ✅ Logout method - FIXED WITH TOKEN CLEARING
   Future<void> logout() async {
     try {
       isLoading.value = true;
@@ -220,6 +184,10 @@ class AuthController extends GetxController {
         print('❌ API logout failed: $e');
       }
 
+      // ✅ CRITICAL FIX: CLEAR TOKEN FROM API SERVICE
+      _apiService.clearAuthToken();
+      print('✅ Token cleared from ApiService headers');
+
       // Clear storage dan state
       await _storageService.clearLoginSession();
       await _clearAuthData();
@@ -229,6 +197,7 @@ class AuthController extends GetxController {
     } catch (e) {
       print('❌ Logout error: $e');
       // Tetap clear local data
+      _apiService.clearAuthToken();
       await _storageService.clearLoginSession();
       await _clearAuthData();
       Get.offAllNamed(Routes.LOGIN);
@@ -237,7 +206,7 @@ class AuthController extends GetxController {
     }
   }
 
-  // ✅ Update profile method
+  // ✅ Update profile method - TOKEN SHOULD ALREADY BE SET
   Future<bool> updateProfile({
     String? name,
     String? email,
@@ -247,6 +216,11 @@ class AuthController extends GetxController {
     try {
       isLoading.value = true;
       errorMessage.value = '';
+
+      // Ensure token is set before making API call
+      if (token.value.isNotEmpty) {
+        _apiService.setAuthToken(token.value);
+      }
 
       final result = await _authRepository.updateProfile(
         name: name,
@@ -347,6 +321,11 @@ class AuthController extends GetxController {
 
   Future<void> refreshUserDataInBackground() async {
     try {
+      // Ensure token is set before making API call
+      if (token.value.isNotEmpty) {
+        _apiService.setAuthToken(token.value);
+      }
+
       final result = await _authRepository.getProfile();
       if (result.isSuccess && result.data != null) {
         currentUser.value = result.data;
@@ -385,7 +364,7 @@ class AuthController extends GetxController {
       message,
       backgroundColor: Colors.green,
       colorText: Colors.white,
-      duration: Duration(seconds: 3),
+      duration: const Duration(seconds: 3),
       snackPosition: SnackPosition.TOP,
     );
   }
@@ -396,7 +375,7 @@ class AuthController extends GetxController {
       message,
       backgroundColor: Colors.red,
       colorText: Colors.white,
-      duration: Duration(seconds: 4),
+      duration: const Duration(seconds: 4),
       snackPosition: SnackPosition.TOP,
     );
   }
@@ -447,5 +426,33 @@ class AuthController extends GetxController {
     } catch (e) {
       print('❌ API connection test failed: $e');
     }
+  }
+
+  // ✅ NEW METHOD: Force set token to API service
+  void ensureTokenIsSet() {
+    if (token.value.isNotEmpty && isLoggedIn.value) {
+      _apiService.setAuthToken(token.value);
+      print(
+          '✅ Token forcefully set to ApiService: ${token.value.substring(0, 20)}...');
+    }
+  }
+
+  // ✅ NEW METHOD: Check if API service has token
+  bool get hasApiToken {
+    final headers = _apiService.dio.options.headers;
+    return headers.containsKey('Authorization') &&
+        headers['Authorization'] != null &&
+        headers['Authorization'].toString().startsWith('Bearer ');
+  }
+
+  // ✅ Debug methods
+  void debugTokenStatus() {
+    print('=== TOKEN DEBUG STATUS ===');
+    print('isLoggedIn: ${isLoggedIn.value}');
+    print(
+        'token in state: ${token.value.isNotEmpty ? "${token.value.substring(0, 20)}..." : "EMPTY"}');
+    print('hasApiToken: $hasApiToken');
+    print('API headers: ${_apiService.dio.options.headers}');
+    print('=========================');
   }
 }
