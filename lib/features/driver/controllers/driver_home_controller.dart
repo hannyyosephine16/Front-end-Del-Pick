@@ -1,4 +1,4 @@
-// lib/features/driver/controllers/driver_home_controller.dart - FIXED VERSION
+// lib/features/driver/controllers/driver_home_controller.dart - COMPLETE VERSION
 import 'dart:async';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/driver_repository.dart';
@@ -524,5 +524,27 @@ class DriverHomeController extends GetxController {
 
   Future<void> refreshDriverRequests() async {
     await loadDriverRequests();
+  }
+
+  // Alias for refreshData to match the screen usage
+  Future<void> refreshStatus() async {
+    await refreshData();
+  }
+
+  // Navigation methods that are used in the screen
+  void goToMap() {
+    Get.toNamed(Routes.DRIVER_MAP);
+  }
+
+  void goToOrders() {
+    Get.toNamed(Routes.DRIVER_ORDER_HISTORY);
+  }
+
+  void goToRequests() {
+    Get.toNamed(Routes.DRIVER_REQUESTS);
+  }
+
+  void goToProfile() {
+    Get.toNamed(Routes.DRIVER_PROFILE);
   }
 }

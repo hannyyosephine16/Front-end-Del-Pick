@@ -39,6 +39,8 @@ abstract class Routes {
   static const DRIVER_MAP = '/driver/map';
   static const DRIVER_REQUEST_DETAIL = '/driver/request_detail';
   // static const DRIVER_ORDER_DETAIL = '/driver/order_detail';
+  static const DRIVER_NAVIGATION = '/driver/navigation';
+  static const DRIVER_TRACKING = '/driver/tracking';
   static const DELIVERY = '/driver/delivery';
   static const NAVIGATION = '/driver/navigation';
   static const DRIVER_ORDERS = '/driver/orders';
