@@ -257,6 +257,8 @@ class OrderModel {
   String get code => 'ORD${id.toString().padLeft(6, '0')}';
   String get statusDisplayName =>
       OrderStatusConstants.getStatusName(orderStatus);
+  // String get deliveryStatus =>
+  //     OrderStatusConstants.getDeliveryStatusName(orderStatus);
   String get storeName => store?.name ?? 'Unknown Store';
 
   String get formattedOrderDate {

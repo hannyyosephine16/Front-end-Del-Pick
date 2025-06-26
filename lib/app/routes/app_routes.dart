@@ -37,7 +37,8 @@ abstract class Routes {
   static const DRIVER_MAIN = '/driver/main';
   static const DRIVER_REQUESTS = '/driver/requests';
   static const DRIVER_MAP = '/driver/map';
-  static const REQUEST_DETAIL = '/driver/request_detail';
+  static const DRIVER_REQUEST_DETAIL = '/driver/request_detail';
+  // static const DRIVER_ORDER_DETAIL = '/driver/order_detail';
   static const DELIVERY = '/driver/delivery';
   static const NAVIGATION = '/driver/navigation';
   static const DRIVER_ORDERS = '/driver/orders';
@@ -126,8 +127,20 @@ class RouteHelper {
       '${Routes.REVIEW}?orderId=$orderId${type != null ? '&type=$type' : ''}';
 
   // ✅ Driver route helpers with parameters
+  String driverRequestDetail({required String requestId}) =>
+      '${Routes.DRIVER_REQUEST_DETAIL}?requestId=$requestId';
+
+  // String driverOrderDetail({required String orderId}) =>
+  //     '${Routes.DRIVER_ORDER_DETAIL}?orderId=$orderId';
+
+  void goToDriverRequestDetail(String requestId) =>
+      Get.toNamed(driverRequestDetail(requestId: requestId));
+
+  // void goToDriverOrderDetail(String orderId) =>
+  //     Get.toNamed(driverOrderDetail(orderId: orderId));
+
   static String requestDetail({required String requestId}) =>
-      '${Routes.REQUEST_DETAIL}?requestId=$requestId';
+      '${Routes.DRIVER_REQUEST_DETAIL}?requestId=$requestId';
 
   static String delivery({required String orderId}) =>
       '${Routes.DELIVERY}?orderId=$orderId';
@@ -254,7 +267,7 @@ class RouteConfig {
     Routes.DRIVER_MAIN,
     Routes.DRIVER_REQUESTS,
     Routes.DRIVER_MAP,
-    Routes.REQUEST_DETAIL,
+    Routes.DRIVER_REQUEST_DETAIL,
     Routes.DELIVERY,
     Routes.NAVIGATION,
     Routes.DRIVER_ORDERS,

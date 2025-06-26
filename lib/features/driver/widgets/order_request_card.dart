@@ -1,8 +1,7 @@
-// lib/features/driver/widgets/order_request_card.dart
+// lib/features/driver/widgets/order_request_card.dart - COMPLETE VERSION
 import 'package:flutter/material.dart';
 import 'package:del_pick/data/models/driver/driver_request_model.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
-import 'package:del_pick/core/constants/driver_status_constants.dart';
 
 class OrderRequestCard extends StatelessWidget {
   final DriverRequestModel driverRequest;
@@ -25,6 +24,9 @@ class OrderRequestCard extends StatelessWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -34,141 +36,117 @@ class OrderRequestCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  driverRequest.orderCode,
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
+                Expanded(
+                  child: Text(
+                    driverRequest.orderCode,
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 _buildStatusBadge(),
               ],
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 12),
 
-            // Store & Customer Info
+            // Store Info
             if (driverRequest.storeName.isNotEmpty) ...[
-              Row(
-                children: [
-                  const Icon(Icons.store, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      driverRequest.storeName,
-                      style: const TextStyle(fontWeight: FontWeight.w500),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 4),
-            ],
-
-            if (driverRequest.customerName.isNotEmpty) ...[
-              Row(
-                children: [
-                  const Icon(Icons.person, size: 16, color: Colors.grey),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(driverRequest.customerName),
-                  ),
-                ],
+              _buildInfoRow(
+                Icons.store,
+                'Toko',
+                driverRequest.storeName,
               ),
               const SizedBox(height: 8),
             ],
 
-            // Order Total
+            // Customer Info
+            if (driverRequest.customerName.isNotEmpty) ...[
+              _buildInfoRow(
+                Icons.person,
+                'Customer',
+                driverRequest.customerName,
+              ),
+              const SizedBox(height: 4),
+            ],
+
+            if (driverRequest.customerPhone.isNotEmpty) ...[
+              _buildInfoRow(
+                Icons.phone,
+                'Telepon',
+                driverRequest.customerPhone,
+              ),
+              const SizedBox(height: 8),
+            ],
+
+            // Order Details
             Row(
               children: [
-                const Icon(Icons.attach_money, size: 16, color: Colors.green),
-                const SizedBox(width: 8),
-                Text(
-                  'Rp ${driverRequest.orderTotal.toStringAsFixed(0).replaceAllMapped(
-                        RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
-                        (Match m) => '${m[1]}.',
-                      )}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.green,
+                Expanded(
+                  child: _buildInfoRow(
+                    Icons.attach_money,
+                    'Total',
+                    _formatCurrency(driverRequest.orderTotal),
+                    valueColor: Colors.green,
+                    valueWeight: FontWeight.bold,
                   ),
                 ),
+                if (driverRequest.deliveryFee > 0) ...[
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildInfoRow(
+                      Icons.delivery_dining,
+                      'Ongkir',
+                      _formatCurrency(driverRequest.deliveryFee),
+                      valueColor: Colors.blue,
+                    ),
+                  ),
+                ],
               ],
             ),
 
             const SizedBox(height: 8),
 
             // Time Info
-            Row(
-              children: [
-                const Icon(Icons.access_time, size: 16, color: Colors.grey),
-                const SizedBox(width: 8),
-                Text(
-                  driverRequest.timeElapsedString,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.grey,
-                  ),
-                ),
-              ],
+            _buildInfoRow(
+              Icons.access_time,
+              'Waktu',
+              driverRequest.timeElapsedString,
+              valueColor: Colors.grey,
             ),
 
-            // Action Buttons
-            if (driverRequest.canRespond) ...[
-              const SizedBox(height: 12),
-              const Divider(height: 1),
-              const SizedBox(height: 12),
+            // Estimated Times (jika ada)
+            if (driverRequest.hasEstimatedTimes) ...[
+              const SizedBox(height: 8),
               Row(
                 children: [
-                  // View Detail Button
-                  if (onViewDetail != null)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: isLoading ? null : onViewDetail,
-                        child: const Text('Detail'),
-                      ),
+                  Expanded(
+                    child: _buildInfoRow(
+                      Icons.schedule,
+                      'Pickup',
+                      driverRequest.formattedEstimatedPickupTime,
+                      valueColor: Colors.orange,
                     ),
-
-                  if (onViewDetail != null) const SizedBox(width: 8),
-
-                  // Reject Button
-                  if (onReject != null)
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: isLoading ? null : onReject,
-                        style: OutlinedButton.styleFrom(
-                          foregroundColor: Colors.red,
-                          side: const BorderSide(color: Colors.red),
-                        ),
-                        child: const Text('Tolak'),
-                      ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: _buildInfoRow(
+                      Icons.local_shipping,
+                      'Delivery',
+                      driverRequest.formattedEstimatedDeliveryTime,
+                      valueColor: Colors.blue,
                     ),
-
-                  if (onReject != null) const SizedBox(width: 8),
-
-                  // Accept Button
-                  if (onAccept != null)
-                    Expanded(
-                      flex: 2,
-                      child: ElevatedButton(
-                        onPressed: isLoading ? null : onAccept,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.primary,
-                          foregroundColor: Colors.white,
-                        ),
-                        child: isLoading
-                            ? const SizedBox(
-                                height: 16,
-                                width: 16,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
-                                ),
-                              )
-                            : const Text('Terima'),
-                      ),
-                    ),
+                  ),
                 ],
               ),
+            ],
+
+            // Action Buttons
+            if (driverRequest.canRespond || onViewDetail != null) ...[
+              const SizedBox(height: 16),
+              const Divider(height: 1),
+              const SizedBox(height: 12),
+              _buildActionButtons(),
             ],
           ],
         ),
@@ -176,34 +154,141 @@ class OrderRequestCard extends StatelessWidget {
     );
   }
 
+  Widget _buildInfoRow(
+    IconData icon,
+    String label,
+    String value, {
+    Color? valueColor,
+    FontWeight? valueWeight,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 16, color: Colors.grey[600]),
+        const SizedBox(width: 8),
+        Text(
+          '$label: ',
+          style: TextStyle(
+            fontSize: 13,
+            color: Colors.grey[600],
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: TextStyle(
+              fontSize: 13,
+              color: valueColor ?? Colors.black87,
+              fontWeight: valueWeight ?? FontWeight.normal,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionButtons() {
+    final buttons = <Widget>[];
+
+    // View Detail Button
+    if (onViewDetail != null) {
+      buttons.add(
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: isLoading ? null : onViewDetail,
+            icon: const Icon(Icons.visibility, size: 16),
+            label: const Text('Detail'),
+            style: OutlinedButton.styleFrom(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Reject Button (hanya untuk pending requests)
+    if (onReject != null && driverRequest.canReject) {
+      if (buttons.isNotEmpty) buttons.add(const SizedBox(width: 8));
+      buttons.add(
+        Expanded(
+          child: OutlinedButton.icon(
+            onPressed: isLoading ? null : onReject,
+            icon: const Icon(Icons.close, size: 16),
+            label: const Text('Tolak'),
+            style: OutlinedButton.styleFrom(
+              foregroundColor: Colors.red,
+              side: const BorderSide(color: Colors.red),
+              padding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+          ),
+        ),
+      );
+    }
+
+    // Accept Button (hanya untuk pending requests)
+    if (onAccept != null && driverRequest.canAccept) {
+      if (buttons.isNotEmpty) buttons.add(const SizedBox(width: 8));
+      buttons.add(
+        Expanded(
+          flex: 2,
+          child: ElevatedButton.icon(
+            onPressed: isLoading ? null : onAccept,
+            icon: isLoading
+                ? const SizedBox(
+                    height: 16,
+                    width: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                    ),
+                  )
+                : const Icon(Icons.check, size: 16),
+            label: Text(isLoading ? 'Processing...' : 'Terima'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primary,
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(vertical: 8),
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Row(children: buttons);
+  }
+
   Widget _buildStatusBadge() {
     Color backgroundColor;
     Color textColor;
 
     switch (driverRequest.status) {
-      case DriverStatusConstants.requestPending:
-        backgroundColor = Colors.orange.withOpacity(0.1);
-        textColor = Colors.orange;
+      case 'pending':
+        backgroundColor = Colors.orange.withOpacity(0.15);
+        textColor = Colors.orange[700]!;
         break;
-      case DriverStatusConstants.requestAccepted:
-        backgroundColor = Colors.green.withOpacity(0.1);
-        textColor = Colors.green;
+      case 'accepted':
+        backgroundColor = Colors.green.withOpacity(0.15);
+        textColor = Colors.green[700]!;
         break;
-      case DriverStatusConstants.requestRejected:
-        backgroundColor = Colors.red.withOpacity(0.1);
-        textColor = Colors.red;
+      case 'rejected':
+        backgroundColor = Colors.red.withOpacity(0.15);
+        textColor = Colors.red[700]!;
         break;
-      case DriverStatusConstants.requestExpired:
-        backgroundColor = Colors.grey.withOpacity(0.1);
-        textColor = Colors.grey;
+      case 'expired':
+        backgroundColor = Colors.grey.withOpacity(0.15);
+        textColor = Colors.grey[700]!;
+        break;
+      case 'completed':
+        backgroundColor = Colors.blue.withOpacity(0.15);
+        textColor = Colors.blue[700]!;
         break;
       default:
-        backgroundColor = Colors.blue.withOpacity(0.1);
-        textColor = Colors.blue;
+        backgroundColor = Colors.grey.withOpacity(0.15);
+        textColor = Colors.grey[700]!;
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
@@ -212,10 +297,17 @@ class OrderRequestCard extends StatelessWidget {
         driverRequest.statusDisplayName,
         style: TextStyle(
           fontSize: 12,
-          fontWeight: FontWeight.w500,
+          fontWeight: FontWeight.w600,
           color: textColor,
         ),
       ),
     );
+  }
+
+  String _formatCurrency(double amount) {
+    return 'Rp ${amount.toStringAsFixed(0).replaceAllMapped(
+          RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'),
+          (Match m) => '${m[1]}.',
+        )}';
   }
 }

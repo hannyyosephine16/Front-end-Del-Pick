@@ -485,6 +485,272 @@ class OrderRepository {
       return Result.failure('Failed to prepare order: ${e.toString()}');
     }
   }
+// lib/data/repositories/order_repository.dart - FIXED DRIVER METHODS
+// Ganti method driver yang sebelumnya dengan yang ini:
+
+  // ✅ DRIVER SPECIFIC METHODS - Menggunakan Driver Requests sebagai sumber data
+
+  /// Get driver orders from driver requests - Returns Result<List<Map<String, dynamic>>>
+  Future<Result<List<Map<String, dynamic>>>> getDriverOrders({
+    int page = 1,
+    int limit = 10,
+    String? status,
+  }) async {
+    try {
+      // Driver orders didapat dari driver requests, bukan dari orders langsung
+      // Kita perlu memanggil driver request repository atau endpoint
+
+      // Jika menggunakan driver request endpoint
+      final response = await _remoteDataSource.getDriverRequests(
+        page: page,
+        limit: limit,
+        status: status,
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = response.data as Map<String, dynamic>;
+
+        if (responseData.containsKey('data') && responseData['data'] != null) {
+          final data = responseData['data'] as Map<String, dynamic>;
+
+          // Extract requests array from the response
+          final requests = data['requests'] as List? ?? [];
+
+          // Convert driver requests ke order format untuk compatibility
+          final orderMaps = <Map<String, dynamic>>[];
+
+          for (final requestMap in requests) {
+            final request = requestMap as Map<String, dynamic>;
+
+            // Extract order data dari driver request
+            if (request.containsKey('order') && request['order'] != null) {
+              final orderData = request['order'] as Map<String, dynamic>;
+
+              // Tambahkan informasi driver request ke order data
+              orderData['driver_request_id'] = request['id'];
+              orderData['driver_request_status'] = request['status'];
+              orderData['estimated_pickup_time'] =
+                  request['estimated_pickup_time'];
+              orderData['estimated_delivery_time'] =
+                  request['estimated_delivery_time'];
+
+              orderMaps.add(orderData);
+            }
+          }
+
+          return Result.success(orderMaps);
+        } else {
+          return Result.failure(
+              responseData['message'] ?? 'No driver requests found');
+        }
+      } else {
+        return Result.failure(_extractErrorMessage(response));
+      }
+    } on DioException catch (e) {
+      return Result.failure(_handleDioError(e));
+    } catch (e) {
+      return Result.failure('Failed to get driver orders: ${e.toString()}');
+    }
+  }
+
+  /// Get active driver orders from accepted driver requests
+  Future<Result<List<Map<String, dynamic>>>> getDriverActiveOrders() async {
+    try {
+      // Get driver requests dengan status yang active
+      final response = await _remoteDataSource.getDriverRequests(
+        limit: 100,
+        status: 'accepted', // Hanya ambil yang sudah accepted
+      );
+
+      if (response.statusCode == 200) {
+        final responseData = response.data as Map<String, dynamic>;
+
+        if (responseData.containsKey('data') && responseData['data'] != null) {
+          final data = responseData['data'] as Map<String, dynamic>;
+
+          final requests = data['requests'] as List? ?? [];
+          final orderMaps = <Map<String, dynamic>>[];
+
+          for (final requestMap in requests) {
+            final request = requestMap as Map<String, dynamic>;
+
+            if (request.containsKey('order') && request['order'] != null) {
+              final orderData = request['order'] as Map<String, dynamic>;
+              final orderStatus = orderData['order_status'] as String?;
+
+              // Filter hanya order yang benar-benar active untuk driver
+              if (['preparing', 'ready_for_pickup', 'on_delivery']
+                  .contains(orderStatus)) {
+                orderData['driver_request_id'] = request['id'];
+                orderData['driver_request_status'] = request['status'];
+                orderData['estimated_pickup_time'] =
+                    request['estimated_pickup_time'];
+                orderData['estimated_delivery_time'] =
+                    request['estimated_delivery_time'];
+
+                orderMaps.add(orderData);
+              }
+            }
+          }
+
+          return Result.success(orderMaps);
+        } else {
+          return Result.failure(
+              responseData['message'] ?? 'No active orders found');
+        }
+      } else {
+        return Result.failure(_extractErrorMessage(response));
+      }
+    } on DioException catch (e) {
+      return Result.failure(_handleDioError(e));
+    } catch (e) {
+      return Result.failure(
+          'Failed to get driver active orders: ${e.toString()}');
+    }
+  }
+
+  /// Get driver order detail from driver request detail
+  Future<Result<OrderModel>> getDriverOrderDetail(int driverRequestId) async {
+    try {
+      // Get driver request detail yang include order data
+      final response =
+          await _remoteDataSource.getDriverRequestDetail(driverRequestId);
+
+      if (response.statusCode == 200) {
+        final responseData = response.data as Map<String, dynamic>;
+
+        if (responseData.containsKey('data') && responseData['data'] != null) {
+          final requestData = responseData['data'] as Map<String, dynamic>;
+
+          // Extract order dari driver request
+          if (requestData.containsKey('order') &&
+              requestData['order'] != null) {
+            final orderData = requestData['order'] as Map<String, dynamic>;
+
+            // Tambahkan informasi driver request
+            orderData['driver_request_id'] = requestData['id'];
+            orderData['driver_request_status'] = requestData['status'];
+            orderData['estimated_pickup_time'] =
+                requestData['estimated_pickup_time'];
+            orderData['estimated_delivery_time'] =
+                requestData['estimated_delivery_time'];
+
+            final order = OrderModel.fromJson(orderData);
+            return Result.success(order);
+          } else {
+            return Result.failure('Order data not found in driver request');
+          }
+        } else {
+          return Result.failure(
+              responseData['message'] ?? 'Driver request not found');
+        }
+      } else {
+        return Result.failure(_extractErrorMessage(response));
+      }
+    } on DioException catch (e) {
+      return Result.failure(_handleDioError(e));
+    } catch (e) {
+      return Result.failure(
+          'Failed to get driver order detail: ${e.toString()}');
+    }
+  }
+
+  // ✅ Alias method untuk backward compatibility dengan order ID
+  Future<Result<OrderModel>> getDriverOrderDetailByOrderId(int orderId) async {
+    try {
+      // Fallback ke getOrderDetail untuk order ID
+      return await getOrderDetail(orderId);
+    } catch (e) {
+      return Result.failure('Failed to get order detail: ${e.toString()}');
+    }
+  }
+
+  /// Get driver earnings dari completed driver requests
+  Future<Result<Map<String, dynamic>>> getDriverEarnings({
+    String? period,
+  }) async {
+    try {
+      // Get all driver requests untuk calculate earnings
+      final result = await getDriverOrders(limit: 1000);
+
+      if (result.isSuccess && result.data != null) {
+        final orders = result.data!;
+
+        // Filter completed orders
+        final completedOrders = orders.where((orderMap) {
+          final status = orderMap['order_status'] as String?;
+          final requestStatus = orderMap['driver_request_status'] as String?;
+          return status == 'delivered' && requestStatus == 'completed';
+        }).toList();
+
+        // Calculate earnings
+        double totalEarnings = 0.0;
+        int deliveryCount = completedOrders.length;
+
+        for (final orderMap in completedOrders) {
+          final deliveryFee = orderMap['delivery_fee'];
+          if (deliveryFee != null) {
+            totalEarnings +=
+                (deliveryFee is num) ? deliveryFee.toDouble() : 0.0;
+          }
+        }
+
+        final earnings = {
+          'total_earnings': totalEarnings,
+          'delivery_count': deliveryCount,
+          'completed_orders': completedOrders,
+          'average_per_delivery':
+              deliveryCount > 0 ? totalEarnings / deliveryCount : 0.0,
+        };
+
+        return Result.success(earnings);
+      } else {
+        return Result.failure(result.message ?? 'Failed to get earnings');
+      }
+    } catch (e) {
+      return Result.failure('Failed to get driver earnings: ${e.toString()}');
+    }
+  }
+
+  /// Get driver statistics dari driver requests
+  Future<Result<Map<String, dynamic>>> getDriverStatistics() async {
+    try {
+      final result = await getDriverOrders(limit: 1000);
+
+      if (result.isSuccess && result.data != null) {
+        final orders = result.data!;
+
+        final stats = <String, dynamic>{
+          'total_orders': orders.length,
+          'pending': orders
+              .where((o) => o['driver_request_status'] == 'pending')
+              .length,
+          'accepted': orders
+              .where((o) => o['driver_request_status'] == 'accepted')
+              .length,
+          'preparing':
+              orders.where((o) => o['order_status'] == 'preparing').length,
+          'ready_for_pickup': orders
+              .where((o) => o['order_status'] == 'ready_for_pickup')
+              .length,
+          'on_delivery':
+              orders.where((o) => o['order_status'] == 'on_delivery').length,
+          'delivered':
+              orders.where((o) => o['order_status'] == 'delivered').length,
+          'completed': orders
+              .where((o) => o['driver_request_status'] == 'completed')
+              .length,
+        };
+
+        return Result.success(stats);
+      } else {
+        return Result.failure(result.message ?? 'Failed to get statistics');
+      }
+    } catch (e) {
+      return Result.failure('Failed to get driver statistics: ${e.toString()}');
+    }
+  }
+
   // ✅ BUSINESS LOGIC HELPERS
 
   /// Check if order can be cancelled by the given role

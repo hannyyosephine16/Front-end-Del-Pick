@@ -325,7 +325,7 @@ class DriverHomeController extends GetxController {
           loadDriverProfile(),
         ]);
 
-        Get.toNamed(Routes.REQUEST_DETAIL,
+        Get.toNamed(Routes.DRIVER_REQUEST_DETAIL,
             arguments: {'orderId': request.orderId});
       } else {
         CustomSnackbar.showError(

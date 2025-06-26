@@ -1,7 +1,8 @@
+// lib/data/models/driver/driver_request_model.dart - FIXED
 import 'package:del_pick/data/models/order/order_model.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
-import 'package:del_pick/core/constants/driver_status_constants.dart';
 import 'package:del_pick/core/utils/parsing_helper.dart';
+import 'package:del_pick/data/models/order/order_model_extensions.dart';
 
 class DriverRequestModel {
   final int id;
@@ -28,7 +29,7 @@ class DriverRequestModel {
     this.updatedAt,
   });
 
-  // ✅ FIXED: Safe parsing using ParsingHelper
+  // ✅ FIXED: Safe parsing using ParsingHelper sesuai response backend
   factory DriverRequestModel.fromJson(Map<String, dynamic> json) {
     return DriverRequestModel(
       id: ParsingHelper.parseIntWithDefault(json['id'], 0),
@@ -90,7 +91,7 @@ class DriverRequestModel {
       status: status ?? this.status,
       estimatedPickupTime: estimatedPickupTime ?? this.estimatedPickupTime,
       estimatedDeliveryTime:
-      estimatedDeliveryTime ?? this.estimatedDeliveryTime,
+          estimatedDeliveryTime ?? this.estimatedDeliveryTime,
       order: order ?? this.order,
       driver: driver ?? this.driver,
       createdAt: createdAt ?? this.createdAt,
@@ -98,7 +99,7 @@ class DriverRequestModel {
     );
   }
 
-  // Status checks (sesuai backend)
+  // Status checks (sesuai backend: pending, accepted, rejected, expired, completed)
   bool get isPending => status == 'pending';
   bool get isAccepted => status == 'accepted';
   bool get isRejected => status == 'rejected';
@@ -130,7 +131,9 @@ class DriverRequestModel {
   String get orderCode => 'ORD-${orderId.toString().padLeft(6, '0')}';
   String get storeName => order?.store?.name ?? '';
   String get customerName => order?.customer?.name ?? '';
+  String get customerPhone => order?.customer?.phone ?? '';
   double get orderTotal => order?.totalAmount ?? 0.0;
+  double get deliveryFee => order?.deliveryFee ?? 0.0;
 
   String get formattedCreatedAt {
     if (createdAt == null) return '';
@@ -157,12 +160,31 @@ class DriverRequestModel {
     }
   }
 
+  // ✅ FIXED: Helper methods untuk data order - menggunakan getter yang ada di OrderModel
+  String get orderStatusDisplayName => order?.statusDisplayName ?? '';
+  String get deliveryStatusDisplayName => order?.deliveryStatusText ?? '';
+
+  bool get hasEstimatedTimes =>
+      estimatedPickupTime != null && estimatedDeliveryTime != null;
+
+  String get formattedEstimatedPickupTime {
+    if (estimatedPickupTime == null) return '';
+    final time = estimatedPickupTime!;
+    return '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
+  String get formattedEstimatedDeliveryTime {
+    if (estimatedDeliveryTime == null) return '';
+    final time = estimatedDeliveryTime!;
+    return '${time.hour}:${time.minute.toString().padLeft(2, '0')}';
+  }
+
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-          other is DriverRequestModel &&
-              runtimeType == other.runtimeType &&
-              id == other.id;
+      other is DriverRequestModel &&
+          runtimeType == other.runtimeType &&
+          id == other.id;
 
   @override
   int get hashCode => id.hashCode;
