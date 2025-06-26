@@ -6,6 +6,7 @@ class ApiEndpoints {
   static const String baseUrl = EnvironmentConfig.productionUrl;
 
   /// Base paths
+  /// Base paths
   static const String auth = '/auth';
   static const String users = '/users';
   static const String customers = '/customers';
@@ -99,6 +100,24 @@ class ApiEndpoints {
   static const String healthDatabase = '$health/db';
   static const String healthCache = '$health/cache';
   static const String healthStorage = '$health/storage';
+
+  static String getFullImageUrl(String relativePath) {
+    if (relativePath.startsWith('http')) {
+      return relativePath; // Already full URL
+    }
+    return '$baseUrl$relativePath';
+  }
+
+  static String getUserAvatarUrl(String? avatarPath) {
+    if (avatarPath == null || avatarPath.isEmpty) {
+      return getDefaultAvatarUrl();
+    }
+    return getFullImageUrl(avatarPath);
+  }
+
+  static String getDefaultAvatarUrl() {
+    return '$baseUrl/images/default-avatar.png';
+  }
 
   /// HELPER METHODS DENGAN QUERY PARAMETERS
   /// Get stores with filters

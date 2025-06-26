@@ -31,11 +31,10 @@ class InitialBinding extends Bindings {
     Get.put<PermissionService>(PermissionService(), permanent: true);
 
     // Repositories
-    Get.put<AuthRepository>(
-      AuthRepository(
-          Get.find<AuthRemoteDataSource>(), Get.find<AuthLocalDataSource>()),
-      permanent: true,
-    );
+    Get.put<AuthRepository>(AuthRepository(Get.find<AuthService>())
+        // Get.find<AuthRemoteDataSource>(), Get.find<AuthLocalDataSource>()),
+        // permanent: true,
+        );
 
     // Controllers
     Get.put<AuthController>(

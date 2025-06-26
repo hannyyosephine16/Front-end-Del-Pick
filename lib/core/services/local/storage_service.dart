@@ -151,157 +151,157 @@ class StorageService extends getx.GetxService {
 
   // ======================== AUTH METHODS - Backend DelPick Compatible ========================
 
-  /// Save complete login session (sesuai response backend DelPick)
-  Future<void> saveLoginSession(
-    String token,
-    Map<String, dynamic> user,
-    String role, {
-    Map<String, dynamic>? driverData,
-    Map<String, dynamic>? storeData,
-  }) async {
-    // Save auth token
-    await writeString(StorageConstants.authToken, token);
-    await writeBool(StorageConstants.isLoggedIn, true);
-    await writeDateTime(StorageConstants.lastLoginTime, DateTime.now());
-
-    // Save complete user data
-    await writeJson(StorageConstants.userDataKey, user);
-    await writeString(StorageConstants.userRole, role);
-
-    // Save individual user fields for quick access
-    await writeInt(StorageConstants.userId, user['id'] ?? 0);
-    await writeString(StorageConstants.userName, user['name'] ?? '');
-    await writeString(StorageConstants.userEmail, user['email'] ?? '');
-    await writeString(StorageConstants.userPhone, user['phone'] ?? '');
-    await writeString(StorageConstants.userAvatar, user['avatar'] ?? '');
-    if (user['fcm_token'] != null) {
-      await writeString(StorageConstants.fcmToken, user['fcm_token']);
-    }
-
-    // Save role-specific data
-    if (driverData != null) {
-      await writeJson(StorageConstants.driverDataKey, driverData);
-      // Extract driver specific fields
-      await writeString(StorageConstants.driverLicenseNumber,
-          driverData['license_number'] ?? '');
-      await writeString(StorageConstants.driverVehicleNumber,
-          driverData['vehicle_plate'] ?? '');
-      await writeString(
-          StorageConstants.driverStatus, driverData['status'] ?? 'inactive');
-      if (driverData['latitude'] != null) {
-        await writeDouble(StorageConstants.driverLatitude,
-            (driverData['latitude'] as num).toDouble());
-      }
-      if (driverData['longitude'] != null) {
-        await writeDouble(StorageConstants.driverLongitude,
-            (driverData['longitude'] as num).toDouble());
-      }
-      if (driverData['rating'] != null) {
-        await writeDouble(
-            'driver_rating', (driverData['rating'] as num).toDouble());
-      }
-      if (driverData['reviews_count'] != null) {
-        await writeInt('driver_reviews_count', driverData['reviews_count']);
-      }
-    }
-
-    if (storeData != null) {
-      await writeJson(StorageConstants.storeDataKey, storeData);
-      // Extract store specific fields
-      await writeInt(StorageConstants.storeId, storeData['id'] ?? 0);
-      await writeString(StorageConstants.storeName, storeData['name'] ?? '');
-      await writeString(
-          StorageConstants.storeStatus, storeData['status'] ?? 'inactive');
-      await writeString(
-          StorageConstants.storeAddress, storeData['address'] ?? '');
-      await writeString(
-          StorageConstants.storeDescription, storeData['description'] ?? '');
-      await writeString(
-          StorageConstants.storeImageUrl, storeData['image_url'] ?? '');
-      await writeString(StorageConstants.storePhone, storeData['phone'] ?? '');
-      await writeString(
-          StorageConstants.storeOpenTime, storeData['open_time'] ?? '');
-      await writeString(
-          StorageConstants.storeCloseTime, storeData['close_time'] ?? '');
-      if (storeData['latitude'] != null) {
-        await writeDouble(StorageConstants.storeLatitude,
-            (storeData['latitude'] as num).toDouble());
-      }
-      if (storeData['longitude'] != null) {
-        await writeDouble(StorageConstants.storeLongitude,
-            (storeData['longitude'] as num).toDouble());
-      }
-      if (storeData['rating'] != null) {
-        await writeDouble(StorageConstants.storeRating,
-            (storeData['rating'] as num).toDouble());
-      }
-      if (storeData['total_products'] != null) {
-        await writeInt(
-            StorageConstants.storeTotalProducts, storeData['total_products']);
-      }
-      if (storeData['review_count'] != null) {
-        await writeInt('store_review_count', storeData['review_count']);
-      }
-    }
-  }
-
-  /// Clear complete login session
-  Future<void> clearLoginSession() async {
-    final keysToRemove = [
-      // Auth data
-      StorageConstants.authToken,
-      StorageConstants.refreshToken,
-      StorageConstants.userDataKey,
-      StorageConstants.driverDataKey,
-      StorageConstants.storeDataKey,
-      StorageConstants.userId,
-      StorageConstants.userRole,
-      StorageConstants.userEmail,
-      StorageConstants.userName,
-      StorageConstants.userPhone,
-      StorageConstants.userAvatar,
-      StorageConstants.fcmToken,
-      StorageConstants.lastLoginTime,
-      StorageConstants.rememberMe,
-
-      // Driver specific
-      StorageConstants.driverStatus,
-      StorageConstants.driverVehicleNumber,
-      StorageConstants.driverLicenseNumber,
-      StorageConstants.driverLatitude,
-      StorageConstants.driverLongitude,
-      'driver_rating',
-      'driver_reviews_count',
-
-      // Store specific
-      StorageConstants.storeId,
-      StorageConstants.storeName,
-      StorageConstants.storeStatus,
-      StorageConstants.storeAddress,
-      StorageConstants.storeDescription,
-      StorageConstants.storeImageUrl,
-      StorageConstants.storePhone,
-      StorageConstants.storeOpenTime,
-      StorageConstants.storeCloseTime,
-      StorageConstants.storeLatitude,
-      StorageConstants.storeLongitude,
-      StorageConstants.storeRating,
-      StorageConstants.storeTotalProducts,
-      'store_review_count',
-
-      // UI state
-      'last_active_tab',
-
-      // Temporary data
-      'temp_registration_data',
-      'password_reset_token',
-      'password_reset_token_expiry',
-      'email_verified',
-    ];
-
-    await removeBatch(keysToRemove);
-    await writeBool(StorageConstants.isLoggedIn, false);
-  }
+  // /// Save complete login session (sesuai response backend DelPick)
+  // Future<void> saveLoginSession(
+  //   String token,
+  //   Map<String, dynamic> user,
+  //   String role, {
+  //   Map<String, dynamic>? driverData,
+  //   Map<String, dynamic>? storeData,
+  // }) async {
+  //   // Save auth token
+  //   await writeString(StorageConstants.authToken, token);
+  //   await writeBool(StorageConstants.isLoggedIn, true);
+  //   await writeDateTime(StorageConstants.lastLoginTime, DateTime.now());
+  //
+  //   // Save complete user data
+  //   await writeJson(StorageConstants.userDataKey, user);
+  //   await writeString(StorageConstants.userRole, role);
+  //
+  //   // Save individual user fields for quick access
+  //   await writeInt(StorageConstants.userId, user['id'] ?? 0);
+  //   await writeString(StorageConstants.userName, user['name'] ?? '');
+  //   await writeString(StorageConstants.userEmail, user['email'] ?? '');
+  //   await writeString(StorageConstants.userPhone, user['phone'] ?? '');
+  //   await writeString(StorageConstants.userAvatar, user['avatar'] ?? '');
+  //   if (user['fcm_token'] != null) {
+  //     await writeString(StorageConstants.fcmToken, user['fcm_token']);
+  //   }
+  //
+  //   // Save role-specific data
+  //   if (driverData != null) {
+  //     await writeJson(StorageConstants.driverDataKey, driverData);
+  //     // Extract driver specific fields
+  //     await writeString(StorageConstants.driverLicenseNumber,
+  //         driverData['license_number'] ?? '');
+  //     await writeString(StorageConstants.driverVehicleNumber,
+  //         driverData['vehicle_plate'] ?? '');
+  //     await writeString(
+  //         StorageConstants.driverStatus, driverData['status'] ?? 'inactive');
+  //     if (driverData['latitude'] != null) {
+  //       await writeDouble(StorageConstants.driverLatitude,
+  //           (driverData['latitude'] as num).toDouble());
+  //     }
+  //     if (driverData['longitude'] != null) {
+  //       await writeDouble(StorageConstants.driverLongitude,
+  //           (driverData['longitude'] as num).toDouble());
+  //     }
+  //     if (driverData['rating'] != null) {
+  //       await writeDouble(
+  //           'driver_rating', (driverData['rating'] as num).toDouble());
+  //     }
+  //     if (driverData['reviews_count'] != null) {
+  //       await writeInt('driver_reviews_count', driverData['reviews_count']);
+  //     }
+  //   }
+  //
+  //   if (storeData != null) {
+  //     await writeJson(StorageConstants.storeDataKey, storeData);
+  //     // Extract store specific fields
+  //     await writeInt(StorageConstants.storeId, storeData['id'] ?? 0);
+  //     await writeString(StorageConstants.storeName, storeData['name'] ?? '');
+  //     await writeString(
+  //         StorageConstants.storeStatus, storeData['status'] ?? 'inactive');
+  //     await writeString(
+  //         StorageConstants.storeAddress, storeData['address'] ?? '');
+  //     await writeString(
+  //         StorageConstants.storeDescription, storeData['description'] ?? '');
+  //     await writeString(
+  //         StorageConstants.storeImageUrl, storeData['image_url'] ?? '');
+  //     await writeString(StorageConstants.storePhone, storeData['phone'] ?? '');
+  //     await writeString(
+  //         StorageConstants.storeOpenTime, storeData['open_time'] ?? '');
+  //     await writeString(
+  //         StorageConstants.storeCloseTime, storeData['close_time'] ?? '');
+  //     if (storeData['latitude'] != null) {
+  //       await writeDouble(StorageConstants.storeLatitude,
+  //           (storeData['latitude'] as num).toDouble());
+  //     }
+  //     if (storeData['longitude'] != null) {
+  //       await writeDouble(StorageConstants.storeLongitude,
+  //           (storeData['longitude'] as num).toDouble());
+  //     }
+  //     if (storeData['rating'] != null) {
+  //       await writeDouble(StorageConstants.storeRating,
+  //           (storeData['rating'] as num).toDouble());
+  //     }
+  //     if (storeData['total_products'] != null) {
+  //       await writeInt(
+  //           StorageConstants.storeTotalProducts, storeData['total_products']);
+  //     }
+  //     if (storeData['review_count'] != null) {
+  //       await writeInt('store_review_count', storeData['review_count']);
+  //     }
+  //   }
+  // }
+  //
+  // /// Clear complete login session
+  // Future<void> clearLoginSession() async {
+  //   final keysToRemove = [
+  //     // Auth data
+  //     StorageConstants.authToken,
+  //     StorageConstants.refreshToken,
+  //     StorageConstants.userDataKey,
+  //     StorageConstants.driverDataKey,
+  //     StorageConstants.storeDataKey,
+  //     StorageConstants.userId,
+  //     StorageConstants.userRole,
+  //     StorageConstants.userEmail,
+  //     StorageConstants.userName,
+  //     StorageConstants.userPhone,
+  //     StorageConstants.userAvatar,
+  //     StorageConstants.fcmToken,
+  //     StorageConstants.lastLoginTime,
+  //     StorageConstants.rememberMe,
+  //
+  //     // Driver specific
+  //     StorageConstants.driverStatus,
+  //     StorageConstants.driverVehicleNumber,
+  //     StorageConstants.driverLicenseNumber,
+  //     StorageConstants.driverLatitude,
+  //     StorageConstants.driverLongitude,
+  //     'driver_rating',
+  //     'driver_reviews_count',
+  //
+  //     // Store specific
+  //     StorageConstants.storeId,
+  //     StorageConstants.storeName,
+  //     StorageConstants.storeStatus,
+  //     StorageConstants.storeAddress,
+  //     StorageConstants.storeDescription,
+  //     StorageConstants.storeImageUrl,
+  //     StorageConstants.storePhone,
+  //     StorageConstants.storeOpenTime,
+  //     StorageConstants.storeCloseTime,
+  //     StorageConstants.storeLatitude,
+  //     StorageConstants.storeLongitude,
+  //     StorageConstants.storeRating,
+  //     StorageConstants.storeTotalProducts,
+  //     'store_review_count',
+  //
+  //     // UI state
+  //     'last_active_tab',
+  //
+  //     // Temporary data
+  //     'temp_registration_data',
+  //     'password_reset_token',
+  //     'password_reset_token_expiry',
+  //     'email_verified',
+  //   ];
+  //
+  //   await removeBatch(keysToRemove);
+  //   await writeBool(StorageConstants.isLoggedIn, false);
+  // }
 
   // ======================== USER DATA GETTERS ========================
 
@@ -420,47 +420,47 @@ class StorageService extends getx.GetxService {
     ]);
   }
 
-  // ======================== NOTIFICATION PREFERENCES ========================
-
-  Future<void> updateNotificationPreferences({
-    bool? orderNotifications,
-    bool? deliveryNotifications,
-    bool? promotionNotifications,
-    bool? soundEnabled,
-    bool? vibrationEnabled,
-  }) async {
-    if (orderNotifications != null) {
-      await writeBool(StorageConstants.orderNotifications, orderNotifications);
-    }
-    if (deliveryNotifications != null) {
-      await writeBool(
-          StorageConstants.deliveryNotifications, deliveryNotifications);
-    }
-    if (promotionNotifications != null) {
-      await writeBool(
-          StorageConstants.promotionNotifications, promotionNotifications);
-    }
-    if (soundEnabled != null) {
-      await writeBool(StorageConstants.soundEnabled, soundEnabled);
-    }
-    if (vibrationEnabled != null) {
-      await writeBool(StorageConstants.vibrationEnabled, vibrationEnabled);
-    }
-  }
-
-  Map<String, bool> getNotificationPreferences() {
-    return {
-      'orderNotifications':
-          readBoolWithDefault(StorageConstants.orderNotifications, true),
-      'deliveryNotifications':
-          readBoolWithDefault(StorageConstants.deliveryNotifications, true),
-      'promotionNotifications':
-          readBoolWithDefault(StorageConstants.promotionNotifications, false),
-      'soundEnabled': readBoolWithDefault(StorageConstants.soundEnabled, true),
-      'vibrationEnabled':
-          readBoolWithDefault(StorageConstants.vibrationEnabled, true),
-    };
-  }
+  // // ======================== NOTIFICATION PREFERENCES ========================
+  //
+  // Future<void> updateNotificationPreferences({
+  //   bool? orderNotifications,
+  //   bool? deliveryNotifications,
+  //   bool? promotionNotifications,
+  //   bool? soundEnabled,
+  //   bool? vibrationEnabled,
+  // }) async {
+  //   if (orderNotifications != null) {
+  //     await writeBool(StorageConstants.orderNotifications, orderNotifications);
+  //   }
+  //   if (deliveryNotifications != null) {
+  //     await writeBool(
+  //         StorageConstants.deliveryNotifications, deliveryNotifications);
+  //   }
+  //   if (promotionNotifications != null) {
+  //     await writeBool(
+  //         StorageConstants.promotionNotifications, promotionNotifications);
+  //   }
+  //   if (soundEnabled != null) {
+  //     await writeBool(StorageConstants.soundEnabled, soundEnabled);
+  //   }
+  //   if (vibrationEnabled != null) {
+  //     await writeBool(StorageConstants.vibrationEnabled, vibrationEnabled);
+  //   }
+  // }
+  //
+  // Map<String, bool> getNotificationPreferences() {
+  //   return {
+  //     'orderNotifications':
+  //         readBoolWithDefault(StorageConstants.orderNotifications, true),
+  //     'deliveryNotifications':
+  //         readBoolWithDefault(StorageConstants.deliveryNotifications, true),
+  //     'promotionNotifications':
+  //         readBoolWithDefault(StorageConstants.promotionNotifications, false),
+  //     'soundEnabled': readBoolWithDefault(StorageConstants.soundEnabled, true),
+  //     'vibrationEnabled':
+  //         readBoolWithDefault(StorageConstants.vibrationEnabled, true),
+  //   };
+  // }
 
   // ======================== DRIVER SPECIFIC METHODS ========================
 
@@ -866,7 +866,7 @@ class StorageService extends getx.GetxService {
       'store_data': getStoreData(),
       'cart_items': getCartItems(),
       'order_history': getOrderHistory(),
-      'notification_preferences': getNotificationPreferences(),
+      // 'notification_preferences': getNotificationPreferences(),
       'driver_settings':
           getCurrentUserRole() == 'driver' ? getDriverSettings() : null,
       'store_settings':
@@ -916,18 +916,18 @@ class StorageService extends getx.GetxService {
             'order_history', orderHistory.cast<Map<String, dynamic>>());
       }
 
-      // Restore preferences
-      final notificationPrefs =
-          backup['notification_preferences'] as Map<String, dynamic>?;
-      if (notificationPrefs != null) {
-        await updateNotificationPreferences(
-          orderNotifications: notificationPrefs['orderNotifications'],
-          deliveryNotifications: notificationPrefs['deliveryNotifications'],
-          promotionNotifications: notificationPrefs['promotionNotifications'],
-          soundEnabled: notificationPrefs['soundEnabled'],
-          vibrationEnabled: notificationPrefs['vibrationEnabled'],
-        );
-      }
+      // // Restore preferences
+      // final notificationPrefs =
+      //     backup['notification_preferences'] as Map<String, dynamic>?;
+      // if (notificationPrefs != null) {
+      //   await updateNotificationPreferences(
+      //     orderNotifications: notificationPrefs['orderNotifications'],
+      //     deliveryNotifications: notificationPrefs['deliveryNotifications'],
+      //     promotionNotifications: notificationPrefs['promotionNotifications'],
+      //     soundEnabled: notificationPrefs['soundEnabled'],
+      //     vibrationEnabled: notificationPrefs['vibrationEnabled'],
+      //   );
+      // }
 
       // Restore location
       final location = backup['last_known_location'] as Map<String, dynamic>?;
@@ -999,15 +999,15 @@ class StorageService extends getx.GetxService {
   /// Initialize storage with default values
   Future<void> initializeDefaults() async {
     // Set default notification preferences if not set
-    if (!hasData(StorageConstants.orderNotifications)) {
-      await updateNotificationPreferences(
-        orderNotifications: true,
-        deliveryNotifications: true,
-        promotionNotifications: false,
-        soundEnabled: true,
-        vibrationEnabled: true,
-      );
-    }
+    // if (!hasData(StorageConstants.orderNotifications)) {
+    //   // await updateNotificationPreferences(
+    //     orderNotifications: true,
+    //     deliveryNotifications: true,
+    //     promotionNotifications: false,
+    //     soundEnabled: true,
+    //     vibrationEnabled: true,
+    //   );
+    // }
 
     // Set default theme if not set
     if (!hasData(StorageConstants.isDarkMode)) {

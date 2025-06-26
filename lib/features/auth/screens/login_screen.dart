@@ -139,43 +139,43 @@ class LoginScreen extends StatelessWidget {
                     )),
                 const SizedBox(height: AppDimensions.spacingMD),
 
-                // Remember Me & Forgot Password Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    // Remember Me
-                    Obx(() => Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Checkbox(
-                              value: controller.rememberMe.value,
-                              onChanged: (value) =>
-                                  controller.toggleRememberMe(),
-                              activeColor: AppColors.primary,
-                            ),
-                            Text(
-                              'Ingat saya',
-                              style: AppTextStyles.bodyMedium,
-                            ),
-                          ],
-                        )),
+                // // Remember Me & Forgot Password Row
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                //   children: [
+                //     // Remember Me
+                //     Obx(() => Row(
+                //           mainAxisSize: MainAxisSize.min,
+                //           children: [
+                //             Checkbox(
+                //               value: controller.rememberMe.value,
+                //               onChanged: (value) =>
+                //                   controller.toggleRememberMe(),
+                //               activeColor: AppColors.primary,
+                //             ),
+                //             Text(
+                //               'Ingat saya',
+                //               style: AppTextStyles.bodyMedium,
+                //             ),
+                //           ],
+                //         )),
+                //
+                //     // Forgot Password
+                //     TextButton(
+                //       onPressed: controller.goToForgotPassword,
+                //       child: Text(
+                //         'Lupa Password?',
+                //         style: AppTextStyles.bodyMedium.copyWith(
+                //           color: AppColors.primary,
+                //           fontWeight: FontWeight.w500,
+                //         ),
+                //       ),
+                //     ),
+                //   ],
+                // ),
+                // const SizedBox(height: AppDimensions.spacingXL),
 
-                    // Forgot Password
-                    TextButton(
-                      onPressed: controller.goToForgotPassword,
-                      child: Text(
-                        'Lupa Password?',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppDimensions.spacingXL),
-
-                // ✅ LOGIN BUTTON - Always accessible
+                /// ✅ LOGIN BUTTON - Always accessible
                 Obx(() => SizedBox(
                       width: double.infinity,
                       height: 56,
@@ -215,93 +215,93 @@ class LoginScreen extends StatelessWidget {
                     )),
                 const SizedBox(height: AppDimensions.spacingXL),
 
-                // Demo Buttons (for testing) - Always show for now
-                const Divider(),
-                const SizedBox(height: AppDimensions.spacingMD),
-                Text(
-                  'Demo Accounts (untuk testing)',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: AppDimensions.spacingMD),
-                Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: controller.fillDemoCustomer,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          'Customer',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppDimensions.spacingSM),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: controller.fillDemoDriver,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          'Driver',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: AppDimensions.spacingSM),
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: controller.fillDemoStore,
-                        style: OutlinedButton.styleFrom(
-                          side: BorderSide(color: AppColors.primary),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          'Store',
-                          style: TextStyle(color: AppColors.primary),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-
-                const SizedBox(height: AppDimensions.spacingXL),
-
-                // Register Link
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Text(
-                      'Belum punya akun? ',
-                      style: AppTextStyles.bodyMedium.copyWith(
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                    TextButton(
-                      onPressed: controller.goToRegister,
-                      child: Text(
-                        'Daftar Sekarang',
-                        style: AppTextStyles.bodyMedium.copyWith(
-                          color: AppColors.primary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                // /// Demo Buttons (for testing) - Always show for now
+                // const Divider(),
+                // const SizedBox(height: AppDimensions.spacingMD),
+                // Text(
+                //   'Demo Accounts (untuk testing)',
+                //   style: AppTextStyles.bodyMedium.copyWith(
+                //     color: AppColors.textSecondary,
+                //   ),
+                //   textAlign: TextAlign.center,
+                // ),
+                // const SizedBox(height: AppDimensions.spacingMD),
+                // Row(
+                //   children: [
+                //     Expanded(
+                //       child: OutlinedButton(
+                //         onPressed: controller.fillDemoCustomer,
+                //         style: OutlinedButton.styleFrom(
+                //           side: BorderSide(color: AppColors.primary),
+                //           shape: RoundedRectangleBorder(
+                //             borderRadius: BorderRadius.circular(8),
+                //           ),
+                //         ),
+                //         child: Text(
+                //           'Customer',
+                //           style: TextStyle(color: AppColors.primary),
+                //         ),
+                //       ),
+                //     ),
+                //     const SizedBox(width: AppDimensions.spacingSM),
+                //     Expanded(
+                //       child: OutlinedButton(
+                //         onPressed: controller.fillDemoDriver,
+                //         style: OutlinedButton.styleFrom(
+                //           side: BorderSide(color: AppColors.primary),
+                //           shape: RoundedRectangleBorder(
+                //             borderRadius: BorderRadius.circular(8),
+                //           ),
+                //         ),
+                //         child: Text(
+                //           'Driver',
+                //           style: TextStyle(color: AppColors.primary),
+                //         ),
+                //       ),
+                //     ),
+                //     const SizedBox(width: AppDimensions.spacingSM),
+                //     Expanded(
+                //       child: OutlinedButton(
+                //         onPressed: controller.fillDemoStore,
+                //         style: OutlinedButton.styleFrom(
+                //           side: BorderSide(color: AppColors.primary),
+                //           shape: RoundedRectangleBorder(
+                //             borderRadius: BorderRadius.circular(8),
+                //           ),
+                //         ),
+                //         child: Text(
+                //           'Store',
+                //           style: TextStyle(color: AppColors.primary),
+                //         ),
+                //       ),
+                //     ),
+                //   ],
+                // ),
+                //
+                // const SizedBox(height: AppDimensions.spacingXL),
+                //
+                // /// Register Link
+                // Row(
+                //   mainAxisAlignment: MainAxisAlignment.center,
+                //   children: [
+                //     Text(
+                //       'Belum punya akun? ',
+                //       style: AppTextStyles.bodyMedium.copyWith(
+                //         color: AppColors.textSecondary,
+                //       ),
+                //     ),
+                //     TextButton(
+                //       onPressed: controller.goToRegister,
+                //       child: Text(
+                //         'Daftar Sekarang',
+                //         style: AppTextStyles.bodyMedium.copyWith(
+                //           color: AppColors.primary,
+                //           fontWeight: FontWeight.w600,
+                //         ),
+                //       ),
+                //     ),
+                //   ],
+                // ),
 
                 const SizedBox(height: AppDimensions.spacingXL),
               ],

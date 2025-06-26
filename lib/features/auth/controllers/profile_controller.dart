@@ -36,7 +36,7 @@ class ProfileController extends GetxController {
       if (result.isSuccess && result.data != null) {
         _user.value = result.data;
         // Update AuthController's current user
-        _authController.updateCurrentUser(result.data!);
+        // _authController.updateCurrentUser(result.data!);
       } else {
         _hasError.value = true;
         _errorMessage.value = result.message ?? 'Failed to load profile';
@@ -49,52 +49,54 @@ class ProfileController extends GetxController {
     }
   }
 
-  Future<bool> updateProfile({
-    String? name,
-    String? email,
-    String? phone,
-    String? avatar,
-  }) async {
-    try {
-      _isLoading.value = true;
-
-      final result = await _authRepository.updateProfile(
-        name: name,
-        email: email,
-        phone: phone,
-        avatar: avatar,
-      );
-
-      if (result.isSuccess && result.data != null) {
-        _user.value = result.data;
-        // Update AuthController's current user
-        _authController.updateCurrentUser(result.data!);
-
-        Get.snackbar(
-          'Success',
-          'Profile updated successfully',
-          snackPosition: SnackPosition.TOP,
-        );
-        return true;
-      } else {
-        Get.snackbar(
-          'Error',
-          result.message ?? 'Failed to update profile',
-          snackPosition: SnackPosition.TOP,
-        );
-        return false;
-      }
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'An error occurred while updating profile: $e',
-        snackPosition: SnackPosition.TOP,
-      );
-      return false;
-    } finally {
-      _isLoading.value = false;
-    }
-  }
+  ///Update Profile
+//   Future<bool> updateProfile({
+//     String? name,
+//     String? email,
+//     String? phone,
+//     String? avatar,
+//   })
+//   async {
+//     try {
+//       _isLoading.value = true;
+//
+//       final result = await _authRepository.updateProfile(
+//         name: name,
+//         email: email,
+//         phone: phone,
+//         avatar: avatar,
+//       );
+//
+//       if (result.isSuccess && result.data != null) {
+//         _user.value = result.data;
+//         // Update AuthController's current user
+//         // _authController.updateCurrentUser(result.data!);
+//
+//         Get.snackbar(
+//           'Success',
+//           'Profile updated successfully',
+//           snackPosition: SnackPosition.TOP,
+//         );
+//         return true;
+//       } else {
+//         Get.snackbar(
+//           'Error',
+//           result.message ?? 'Failed to update profile',
+//           snackPosition: SnackPosition.TOP,
+//         );
+//         return false;
+//       }
+//     } catch (e) {
+//       Get.snackbar(
+//         'Error',
+//         'An error occurred while updating profile: $e',
+//         snackPosition: SnackPosition.TOP,
+//       );
+//       return false;
+//     } finally {
+//       _isLoading.value = false;
+//     }
+//   }
 
   void refresh() {
     loadProfile();

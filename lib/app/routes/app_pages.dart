@@ -123,15 +123,15 @@ class AppPages {
     //   transition: Transition.rightToLeft,
     //   transitionDuration: RouteConfig.transitionDuration,
     // ),//Reset Password
-
-    GetPage(
-      name: Routes.EDIT_PROFILE,
-      page: () => const EditProfileScreen(),
-      binding: AuthBinding(),
-      // middlewares: [AuthMiddleware(), PermissionMiddleware()],
-      transition: Transition.rightToLeft,
-      transitionDuration: RouteConfig.transitionDuration,
-    ),
+    //
+    // GetPage(
+    //   name: Routes.EDIT_PROFILE,
+    //   page: () => const EditProfileScreen(),
+    //   binding: AuthBinding(),
+    //   // middlewares: [AuthMiddleware(), PermissionMiddleware()],
+    //   transition: Transition.rightToLeft,
+    //   transitionDuration: RouteConfig.transitionDuration,
+    // ),
 
     // ✅ === CUSTOMER ROUTES ===
     GetPage(

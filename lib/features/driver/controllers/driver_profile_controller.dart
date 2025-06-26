@@ -243,95 +243,96 @@ class DriverProfileController extends GetxController {
   }
 
   /// Update profile information - FIXED: Handle response properly
-  Future<void> updateProfile({
-    String? name,
-    String? email,
-    String? phone,
-    String? vehicleNumber,
-  }) async {
-    try {
-      _isLoading.value = true;
-      print('🔄 Updating profile...');
-
-      bool hasUpdates = false;
-
-      // ✅ Update user profile (name, email)
-      if (name != null || email != null) {
-        print('📡 Updating user profile...');
-
-        try {
-          final userResult = await _authRepository.updateProfile(
-            name: name,
-            email: email,
-          );
-
-          if (userResult.isSuccess && userResult.data != null) {
-            _userProfile.value = userResult.data;
-            hasUpdates = true;
-            print('✅ User profile updated');
-          } else {
-            print('⚠️ User profile update failed: ${userResult.errorMessage}');
-          }
-        } catch (e) {
-          print('❌ User profile update error: $e');
-        }
-      }
-
-      // Handle phone separately if needed
-      if (phone != null && phone.isNotEmpty) {
-        print('📞 Phone update not implemented in AuthRepository');
-        CustomSnackbar.showWarning(
-          title: 'Phone Update',
-          message: 'Phone number update is not available yet',
-        );
-      }
-
-      // ✅ Update driver profile (vehicle number, etc.)
-      if (vehicleNumber != null) {
-        print('📡 Updating driver profile...');
-
-        final driverData = <String, dynamic>{};
-        if (vehicleNumber.isNotEmpty) {
-          driverData['vehicleNumber'] = vehicleNumber;
-        }
-
-        if (driverData.isNotEmpty) {
-          final driverResult =
-              await _driverRepository.updateDriverProfile(driverData);
-
-          if (driverResult.isSuccess && driverResult.data != null) {
-            // ✅ FIXED: driverResult.data is DriverModel, not Map
-            _driverProfile.value = driverResult.data!;
-            hasUpdates = true;
-            print('✅ Driver profile updated');
-          } else {
-            print(
-                '⚠️ Driver profile update failed: ${driverResult.errorMessage}');
-          }
-        }
-      }
-
-      if (hasUpdates) {
-        CustomSnackbar.showSuccess(
-          title: 'Success',
-          message: 'Profile updated successfully',
-        );
-      } else {
-        CustomSnackbar.showWarning(
-          title: 'No Changes',
-          message: 'No changes were made to your profile',
-        );
-      }
-    } catch (e) {
-      print('❌ Exception in updateProfile: $e');
-      CustomSnackbar.showError(
-        title: 'Error',
-        message: 'Failed to update profile: ${e.toString()}',
-      );
-    } finally {
-      _isLoading.value = false;
-    }
-  }
+  // Future<void> updateProfile({
+  //   String? name,
+  //   String? email,
+  //   String? phone,
+  //   String? vehicleNumber,
+  // })
+  // async {
+  //   try {
+  //     _isLoading.value = true;
+  //     print('🔄 Updating profile...');
+  //
+  //     bool hasUpdates = false;
+  //
+  //     // ✅ Update user profile (name, email)
+  //     if (name != null || email != null) {
+  //       print('📡 Updating user profile...');
+  //
+  //       try {
+  //         final userResult = await _authRepository.updateProfile(
+  //           name: name,
+  //           email: email,
+  //         );
+  //
+  //         if (userResult.isSuccess && userResult.data != null) {
+  //           _userProfile.value = userResult.data;
+  //           hasUpdates = true;
+  //           print('✅ User profile updated');
+  //         } else {
+  //           print('⚠️ User profile update failed: ${userResult.errorMessage}');
+  //         }
+  //       } catch (e) {
+  //         print('❌ User profile update error: $e');
+  //       }
+  //     }
+  //
+  //     // Handle phone separately if needed
+  //     if (phone != null && phone.isNotEmpty) {
+  //       print('📞 Phone update not implemented in AuthRepository');
+  //       CustomSnackbar.showWarning(
+  //         title: 'Phone Update',
+  //         message: 'Phone number update is not available yet',
+  //       );
+  //     }
+  //
+  //     // ✅ Update driver profile (vehicle number, etc.)
+  //     if (vehicleNumber != null) {
+  //       print('📡 Updating driver profile...');
+  //
+  //       final driverData = <String, dynamic>{};
+  //       if (vehicleNumber.isNotEmpty) {
+  //         driverData['vehicleNumber'] = vehicleNumber;
+  //       }
+  //
+  //       if (driverData.isNotEmpty) {
+  //         final driverResult =
+  //             await _driverRepository.updateDriverProfile(driverData);
+  //
+  //         if (driverResult.isSuccess && driverResult.data != null) {
+  //           // ✅ FIXED: driverResult.data is DriverModel, not Map
+  //           _driverProfile.value = driverResult.data!;
+  //           hasUpdates = true;
+  //           print('✅ Driver profile updated');
+  //         } else {
+  //           print(
+  //               '⚠️ Driver profile update failed: ${driverResult.errorMessage}');
+  //         }
+  //       }
+  //     }
+  //
+  //     if (hasUpdates) {
+  //       CustomSnackbar.showSuccess(
+  //         title: 'Success',
+  //         message: 'Profile updated successfully',
+  //       );
+  //     } else {
+  //       CustomSnackbar.showWarning(
+  //         title: 'No Changes',
+  //         message: 'No changes were made to your profile',
+  //       );
+  //     }
+  //   } catch (e) {
+  //     print('❌ Exception in updateProfile: $e');
+  //     CustomSnackbar.showError(
+  //       title: 'Error',
+  //       message: 'Failed to update profile: ${e.toString()}',
+  //     );
+  //   } finally {
+  //     _isLoading.value = false;
+  //   }
+  // }
 
   /// Update driver profile locally when API response is unclear
   void _updateDriverProfileLocally(Map<String, dynamic> updatedData) {

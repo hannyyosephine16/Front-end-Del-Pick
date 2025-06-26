@@ -1,3 +1,4 @@
+import 'package:del_pick/core/services/api/auth_service.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/auth_repository.dart';
 import 'package:del_pick/data/providers/auth_provider.dart';
@@ -54,10 +55,10 @@ class AuthBinding extends Bindings {
 
     // ✅ Repository - Sesuai dengan constructor AuthRepository
     Get.lazyPut<AuthRepository>(
-      () => AuthRepository(
-        Get.find<AuthRemoteDataSource>(), // Parameter 1: _remoteDataSource
-        Get.find<AuthLocalDataSource>(), // Parameter 2: _localDataSource
-      ),
+      () => AuthRepository(Get.find<AuthService>()
+          // Get.find<AuthRemoteDataSource>(), // Parameter 1: _remoteDataSource
+          // Get.find<AuthLocalDataSource>(), // Parameter 2: _localDataSource
+          ),
       fenix: true,
     );
 
@@ -74,7 +75,10 @@ class AuthBinding extends Bindings {
 
     // ✅ Other Auth Controllers (sesuai dengan constructor masing-masing)
     Get.lazyPut<LoginController>(
-      () => LoginController(Get.find<AuthRepository>()),
+      () => LoginController(
+
+          // Get.find<AuthRepository>()
+          ),
       fenix: true,
     );
 

@@ -66,41 +66,41 @@ class ProfileScreen extends StatelessWidget {
                       ),
                       child: Column(
                         children: [
-                          // Avatar - UNCHANGED
-                          Container(
-                            width: 100,
-                            height: 100,
-                            decoration: BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: AppColors.primary.withOpacity(0.1),
-                              border: Border.all(
-                                color: AppColors.primary,
-                                width: 3,
-                              ),
-                            ),
-                            child: authController.userAvatar.isNotEmpty
-                                ? ClipOval(
-                                    child: Image.network(
-                                      authController.userAvatar,
-                                      width: 100,
-                                      height: 100,
-                                      fit: BoxFit.cover,
-                                      errorBuilder:
-                                          (context, error, stackTrace) => Icon(
-                                        _getRoleIcon(
-                                            authController.userRole.value),
-                                        size: 50,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  )
-                                : Icon(
-                                    _getRoleIcon(authController.userRole.value),
-                                    size: 50,
-                                    color: AppColors.primary,
-                                  ),
-                          ),
-                          const SizedBox(height: AppDimensions.spacingLG),
+                          /// Avatar - UNCHANGED
+                          // Container(
+                          //   width: 100,
+                          //   height: 100,
+                          //   decoration: BoxDecoration(
+                          //     shape: BoxShape.circle,
+                          //     color: AppColors.primary.withOpacity(0.1),
+                          //     border: Border.all(
+                          //       color: AppColors.primary,
+                          //       width: 3,
+                          //     ),
+                          //   ),
+                          //   child: authController.userAvatar.isNotEmpty
+                          //       ? ClipOval(
+                          //           child: Image.network(
+                          //             authController.userAvatar,
+                          //             width: 100,
+                          //             height: 100,
+                          //             fit: BoxFit.cover,
+                          //             errorBuilder:
+                          //                 (context, error, stackTrace) => Icon(
+                          //               _getRoleIcon(
+                          //                   authController.userRole.value),
+                          //               size: 50,
+                          //               color: AppColors.primary,
+                          //             ),
+                          //           ),
+                          //         )
+                          //       : Icon(
+                          //           _getRoleIcon(authController.userRole.value),
+                          //           size: 50,
+                          //           color: AppColors.primary,
+                          //         ),
+                          // ),
+                          // const SizedBox(height: AppDimensions.spacingLG),
 
                           // User Name - FIXED
                           Text(
