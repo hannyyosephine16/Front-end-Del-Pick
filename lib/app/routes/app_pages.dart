@@ -1,7 +1,10 @@
 import 'package:del_pick/features/auth/screens/profile_screen.dart';
 import 'package:del_pick/features/customer/screens/home_screen.dart';
+import 'package:del_pick/features/customer/screens/menu_item_detail_screen.dart';
+import 'package:del_pick/features/customer/screens/order_detail_screen.dart';
 import 'package:del_pick/features/customer/screens/order_history_screen.dart';
 import 'package:del_pick/features/driver/screens/driver_home_screen.dart';
+import 'package:del_pick/features/driver/screens/navigation_screen.dart';
 import 'package:del_pick/features/store/screens/order_detail_screen.dart';
 import 'package:del_pick/features/store/screens/store_dashboard_screen.dart';
 import 'package:del_pick/features/store/screens/store_orders_list_screen.dart';
@@ -104,14 +107,14 @@ class AppPages {
     //   transition: Transition.rightToLeft,
     //   transitionDuration: RouteConfig.transitionDuration,
     // ), //register
-
-    GetPage(
-      name: Routes.FORGOT_PASSWORD,
-      page: () => const ForgotPasswordScreen(),
-      binding: AuthBinding(),
-      transition: Transition.rightToLeft,
-      transitionDuration: RouteConfig.transitionDuration,
-    ),
+    //
+    // GetPage(
+    //   name: Routes.FORGOT_PASSWORD,
+    //   page: () => const ForgotPasswordScreen(),
+    //   binding: AuthBinding(),
+    //   transition: Transition.rightToLeft,
+    //   transitionDuration: RouteConfig.transitionDuration,
+    // ),
 
     // GetPage(
     //   name: Routes.RESET_PASSWORD,
@@ -164,23 +167,27 @@ class AppPages {
       transitionDuration: RouteConfig.transitionDuration,
     ),
 
-    // GetPage(
-    //   name: Routes.MENU_ITEM_DETAIL,
-    //   page: () => const MenuDetailView(),
-    //   binding: CustomerBinding(),
-    //   middlewares: [AuthMiddleware(), RoleMiddleware()],
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: RouteConfig.transitionDuration,
-    // ),
+    GetPage(
+      name: Routes.MENU_ITEM_DETAIL,
+      page: () => const MenuDetailScreen(),
+      binding: CustomerBinding(),
+      middlewares: [
+        AuthMiddleware(),
+      ],
+      transition: Transition.rightToLeft,
+      transitionDuration: RouteConfig.transitionDuration,
+    ),
 
-    // GetPage(
-    //   name: Routes.CUSTOMER_ORDER_DETAIL,
-    //   page: () => const CustomerOrderDetailView(),
-    //   binding: CustomerBinding(),
-    //   middlewares: [AuthMiddleware(), RoleMiddleware()],
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: RouteConfig.transitionDuration,
-    // ),
+    GetPage(
+      name: Routes.CUSTOMER_ORDER_DETAIL,
+      page: () => const CustomerOrderDetailScreen(),
+      binding: CustomerBinding(),
+      middlewares: [
+        AuthMiddleware(),
+      ],
+      transition: Transition.rightToLeft,
+      transitionDuration: RouteConfig.transitionDuration,
+    ),
 
     // GetPage(
     //   name: Routes.ORDER_HISTORY,
@@ -270,14 +277,16 @@ class AppPages {
       transitionDuration: RouteConfig.transitionDuration,
     ),
 
-    // GetPage(
-    //   name: Routes.NAVIGATION,
-    //   page: () => const NavigationView(),
-    //   binding: DriverBinding(),
-    //   middlewares: [AuthMiddleware(), RoleMiddleware(), PermissionMiddleware()],
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: RouteConfig.transitionDuration,
-    // ),
+    GetPage(
+      name: Routes.NAVIGATION,
+      page: () => const NavigationScreen(),
+      binding: DriverBinding(),
+      middlewares: [
+        AuthMiddleware(),
+      ],
+      transition: Transition.rightToLeft,
+      transitionDuration: RouteConfig.transitionDuration,
+    ),
 
     GetPage(
       name: Routes.DRIVER_PROFILE,

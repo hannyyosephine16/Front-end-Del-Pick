@@ -65,7 +65,7 @@ class AuthBinding extends Bindings {
     Get.lazyPut<AuthController>(
       () => AuthController(
         Get.find<AuthRepository>(), // Parameter 1: _authRepository
-        Get.find<NotificationService>(), // Parameter 2: _notificationService
+        // Get.find<NotificationService>(), // Parameter 2: _notificationService
         Get.find<ConnectivityService>(), // Parameter 3: _connectivityService
         Get.find<StorageService>(), // Parameter 4: _storageService
       ),
