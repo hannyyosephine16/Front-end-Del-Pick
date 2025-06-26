@@ -1,3 +1,4 @@
+// lib/data/repositories/driver_repository.dart - UPDATED
 import 'package:del_pick/data/datasources/remote/driver_remote_datasource.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
@@ -52,6 +53,7 @@ class DriverRepository {
     }
   }
 
+  /// Update driver location - Returns Result<void> to match usage in tracking controller
   Future<Result<void>> updateDriverLocation(
     double latitude,
     double longitude,

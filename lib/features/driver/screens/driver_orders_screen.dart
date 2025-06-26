@@ -1,4 +1,5 @@
 // lib/features/driver/screens/driver_orders_screen.dart - FIXED
+import 'package:del_pick/data/repositories/tracking_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/features/driver/controllers/driver_orders_controller.dart';
@@ -16,7 +17,10 @@ class DriverOrdersScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     // ✅ FIXED: Use proper constructor with named parameter
     final controller = Get.put(
-      DriverOrdersController(orderRepository: Get.find<OrderRepository>()),
+      DriverOrdersController(
+        orderRepository: Get.find<OrderRepository>(),
+        trackingRepository: Get.find<TrackingRepository>(),
+      ),
     );
 
     return Scaffold(

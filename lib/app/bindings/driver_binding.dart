@@ -90,8 +90,9 @@ class DriverBinding extends Bindings {
     );
 
     Get.lazyPut<DriverOrdersController>(
-      () =>
-          DriverOrdersController(orderRepository: Get.find<OrderRepository>()),
+      () => DriverOrdersController(
+          orderRepository: Get.find<OrderRepository>(),
+          trackingRepository: Get.find<TrackingRepository>()),
     );
 
     // ProfileController() - tanpa parameter berdasarkan error
