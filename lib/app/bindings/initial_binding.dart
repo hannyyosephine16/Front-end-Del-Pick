@@ -20,18 +20,24 @@ import '../../features/shared/controllers/splash_controller.dart';
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
+    // ✅ Core Services (required untuk SplashController)
     Get.put<StorageService>(StorageService(), permanent: true);
     Get.put<ApiService>(ApiService(), permanent: true);
-    Get.lazyPut(() => AuthApiService(Get.find()), fenix: true);
     Get.put<NavigationController>(NavigationController(), permanent: true);
 
+    // ✅ Other essential services
+    Get.lazyPut<AuthApiService>(() => AuthApiService(Get.find()), fenix: true);
     Get.lazyPut<CacheService>(() => CacheService(), fenix: true);
     Get.lazyPut<DatabaseService>(() => DatabaseService(), fenix: true);
     Get.lazyPut<LocationService>(() => LocationService(), fenix: true);
     Get.lazyPut<NotificationService>(() => NotificationService(), fenix: true);
     Get.lazyPut<ConnectivityService>(() => ConnectivityService(), fenix: true);
     Get.lazyPut<PermissionService>(() => PermissionService(), fenix: true);
+
+    // ✅ SplashController - hanya butuh basic services
     Get.lazyPut<SplashController>(() => SplashController());
+
+    // ✅ UI Controllers
     Get.lazyPut<ThemeController>(() => ThemeController(), fenix: true);
     Get.lazyPut<LanguageController>(() => LanguageController(), fenix: true);
     Get.lazyPut<NotificationController>(() => NotificationController(),

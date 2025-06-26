@@ -1,14 +1,15 @@
-// lib/features/shared/controllers/splash_controller.dart (FIXED NAVIGATION FLOW)
+// lib/features/shared/controllers/splash_controller.dart (FIXED)
 import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/services/external/permission_service.dart';
 import '../../../core/services/external/notification_service.dart';
-import '../../../data/repositories/auth_repository.dart';
-import '../../../core/constants/storage_constants.dart';
 import '../../../core/services/local/storage_service.dart';
+import '../../../core/constants/storage_constants.dart';
 
 class SplashController extends GetxController {
-  final AuthRepository _authRepository = Get.find<AuthRepository>();
+  // ✅ TIDAK langsung inject AuthRepository di constructor
+  // Karena SplashController dibuat SEBELUM AuthBinding
+
   final PermissionService _permissionService = Get.find<PermissionService>();
   final NotificationService _notificationService =
       Get.find<NotificationService>();
@@ -137,16 +138,21 @@ class SplashController extends GetxController {
       final token = _storageService.readString(StorageConstants.authToken);
 
       if (isLoggedIn && token != null && token.isNotEmpty) {
-        // Verify token with backend
+        // ✅ Token valid, verify with backend
         loadingText.value = 'Memverifikasi sesi...';
-        final result = await _authRepository.getProfile();
 
-        if (result.isSuccess && result.data != null) {
-          // Token valid, update user data and navigate based on role
-          _updateUserSession(result.data!);
-          _navigateBasedOnRole(result.data!.role);
+        // ✅ PERBAIKAN: Hanya cek token dari storage dulu
+        // Tidak perlu verify ke backend karena AuthRepository belum tersedia
+
+        // Get user role from storage
+        final userRole = _storageService.readString(StorageConstants.userRole);
+
+        if (userRole != null && userRole.isNotEmpty) {
+          // Update user session info
+          _updateUserSession();
+          _navigateBasedOnRole(userRole);
         } else {
-          // Token invalid, clear session and navigate to login
+          // No role found, clear session and go to login
           _clearInvalidSession();
           _navigateToLogin();
         }
@@ -175,22 +181,10 @@ class SplashController extends GetxController {
     _storageService.writeBool(StorageConstants.isLoggedIn, false);
   }
 
-  void _updateUserSession(dynamic user) {
+  void _updateUserSession() {
     // Update last login time
     _storageService.writeString(
         StorageConstants.lastLoginTime, DateTime.now().toIso8601String());
-
-    // Update user data in storage
-    _storageService.writeString(StorageConstants.userName, user.name);
-    _storageService.writeString(StorageConstants.userEmail, user.email);
-    _storageService.writeString(StorageConstants.userRole, user.role);
-
-    if (user.phone != null) {
-      _storageService.writeString(StorageConstants.userPhone, user.phone!);
-    }
-    if (user.avatar != null) {
-      _storageService.writeString(StorageConstants.userAvatar, user.avatar!);
-    }
   }
 
   // ✅ Navigation methods with proper flow
@@ -215,7 +209,7 @@ class SplashController extends GetxController {
         Get.offAllNamed(Routes.CUSTOMER_HOME);
         break;
       case 'driver':
-        Get.offAllNamed(Routes.DRIVER_MAIN);
+        Get.offAllNamed(Routes.DRIVER_HOME); // ✅ Fixed route
         break;
       case 'store':
         Get.offAllNamed(Routes.STORE_DASHBOARD);

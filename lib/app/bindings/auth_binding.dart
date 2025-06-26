@@ -15,7 +15,8 @@ import 'package:del_pick/core/services/api/api_service.dart';
 class AuthBinding extends Bindings {
   @override
   void dependencies() {
-    // ✅ Pastikan core services sudah tersedia (biasanya dari InitialBinding)
+    // ✅ Pastikan core services sudah tersedia (dari InitialBinding)
+    // Jika belum ada, daftarkan dengan fenix untuk bisa re-create
     if (!Get.isRegistered<ApiService>()) {
       Get.put<ApiService>(ApiService(), permanent: true);
     }
@@ -23,27 +24,32 @@ class AuthBinding extends Bindings {
       Get.put<StorageService>(StorageService(), permanent: true);
     }
     if (!Get.isRegistered<ConnectivityService>()) {
-      Get.put<ConnectivityService>(ConnectivityService(), permanent: true);
+      Get.lazyPut<ConnectivityService>(() => ConnectivityService(),
+          fenix: true);
     }
     if (!Get.isRegistered<NotificationService>()) {
-      Get.put<NotificationService>(NotificationService(), permanent: true);
+      Get.lazyPut<NotificationService>(() => NotificationService(),
+          fenix: true);
     }
 
-    // ✅ Data sources
+    // ✅ Data sources - dalam urutan yang benar
     Get.lazyPut<AuthRemoteDataSource>(
       () => AuthRemoteDataSource(Get.find<ApiService>()),
+      fenix: true,
     );
 
     Get.lazyPut<AuthLocalDataSource>(
       () => AuthLocalDataSource(Get.find<StorageService>()),
+      fenix: true,
     );
 
-    // ✅ Provider
+    // ✅ Provider - opsional, bisa skip jika tidak digunakan
     Get.lazyPut<AuthProvider>(
       () => AuthProvider(
         remoteDataSource: Get.find<AuthRemoteDataSource>(),
         localDataSource: Get.find<AuthLocalDataSource>(),
       ),
+      fenix: true,
     );
 
     // ✅ Repository - Sesuai dengan constructor AuthRepository
@@ -52,6 +58,7 @@ class AuthBinding extends Bindings {
         Get.find<AuthRemoteDataSource>(), // Parameter 1: _remoteDataSource
         Get.find<AuthLocalDataSource>(), // Parameter 2: _localDataSource
       ),
+      fenix: true,
     );
 
     // ✅ AuthController - Sesuai dengan constructor yang ada (4 parameter)
@@ -62,19 +69,23 @@ class AuthBinding extends Bindings {
         Get.find<ConnectivityService>(), // Parameter 3: _connectivityService
         Get.find<StorageService>(), // Parameter 4: _storageService
       ),
+      fenix: true,
     );
 
     // ✅ Other Auth Controllers (sesuai dengan constructor masing-masing)
     Get.lazyPut<LoginController>(
       () => LoginController(Get.find<AuthRepository>()),
+      fenix: true,
     );
 
     Get.lazyPut<RegisterController>(
       () => RegisterController(Get.find<AuthRepository>()),
+      fenix: true,
     );
 
-    // Get.lazyPut<ProfileController>(
-    //   () => ProfileController(Get.find<AuthRepository>()),
-    // );
+    Get.lazyPut<ProfileController>(
+      () => ProfileController(),
+      fenix: true,
+    );
   }
 }
