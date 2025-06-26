@@ -1,52 +1,36 @@
 // lib/core/utils/helpers.dart - Fixed Timer import
 import 'dart:async'; // Added missing import
 import 'dart:math';
+import 'package:del_pick/core/utils/custom_snackbar.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
 class Helpers {
   static void showErrorSnackbar(
       String title, String message, BuildContext context) {
-    final snackBar = SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.red, // Color for error
-      action: SnackBarAction(
-        label: 'Close',
-        onPressed: () {},
-      ),
+    CustomSnackbar.showError(
+      title: title,
+      message: message,
+      context: context,
     );
-
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  // Show warning Snackbar with Flutter's native Snackbar
   static void showWarningSnackbar(
       String title, String message, BuildContext context) {
-    final snackBar = SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.orange, // Color for warning
-      action: SnackBarAction(
-        label: 'Close',
-        onPressed: () {},
-      ),
+    CustomSnackbar.showWarning(
+      title: title,
+      message: message,
+      context: context,
     );
-
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
-  // Show Success Snackbar with Flutter's native Snackbar
   static void showSuccessSnackbar(
       String title, String message, BuildContext context) {
-    final snackBar = SnackBar(
-      content: Text(message),
-      backgroundColor: Colors.green, // Color for warning
-      action: SnackBarAction(
-        label: 'Close',
-        onPressed: () {},
-      ),
+    CustomSnackbar.showSuccess(
+      title: title,
+      message: message,
+      context: context,
     );
-
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
   // Generate random string
