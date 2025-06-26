@@ -1,4 +1,4 @@
-// lib/features/shared/screens/onboarding_screen.dart (FIXED)
+// lib/features/shared/screens/onboarding_screen.dart (CLEANED - No Firebase)
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
@@ -22,13 +22,13 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   int _currentPage = 0;
 
-  // ✅ Onboarding data sesuai dengan backend (customer, driver, store)
+  // Onboarding data sesuai dengan backend roles (customer, driver, store)
   final List<OnboardingData> _onboardingPages = [
     OnboardingData(
       title: 'Selamat Datang di DelPick',
       subtitle: 'Platform delivery terpercaya untuk semua kebutuhan Anda',
       description:
-          'Nikmati kemudahan memesan makanan, menggunakan jasa kurir, dan mengelola toko dalam satu aplikasi.',
+      'Nikmati kemudahan memesan makanan, menggunakan jasa kurir, dan mengelola toko dalam satu aplikasi.',
       icon: Icons.delivery_dining,
       color: AppColors.primary,
     ),
@@ -36,7 +36,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Untuk Customer',
       subtitle: 'Pesan makanan favorit dengan mudah',
       description:
-          'Jelajahi berbagai toko, pilih menu favorit, dan nikmati pengiriman cepat langsung ke lokasi Anda.',
+      'Jelajahi berbagai toko, pilih menu favorit, dan nikmati pengiriman cepat langsung ke lokasi Anda.',
       icon: Icons.restaurant_menu,
       color: Colors.orange,
     ),
@@ -44,7 +44,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Untuk Driver',
       subtitle: 'Bergabung sebagai mitra driver',
       description:
-          'Dapatkan penghasilan tambahan dengan menjadi driver DelPick. Atur jadwal kerja Anda sendiri.',
+      'Dapatkan penghasilan tambahan dengan menjadi driver DelPick. Atur jadwal kerja Anda sendiri.',
       icon: Icons.two_wheeler,
       color: Colors.blue,
     ),
@@ -52,7 +52,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       title: 'Untuk Store',
       subtitle: 'Kembangkan bisnis kuliner Anda',
       description:
-          'Daftarkan toko Anda, kelola menu, dan jangkau lebih banyak pelanggan melalui platform kami.',
+      'Daftarkan toko Anda, kelola menu, dan jangkau lebih banyak pelanggan melalui platform kami.',
       icon: Icons.store,
       color: Colors.green,
     ),
@@ -79,7 +79,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     _completeOnboarding();
   }
 
-  // ✅ FIXED: Complete onboarding and navigate to login
+  // Complete onboarding and navigate to login
   Future<void> _completeOnboarding() async {
     try {
       // Mark onboarding as completed
@@ -103,7 +103,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            // Skip button
+            // Header with logo and skip button
             Padding(
               padding: const EdgeInsets.all(AppDimensions.paddingLG),
               child: Row(
@@ -223,7 +223,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: List.generate(
                       _onboardingPages.length,
-                      (index) => Container(
+                          (index) => Container(
                         margin: const EdgeInsets.symmetric(
                           horizontal: AppDimensions.spacingXS,
                         ),
@@ -267,7 +267,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   }
 }
 
-// ✅ Data model untuk onboarding
+// Data model untuk onboarding
 class OnboardingData {
   final String title;
   final String subtitle;

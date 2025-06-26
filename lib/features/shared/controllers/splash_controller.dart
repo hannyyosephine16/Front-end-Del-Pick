@@ -1,18 +1,12 @@
-// lib/features/shared/controllers/splash_controller.dart (FIXED)
+// lib/features/shared/controllers/splash_controller.dart (FIXED - No Firebase)
 import 'package:get/get.dart';
 import '../../../app/routes/app_routes.dart';
 import '../../../core/services/external/permission_service.dart';
-import '../../../core/services/external/notification_service.dart';
 import '../../../core/services/local/storage_service.dart';
 import '../../../core/constants/storage_constants.dart';
 
 class SplashController extends GetxController {
-  // ✅ TIDAK langsung inject AuthRepository di constructor
-  // Karena SplashController dibuat SEBELUM AuthBinding
-
   final PermissionService _permissionService = Get.find<PermissionService>();
-  final NotificationService _notificationService =
-      Get.find<NotificationService>();
   final StorageService _storageService = Get.find<StorageService>();
 
   final RxBool isLoading = true.obs;
@@ -41,7 +35,7 @@ class SplashController extends GetxController {
       loadingText.value = 'Memeriksa izin...';
       await _checkPermissions();
 
-      // ✅ FIXED: Check onboarding first, then auth
+      // Check navigation flow
       loadingText.value = 'Memuat...';
       await _checkNavigationFlow();
     } catch (e) {
@@ -85,9 +79,6 @@ class SplashController extends GetxController {
 
   Future<void> _checkPermissions() async {
     try {
-      // Request notification permission
-      await _notificationService.requestPermission();
-
       // Check location permission status (don't request yet)
       final hasLocationPermission =
           await _permissionService.hasLocationPermission();
@@ -103,7 +94,6 @@ class SplashController extends GetxController {
     }
   }
 
-  // ✅ FIXED: Proper navigation flow check
   Future<void> _checkNavigationFlow() async {
     try {
       // 1. Check if this is first time opening the app
@@ -138,11 +128,7 @@ class SplashController extends GetxController {
       final token = _storageService.readString(StorageConstants.authToken);
 
       if (isLoggedIn && token != null && token.isNotEmpty) {
-        // ✅ Token valid, verify with backend
         loadingText.value = 'Memverifikasi sesi...';
-
-        // ✅ PERBAIKAN: Hanya cek token dari storage dulu
-        // Tidak perlu verify ke backend karena AuthRepository belum tersedia
 
         // Get user role from storage
         final userRole = _storageService.readString(StorageConstants.userRole);
@@ -187,7 +173,7 @@ class SplashController extends GetxController {
         StorageConstants.lastLoginTime, DateTime.now().toIso8601String());
   }
 
-  // ✅ Navigation methods with proper flow
+  // Navigation methods with proper flow
   void _navigateToOnboarding() {
     isLoading.value = false;
     print('Navigating to onboarding');
@@ -209,7 +195,7 @@ class SplashController extends GetxController {
         Get.offAllNamed(Routes.CUSTOMER_HOME);
         break;
       case 'driver':
-        Get.offAllNamed(Routes.DRIVER_HOME); // ✅ Fixed route
+        Get.offAllNamed(Routes.DRIVER_HOME);
         break;
       case 'store':
         Get.offAllNamed(Routes.STORE_DASHBOARD);

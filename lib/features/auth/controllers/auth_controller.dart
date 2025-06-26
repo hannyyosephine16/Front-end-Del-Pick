@@ -292,7 +292,7 @@ class AuthController extends GetxController {
       await _clearAuthData();
 
       // Clear notifications
-      await _notificationService.clearToken();
+      // await _notificationService.clearToken();
 
       // Navigate ke login
       Get.offAllNamed(Routes.LOGIN);

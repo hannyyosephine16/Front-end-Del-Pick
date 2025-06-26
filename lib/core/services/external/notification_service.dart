@@ -1,123 +1,131 @@
-// 4. lib/core/services/external/notification_service.dart (NEW FILE)
-import 'package:firebase_messaging/firebase_messaging.dart';
+// lib/core/services/external/notification_service.dart (Clean - No Firebase)
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:get/get.dart';
-import '../../../core/constants/storage_constants.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:permission_handler/permission_handler.dart';
 
-class NotificationService extends GetxService {
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications =
+class NotificationService {
+  static final NotificationService _instance = NotificationService._internal();
+  factory NotificationService() => _instance;
+  NotificationService._internal();
+
+  final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  @override
-  Future<void> onInit() async {
-    super.onInit();
-    await _initializeNotifications();
+  bool _isInitialized = false;
+
+  // ✅ Initialize without Firebase
+  Future<void> initialize() async {
+    if (_isInitialized) return;
+
+    try {
+      // Initialize local notifications only
+      const initializationSettingsAndroid =
+          AndroidInitializationSettings('@mipmap/ic_launcher');
+
+      const initializationSettingsIOS = DarwinInitializationSettings(
+        requestAlertPermission: false,
+        requestBadgePermission: false,
+        requestSoundPermission: false,
+      );
+
+      const initializationSettings = InitializationSettings(
+        android: initializationSettingsAndroid,
+        iOS: initializationSettingsIOS,
+      );
+
+      await _flutterLocalNotificationsPlugin.initialize(
+        initializationSettings,
+        onDidReceiveNotificationResponse: _onNotificationTapped,
+      );
+
+      _isInitialized = true;
+      debugPrint('✅ NotificationService initialized (local only)');
+    } catch (e) {
+      debugPrint('❌ NotificationService initialization failed: $e');
+    }
   }
 
-  Future<void> _initializeNotifications() async {
-    // Request permission for iOS
-    await _firebaseMessaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+  // ✅ Request permission without Firebase
+  Future<bool> requestPermission() async {
+    try {
+      final status = await Permission.notification.request();
+      debugPrint('📱 Notification permission: ${status.name}');
+      return status.isGranted;
+    } catch (e) {
+      debugPrint('❌ Permission request failed: $e');
+      return false;
+    }
+  }
 
-    // Initialize local notifications
-    const androidSettings =
-        AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
-
-    await _localNotifications.initialize(initSettings);
-
-    // Get FCM token
-    final token = await _firebaseMessaging.getToken();
-    if (token != null) {
-      await _saveFCMToken(token);
+  // ✅ Show local notification
+  Future<void> showLocalNotification({
+    required String title,
+    required String body,
+    String? payload,
+  }) async {
+    if (!_isInitialized) {
+      await initialize();
     }
 
-    // Listen for token refresh
-    _firebaseMessaging.onTokenRefresh.listen(_saveFCMToken);
+    try {
+      const androidDetails = AndroidNotificationDetails(
+        'delpick_channel',
+        'DelPick Notifications',
+        channelDescription: 'Notifications for DelPick app',
+        importance: Importance.high,
+        priority: Priority.high,
+        showWhen: true,
+      );
 
-    // Handle foreground messages
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      const iosDetails = DarwinNotificationDetails(
+        presentAlert: true,
+        presentBadge: true,
+        presentSound: true,
+      );
 
-    // Handle background messages
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+      const notificationDetails = NotificationDetails(
+        android: androidDetails,
+        iOS: iosDetails,
+      );
+
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().millisecondsSinceEpoch.remainder(100000),
+        title,
+        body,
+        notificationDetails,
+        payload: payload,
+      );
+
+      debugPrint('📨 Local notification sent: $title');
+    } catch (e) {
+      debugPrint('❌ Failed to show notification: $e');
+    }
   }
 
-  Future<bool> requestPermission() async {
-    final settings = await _firebaseMessaging.requestPermission();
-    return settings.authorizationStatus == AuthorizationStatus.authorized;
+  // ✅ Handle notification tap
+  void _onNotificationTapped(NotificationResponse response) {
+    debugPrint('📱 Notification tapped: ${response.payload}');
+    // Handle notification tap logic here
   }
 
-  Future<void> _saveFCMToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(StorageConstants.fcmToken, token);
+  // ✅ Cancel all notifications
+  Future<void> cancelAll() async {
+    try {
+      await _flutterLocalNotificationsPlugin.cancelAll();
+      debugPrint('📨 All notifications cancelled');
+    } catch (e) {
+      debugPrint('❌ Failed to cancel notifications: $e');
+    }
   }
 
-  Future<String?> getFCMToken() async {
-    return await _firebaseMessaging.getToken();
+  // ✅ Get pending notifications
+  Future<List<PendingNotificationRequest>> getPendingNotifications() async {
+    try {
+      return await _flutterLocalNotificationsPlugin
+          .pendingNotificationRequests();
+    } catch (e) {
+      debugPrint('❌ Failed to get pending notifications: $e');
+      return [];
+    }
   }
-
-  Future<void> _handleForegroundMessage(RemoteMessage message) async {
-    // Show local notification when app is in foreground
-    await _showLocalNotification(
-      message.notification?.title ?? 'Notification',
-      message.notification?.body ?? '',
-      message.data,
-    );
-  }
-
-  Future<void> _showLocalNotification(
-    String title,
-    String body,
-    Map<String, dynamic> data,
-  ) async {
-    const androidDetails = AndroidNotificationDetails(
-      'default_channel',
-      'Default Channel',
-      channelDescription: 'Default notification channel',
-      importance: Importance.high,
-      priority: Priority.high,
-    );
-
-    const iosDetails = DarwinNotificationDetails();
-
-    const notificationDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _localNotifications.show(
-      DateTime.now().millisecondsSinceEpoch ~/ 1000,
-      title,
-      body,
-      notificationDetails,
-    );
-  }
-
-  Future<void> subscribeToTopic(String topic) async {
-    await _firebaseMessaging.subscribeToTopic(topic);
-  }
-
-  Future<void> unsubscribeFromTopic(String topic) async {
-    await _firebaseMessaging.unsubscribeFromTopic(topic);
-  }
-
-  Future<void> clearToken() async {
-    // Implementasi untuk menghapus token
-    print("FCM token cleared");
-  }
-}
-
-// Background message handler (must be top-level function)
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Handle background messages
-  print('Handling background message: ${message.messageId}');
 }
