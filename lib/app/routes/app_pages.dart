@@ -294,7 +294,7 @@ class AppPages {
 
     GetPage(
       name: Routes.STORE_DASHBOARD,
-      page: () => const StoreDashboardScreen(),
+      page: () => StoreDashboardScreen(),
       binding: StoreBinding(),
       // binding: BindingsBuilder(() {
       //   Get.lazyPut(() => StoreDashboardController(

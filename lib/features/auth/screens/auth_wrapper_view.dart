@@ -32,7 +32,7 @@ class AuthWrapperView extends GetView<AuthController> {
         case AppConstants.roleDriver:
           return const DriverHomeScreen();
         case AppConstants.roleStore:
-          return const StoreDashboardScreen();
+          return StoreDashboardScreen();
         default:
           return const LoginScreen();
       }

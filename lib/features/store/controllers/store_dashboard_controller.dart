@@ -7,13 +7,18 @@ import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
 import 'package:del_pick/core/utils/result.dart';
 
+import '../../../data/models/store/store_model.dart';
+import '../../../data/repositories/store_repository.dart';
+
 class StoreDashboardController extends GetxController {
   final OrderRepository _orderRepository;
+  final StoreRepository _storeRepository = Get.find<StoreRepository>();
 
   StoreDashboardController({required OrderRepository orderRepository})
       : _orderRepository = orderRepository;
 
   // Observable state
+  final Rx<StoreModel?> _currentStore = Rx<StoreModel?>(null);
   final RxList<OrderModel> _orders = <OrderModel>[].obs;
   final RxList<OrderModel> _pendingOrders = <OrderModel>[].obs;
   final RxList<OrderModel> _preparingOrders = <OrderModel>[].obs;
@@ -25,6 +30,7 @@ class StoreDashboardController extends GetxController {
   final RxString _selectedFilter = 'all'.obs;
   final RxBool _canLoadMore = true.obs;
   final RxBool _isProcessingOrder = false.obs;
+  final RxBool _isStoreOpen = true.obs;
 
   // Pagination
   int _currentPage = 1;
@@ -51,10 +57,12 @@ class StoreDashboardController extends GetxController {
   ];
 
   // Getters
+  StoreModel? get currentStore => _currentStore.value;
   List<OrderModel> get orders => _orders;
   List<OrderModel> get pendingOrders => _pendingOrders;
   List<OrderModel> get preparingOrders => _preparingOrders;
   List<OrderModel> get readyForPickupOrders => _readyForPickupOrders;
+  bool get isStoreOpen => _isStoreOpen.value;
   bool get isLoading => _isLoading.value;
   bool get isLoadingMore => _isLoadingMore.value;
   bool get hasError => _hasError.value;
@@ -68,11 +76,18 @@ class StoreDashboardController extends GetxController {
   int get pendingOrderCount => _pendingOrders.length;
   int get preparingOrderCount => _preparingOrders.length;
   int get readyForPickupCount => _readyForPickupOrders.length;
+  int get completedOrderCount =>
+      orders.where((order) => order.orderStatus == 'delivered').length;
 
   @override
   void onInit() {
     super.onInit();
     loadInitialData();
+    ever(_isStoreOpen, (bool isOpen) {
+      if (isOpen) {
+        refreshData();
+      }
+    });
   }
 
   // Load initial data

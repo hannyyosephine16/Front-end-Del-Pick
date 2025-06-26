@@ -12,7 +12,56 @@ import 'package:del_pick/core/widgets/loading_widget.dart';
 import 'package:del_pick/core/widgets/error_widget.dart';
 
 class StoreDashboardScreen extends StatelessWidget {
-  const StoreDashboardScreen({Key? key}) : super(key: key);
+  StoreDashboardScreen({Key? key}) : super(key: key);
+
+  // ✅ Tambahkan methods ini ke dalam StoreDashboardController yang sudah ada
+
+// Observable state untuk store status
+  final RxBool _isStoreOpen = true.obs;
+
+// Getter
+  bool get isStoreOpen => _isStoreOpen.value;
+
+// ✅ Get store status text
+  String getStoreStatus() {
+    return _isStoreOpen.value ? 'Buka' : 'Tutup';
+  }
+
+// ✅ Toggle store status
+//   Future<void> toggleStoreStatus(bool isOpen) async {
+//     try {
+//       // TODO: Call API to update store status
+//       // final result = await _storeRepository.updateStoreStatus(isOpen ? 'active' : 'inactive');
+//
+//       // For now, just update local state
+//       _isStoreOpen.value = isOpen;
+//
+//       Get.snackbar(
+//         'Status Toko Diubah',
+//         'Toko sekarang ${isOpen ? 'buka' : 'tutup'}',
+//         snackPosition: SnackPosition.BOTTOM,
+//         backgroundColor: isOpen ? Colors.green : Colors.orange,
+//         colorText: Colors.white,
+//         duration: const Duration(seconds: 2),
+//       );
+//
+//       // Refresh data if store is opened
+//       if (isOpen) {
+//         await refreshData();
+//       }
+//     } catch (e) {
+//       // Revert status on error
+//       _isStoreOpen.value = !isOpen;
+//
+//       Get.snackbar(
+//         'Error',
+//         'Gagal mengubah status toko: ${e.toString()}',
+//         snackPosition: SnackPosition.BOTTOM,
+//         backgroundColor: Colors.red,
+//         colorText: Colors.white,
+//       );
+//     }
+//   }
 
   @override
   Widget build(BuildContext context) {

@@ -15,7 +15,7 @@ class _StoreMainScreenState extends State<StoreMainScreen> {
   int _currentIndex = 0;
 
   final List<Widget> _screens = [
-    const StoreDashboardScreen(),
+    StoreDashboardScreen(),
     const StoreOrdersScreen(),
     // const StoreMenuScreen(),
     const ProfileScreen(), // Universal Profile Screen
