@@ -1,4 +1,4 @@
-// lib/data/repositories/driver_repository.dart - UPDATED
+// lib/data/repositories/driver_repository.dart - FIXED
 import 'package:del_pick/data/datasources/remote/driver_remote_datasource.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/data/models/driver/driver_model.dart';
@@ -13,6 +13,7 @@ class DriverRepository {
 
   DriverRepository(this._remoteDataSource, this._localDataSource);
 
+  /// Update driver status - FIXED: Accept String parameter and return DriverModel
   Future<Result<DriverModel>> updateDriverStatus(String status) async {
     try {
       // Get current user to extract driver ID
@@ -27,9 +28,19 @@ class DriverRepository {
         return Result.failure('Failed to get driver profile');
       }
 
+      // ✅ FIXED: Parse response structure properly
       final profileData = profileResponse.data as Map<String, dynamic>;
-      final driverData = profileData['data'] as Map<String, dynamic>;
-      final driverId = driverData['driver']['id'] as int;
+      final userData = profileData['data'] as Map<String, dynamic>;
+
+      // Handle nested driver data structure
+      Map<String, dynamic> driverData;
+      if (userData.containsKey('driver') && userData['driver'] != null) {
+        driverData = userData['driver'] as Map<String, dynamic>;
+      } else {
+        return Result.failure('Driver data not found in profile');
+      }
+
+      final driverId = driverData['id'] as int;
 
       // Update driver status
       final response = await _remoteDataSource.updateDriverStatus(
@@ -39,8 +50,12 @@ class DriverRepository {
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final driver =
-            DriverModel.fromJson(responseData['data'] as Map<String, dynamic>);
+        final updatedDriverData = responseData['data'] as Map<String, dynamic>;
+        final driver = DriverModel.fromJson(updatedDriverData);
+
+        // Update local storage
+        await _localDataSource.updateDriverStatus(status);
+
         return Result.success(driver);
       } else {
         return Result.failure(
@@ -71,9 +86,18 @@ class DriverRepository {
         return Result.failure('Failed to get driver profile');
       }
 
+      // ✅ FIXED: Parse response structure properly
       final profileData = profileResponse.data as Map<String, dynamic>;
-      final driverData = profileData['data'] as Map<String, dynamic>;
-      final driverId = driverData['driver']['id'] as int;
+      final userData = profileData['data'] as Map<String, dynamic>;
+
+      Map<String, dynamic> driverData;
+      if (userData.containsKey('driver') && userData['driver'] != null) {
+        driverData = userData['driver'] as Map<String, dynamic>;
+      } else {
+        return Result.failure('Driver data not found in profile');
+      }
+
+      final driverId = driverData['id'] as int;
 
       // Update driver location
       final response = await _remoteDataSource.updateDriverLocation(
@@ -82,6 +106,9 @@ class DriverRepository {
       );
 
       if (response.statusCode == 200) {
+        // ✅ FIXED: Don't call deprecated updateDriverLocation method
+        // Location updates are now handled by tracking system separately
+        print('✅ Driver location updated on server (not stored locally)');
         return Result.success(null);
       } else {
         return Result.failure(
@@ -168,15 +195,23 @@ class DriverRepository {
     }
   }
 
+  /// Get driver profile - FIXED: Return DriverModel directly from parsed response
   Future<Result<DriverModel>> getDriverProfile() async {
     try {
       final response = await _remoteDataSource.getDriverProfile();
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final driver = DriverModel.fromJson(
-            responseData['data']['driver'] as Map<String, dynamic>);
-        return Result.success(driver);
+        final userData = responseData['data'] as Map<String, dynamic>;
+
+        // ✅ FIXED: Handle nested driver data structure
+        if (userData.containsKey('driver') && userData['driver'] != null) {
+          final driverData = userData['driver'] as Map<String, dynamic>;
+          final driver = DriverModel.fromJson(driverData);
+          return Result.success(driver);
+        } else {
+          return Result.failure('Driver data not found in response');
+        }
       } else {
         return Result.failure(
             response.data['message'] ?? 'Failed to get driver profile');
@@ -188,6 +223,7 @@ class DriverRepository {
     }
   }
 
+  /// Update driver profile - FIXED: Return DriverModel directly
   Future<Result<DriverModel>> updateDriverProfile(
       Map<String, dynamic> data) async {
     try {
@@ -195,8 +231,31 @@ class DriverRepository {
 
       if (response.statusCode == 200) {
         final responseData = response.data as Map<String, dynamic>;
-        final driver = DriverModel.fromJson(
-            responseData['data']['driver'] as Map<String, dynamic>);
+
+        // ✅ FIXED: Handle response structure properly
+        Map<String, dynamic> driverData;
+
+        // Try different response structures
+        if (responseData.containsKey('data')) {
+          final dataSection = responseData['data'] as Map<String, dynamic>;
+          if (dataSection.containsKey('driver')) {
+            driverData = dataSection['driver'] as Map<String, dynamic>;
+          } else {
+            // Data might be the driver object directly
+            driverData = dataSection;
+          }
+        } else if (responseData.containsKey('driver')) {
+          driverData = responseData['driver'] as Map<String, dynamic>;
+        } else {
+          // Response might be driver data directly
+          driverData = responseData;
+        }
+
+        final driver = DriverModel.fromJson(driverData);
+
+        // Update local storage with updated driver data
+        await _localDataSource.saveDriverData(driverData);
+
         return Result.success(driver);
       } else {
         return Result.failure(

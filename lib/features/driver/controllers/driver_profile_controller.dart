@@ -57,7 +57,7 @@ class DriverProfileController extends GetxController {
   }
 
   // ========================================================================
-  // Main Loading Method - SIMPLIFIED (No Admin Methods)
+  // Main Loading Method - FIXED
   // ========================================================================
 
   Future<void> loadDriverProfile() async {
@@ -68,7 +68,7 @@ class DriverProfileController extends GetxController {
 
       // ✅ Get current user info from AuthController
       final authController = Get.find<AuthController>();
-      _userProfile.value = authController.currentUser;
+      _userProfile.value = authController.currentUser as UserModel?;
 
       if (_userProfile.value != null) {
         print('✅ User found: ${_userProfile.value!.name}');
@@ -90,10 +90,10 @@ class DriverProfileController extends GetxController {
   }
 
   // ========================================================================
-  // Driver Data Loading - DRIVER-ONLY Methods
+  // Driver Data Loading - FIXED: Properly handle response structure
   // ========================================================================
 
-  /// Load driver data from AuthController or API - NO ADMIN METHODS
+  /// Load driver data from AuthController or API - FIXED
   Future<void> _loadDriverDataFromAuth() async {
     try {
       print('📡 Loading driver data from auth...');
@@ -102,9 +102,10 @@ class DriverProfileController extends GetxController {
       final authController = Get.find<AuthController>();
       final driverData = authController.driverData;
 
-      if (driverData != null) {
+      if (driverData != null && driverData is Map<String, dynamic>) {
         print('✅ Found driver data in AuthController: $driverData');
-        _driverProfile.value = DriverModel.fromJson(driverData);
+        _driverProfile.value =
+            DriverModel.fromJson(driverData as Map<String, dynamic>);
         print('✅ Driver profile set: ${_driverProfile.value?.vehiclePlate}');
         return;
       }
@@ -119,39 +120,18 @@ class DriverProfileController extends GetxController {
     }
   }
 
-  /// Load driver data from profile API - ENDPOINT: GET /auth/profile
+  /// Load driver data from profile API - FIXED: Handle response properly
   Future<void> _loadDriverFromProfileAPI() async {
     try {
       print('📡 Calling getDriverProfile API...');
 
-      // ✅ Use driver-specific profile method (not admin method)
+      // ✅ Use driver-specific profile method
       final result = await _driverRepository.getDriverProfile();
 
       if (result.isSuccess && result.data != null) {
-        final profileData = result.data!;
-        print('✅ Profile API response: $profileData');
-
-        // Extract driver data from profile response
-        if (profileData.containsKey('driver') &&
-            profileData['driver'] != null) {
-          final driverData = profileData['driver'] as Map<String, dynamic>;
-          _driverProfile.value = DriverModel.fromJson(driverData);
-          print('✅ Driver profile loaded from API');
-        } else if (profileData.containsKey('data')) {
-          // Handle nested data structure
-          final data = profileData['data'] as Map<String, dynamic>?;
-          if (data?.containsKey('driver') == true) {
-            final driverData = data!['driver'] as Map<String, dynamic>;
-            _driverProfile.value = DriverModel.fromJson(driverData);
-            print('✅ Driver profile loaded from nested data');
-          } else {
-            print('⚠️ No driver data found in profile response');
-            _setDefaultDriverProfile();
-          }
-        } else {
-          print('⚠️ No driver data in profile response, using defaults');
-          _setDefaultDriverProfile();
-        }
+        // ✅ FIXED: result.data is DriverModel, not Map
+        _driverProfile.value = result.data!;
+        print('✅ Driver profile loaded from API: ${result.data!.vehiclePlate}');
       } else {
         print('❌ Failed to load profile: ${result.errorMessage}');
         _setDefaultDriverProfile();
@@ -177,6 +157,7 @@ class DriverProfileController extends GetxController {
         status: 'inactive',
         rating: 0.0,
         reviewsCount: 0,
+        // ✅ FIXED: Don't include latitude/longitude as requested
         createdAt: DateTime.now(),
         updatedAt: DateTime.now(),
       );
@@ -214,39 +195,22 @@ class DriverProfileController extends GetxController {
   }
 
   // ========================================================================
-  // Profile Update Methods - DRIVER-ONLY
+  // Profile Update Methods - FIXED
   // ========================================================================
 
-  /// Update driver status - ENDPOINT: PUT /drivers/status
+  /// Update driver status - FIXED: Pass correct parameter type
   Future<void> updateDriverStatus(String newStatus) async {
     try {
       _isLoading.value = true;
       print('🔄 Updating driver status to: $newStatus');
 
-      final result = await _driverRepository.updateDriverStatus({
-        'status': newStatus,
-      });
+      // ✅ FIXED: Pass String, not Map
+      final result = await _driverRepository.updateDriverStatus(newStatus);
 
       if (result.isSuccess && result.data != null) {
-        final responseData = result.data!;
-        print('✅ Status update response: $responseData');
-
-        // Parse response and update local state
-        if (responseData is Map<String, dynamic>) {
-          if (responseData.containsKey('driver')) {
-            try {
-              _driverProfile.value =
-                  DriverModel.fromJson(responseData['driver']);
-              print('✅ Driver profile updated from response');
-            } catch (e) {
-              print('⚠️ Error parsing driver from response: $e');
-              _updateDriverStatusLocally(newStatus);
-            }
-          } else {
-            // Update locally if response doesn't contain driver data
-            _updateDriverStatusLocally(newStatus);
-          }
-        }
+        // ✅ FIXED: result.data is DriverModel, not Map
+        _driverProfile.value = result.data!;
+        print('✅ Driver profile updated from response');
 
         CustomSnackbar.showSuccess(
           title: 'Success',
@@ -278,7 +242,7 @@ class DriverProfileController extends GetxController {
     }
   }
 
-  /// Update profile information - FIXED: Handle AuthRepository method signature
+  /// Update profile information - FIXED: Handle response properly
   Future<void> updateProfile({
     String? name,
     String? email,
@@ -291,17 +255,14 @@ class DriverProfileController extends GetxController {
 
       bool hasUpdates = false;
 
-      // ✅ FIX 1: Update user profile (name, email) - Remove phone if not supported
+      // ✅ Update user profile (name, email)
       if (name != null || email != null) {
         print('📡 Updating user profile...');
 
-        // Check if AuthRepository supports phone parameter
         try {
-          // Try with phone parameter first
           final userResult = await _authRepository.updateProfile(
             name: name,
             email: email,
-            // phone: phone, // ❌ Remove this line if not supported
           );
 
           if (userResult.isSuccess && userResult.data != null) {
@@ -313,38 +274,19 @@ class DriverProfileController extends GetxController {
           }
         } catch (e) {
           print('❌ User profile update error: $e');
-          // Try without phone parameter
-          if (name != null || email != null) {
-            try {
-              final userResult = await _authRepository.updateProfile(
-                name: name,
-                email: email,
-              );
-
-              if (userResult.isSuccess && userResult.data != null) {
-                _userProfile.value = userResult.data;
-                hasUpdates = true;
-                print('✅ User profile updated (without phone)');
-              }
-            } catch (e2) {
-              print('❌ User profile update failed completely: $e2');
-            }
-          }
         }
       }
 
       // Handle phone separately if needed
       if (phone != null && phone.isNotEmpty) {
         print('📞 Phone update not implemented in AuthRepository');
-        // TODO: Implement phone update when AuthRepository supports it
-        // For now, show warning that phone update is not available
         CustomSnackbar.showWarning(
           title: 'Phone Update',
           message: 'Phone number update is not available yet',
         );
       }
 
-      // ✅ FIX 2: Update driver profile (vehicle number, etc.)
+      // ✅ Update driver profile (vehicle number, etc.)
       if (vehicleNumber != null) {
         print('📡 Updating driver profile...');
 
@@ -358,35 +300,8 @@ class DriverProfileController extends GetxController {
               await _driverRepository.updateDriverProfile(driverData);
 
           if (driverResult.isSuccess && driverResult.data != null) {
-            // ✅ FIX 3: Handle response properly - driverResult.data is Map, not DriverModel
-            final responseData = driverResult.data! as Map<String, dynamic>;
-
-            if (responseData.containsKey('driver')) {
-              _driverProfile.value =
-                  DriverModel.fromJson(responseData['driver']);
-              print('✅ Driver profile updated from response.driver');
-            } else if (responseData.containsKey('data')) {
-              final data = responseData['data'] as Map<String, dynamic>?;
-              if (data?.containsKey('driver') == true) {
-                _driverProfile.value = DriverModel.fromJson(data!['driver']);
-                print('✅ Driver profile updated from response.data.driver');
-              } else {
-                // If response doesn't have expected structure, update locally
-                _updateDriverProfileLocally(driverData);
-                print('✅ Driver profile updated locally');
-              }
-            } else {
-              // Response might be the driver data directly
-              try {
-                _driverProfile.value = DriverModel.fromJson(responseData);
-                print('✅ Driver profile updated from direct response');
-              } catch (e) {
-                print(
-                    '⚠️ Could not parse response as driver, updating locally: $e');
-                _updateDriverProfileLocally(driverData);
-              }
-            }
-
+            // ✅ FIXED: driverResult.data is DriverModel, not Map
+            _driverProfile.value = driverResult.data!;
             hasUpdates = true;
             print('✅ Driver profile updated');
           } else {
