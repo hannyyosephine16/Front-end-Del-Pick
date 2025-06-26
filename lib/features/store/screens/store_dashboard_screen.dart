@@ -14,55 +14,6 @@ import 'package:del_pick/core/widgets/error_widget.dart';
 class StoreDashboardScreen extends StatelessWidget {
   StoreDashboardScreen({Key? key}) : super(key: key);
 
-  // ✅ Tambahkan methods ini ke dalam StoreDashboardController yang sudah ada
-
-// Observable state untuk store status
-  final RxBool _isStoreOpen = true.obs;
-
-// Getter
-  bool get isStoreOpen => _isStoreOpen.value;
-
-// ✅ Get store status text
-  String getStoreStatus() {
-    return _isStoreOpen.value ? 'Buka' : 'Tutup';
-  }
-
-// ✅ Toggle store status
-//   Future<void> toggleStoreStatus(bool isOpen) async {
-//     try {
-//       // TODO: Call API to update store status
-//       // final result = await _storeRepository.updateStoreStatus(isOpen ? 'active' : 'inactive');
-//
-//       // For now, just update local state
-//       _isStoreOpen.value = isOpen;
-//
-//       Get.snackbar(
-//         'Status Toko Diubah',
-//         'Toko sekarang ${isOpen ? 'buka' : 'tutup'}',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: isOpen ? Colors.green : Colors.orange,
-//         colorText: Colors.white,
-//         duration: const Duration(seconds: 2),
-//       );
-//
-//       // Refresh data if store is opened
-//       if (isOpen) {
-//         await refreshData();
-//       }
-//     } catch (e) {
-//       // Revert status on error
-//       _isStoreOpen.value = !isOpen;
-//
-//       Get.snackbar(
-//         'Error',
-//         'Gagal mengubah status toko: ${e.toString()}',
-//         snackPosition: SnackPosition.BOTTOM,
-//         backgroundColor: Colors.red,
-//         colorText: Colors.white,
-//       );
-//     }
-//   }
-
   @override
   Widget build(BuildContext context) {
     // ✅ Get both controllers
@@ -90,32 +41,74 @@ class StoreDashboardScreen extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // ✅ FIXED: Proper access to Rx<UserModel?> value
                   Obx(() => Text(
-                        authController.currentUser?.name ?? 'Store Name',
+                        authController.currentUser.value?.name ??
+                            dashboardController.currentStore?.name ??
+                            'Store Name',
                         style: AppTextStyles.appBarTitle,
                         overflow: TextOverflow.ellipsis,
                       )),
-                  const Text(
-                    'Status: Buka',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 12,
-                    ),
-                  ),
+                  // ✅ FIXED: Show actual store status from controller
+                  Obx(() => Text(
+                        'Status: ${dashboardController.currentStore?.statusDisplayName ?? 'Unknown'}',
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                        ),
+                      )),
                 ],
               ),
             ),
           ],
         ),
         actions: [
-          // Store Status Toggle
-          Switch(
-            value: true,
-            onChanged: (value) {
-              // TODO: Implement store status toggle
-            },
-            activeColor: Colors.white,
-          ),
+          // ✅ FIXED: Store Status Toggle (read-only for store owners)
+          Obx(() => GestureDetector(
+                onTap: () => dashboardController.showStoreStatusInfo(),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.symmetric(vertical: 8),
+                  decoration: BoxDecoration(
+                    color: dashboardController.isStoreOpen
+                        ? Colors.green.withOpacity(0.2)
+                        : Colors.red.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: dashboardController.isStoreOpen
+                          ? Colors.green
+                          : Colors.red,
+                      width: 1,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        dashboardController.isStoreOpen
+                            ? Icons.check_circle
+                            : Icons.cancel,
+                        color: dashboardController.isStoreOpen
+                            ? Colors.green
+                            : Colors.red,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        dashboardController.isStoreOpen ? 'Buka' : 'Tutup',
+                        style: TextStyle(
+                          color: dashboardController.isStoreOpen
+                              ? Colors.green
+                              : Colors.red,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )),
           const SizedBox(width: 8),
 
           // Profile Button
@@ -135,7 +128,8 @@ class StoreDashboardScreen extends StatelessWidget {
                   dashboardController.navigateToStoreProfile();
                   break;
                 case 'settings':
-                  Get.toNamed(Routes.STORE_SETTINGS);
+                  // ✅ FIXED: Navigate to store settings (you may need to create this route)
+                  Get.toNamed('/store/settings');
                   break;
                 case 'logout':
                   _showLogoutDialog();
@@ -271,7 +265,7 @@ class StoreDashboardScreen extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Rp ${stats['totalRevenue']?.toStringAsFixed(0) ?? '0'}',
+            'Rp ${(stats['totalRevenue'] as double? ?? 0.0).toStringAsFixed(0)}',
             style: const TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -394,52 +388,15 @@ class StoreDashboardScreen extends StatelessWidget {
     required OrderModel order,
     required StoreDashboardController controller,
   }) {
-    // Determine status color and action text based on order status
-    Color statusColor;
-    String actionText;
-    VoidCallback? onActionPressed;
+    // ✅ FIXED: Use controller methods for status info
+    final statusColor = controller.getOrderStatusColor(order.orderStatus);
+    final statusText = controller.getOrderStatusText(order.orderStatus);
+    final actions = controller.getOrderActions(order);
 
-    switch (order.orderStatus) {
-      case 'pending':
-        statusColor = AppColors.warning;
-        actionText = 'Terima';
-        onActionPressed = () => controller.approveOrder(order);
-        break;
-      case 'preparing':
-        statusColor = AppColors.info;
-        actionText = 'Siap';
-        onActionPressed = () => controller.markOrderReadyForPickup(order);
-        break;
-      case 'ready_for_pickup':
-        statusColor = AppColors.success;
-        actionText = 'Menunggu Driver';
-        onActionPressed = null;
-        break;
-      case 'on_delivery':
-        statusColor = Colors.blue;
-        actionText = 'Diantar';
-        onActionPressed = null;
-        break;
-      case 'delivered':
-        statusColor = AppColors.success;
-        actionText = 'Selesai';
-        onActionPressed = null;
-        break;
-      case 'cancelled':
-        statusColor = AppColors.error;
-        actionText = 'Dibatalkan';
-        onActionPressed = null;
-        break;
-      case 'rejected':
-        statusColor = AppColors.error;
-        actionText = 'Ditolak';
-        onActionPressed = null;
-        break;
-      default:
-        statusColor = Colors.grey;
-        actionText = 'Unknown';
-        onActionPressed = null;
-    }
+    // Get primary action (first action that's not "View Details")
+    final primaryAction = actions.firstWhereOrNull(
+      (action) => action['label'] != 'View Details',
+    );
 
     return GestureDetector(
       onTap: () => controller.navigateToOrderDetail(order.id),
@@ -465,7 +422,10 @@ class StoreDashboardScreen extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(order.code, style: AppTextStyles.cardTitle),
+                    Text(
+                      '#${order.id}', // ✅ FIXED: Use order.id instead of order.code
+                      style: AppTextStyles.cardTitle,
+                    ),
                     const SizedBox(height: 4),
                     Text(
                       order.customer?.name ?? 'Customer',
@@ -484,7 +444,7 @@ class StoreDashboardScreen extends StatelessWidget {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        order.statusDisplayName,
+                        statusText,
                         style: TextStyle(
                           color: statusColor,
                           fontSize: 12,
@@ -518,13 +478,13 @@ class StoreDashboardScreen extends StatelessWidget {
                   order.formattedTotal,
                   style: AppTextStyles.price,
                 ),
-                if (onActionPressed != null)
+                if (primaryAction != null)
                   Obx(() => ElevatedButton(
                         onPressed: controller.isProcessingOrder
                             ? null
-                            : onActionPressed,
+                            : primaryAction['action'] as VoidCallback?,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: statusColor,
+                          backgroundColor: primaryAction['color'] as Color?,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(
                               horizontal: 16, vertical: 8),
@@ -543,7 +503,7 @@ class StoreDashboardScreen extends StatelessWidget {
                                 ),
                               )
                             : Text(
-                                actionText,
+                                primaryAction['label'] as String,
                                 style: const TextStyle(fontSize: 12),
                               ),
                       ))
@@ -556,7 +516,7 @@ class StoreDashboardScreen extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
-                      actionText,
+                      statusText,
                       style: TextStyle(
                         fontSize: 12,
                         color: statusColor,
