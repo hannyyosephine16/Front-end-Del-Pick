@@ -353,14 +353,16 @@ class AppPages {
     //   transitionDuration: RouteConfig.transitionDuration,
     // ),
 
-    // GetPage(
-    //   name: Routes.STORE_ORDER_DETAIL,
-    //   page: () => const StoreOrderDetailView(),
-    //   binding: StoreBinding(),
-    //   middlewares: [AuthMiddleware(), RoleMiddleware()],
-    //   transition: Transition.rightToLeft,
-    //   transitionDuration: RouteConfig.transitionDuration,
-    // ),
+    GetPage(
+      name: Routes.STORE_ORDER_DETAIL,
+      page: () => const StoreOrderDetailScreen(),
+      binding: StoreBinding(),
+      middlewares: [
+        AuthMiddleware(),
+      ],
+      transition: Transition.rightToLeft,
+      transitionDuration: RouteConfig.transitionDuration,
+    ),
 
     // GetPage(
     //   name: Routes.STORE_ANALYTICS,

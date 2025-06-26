@@ -1,4 +1,4 @@
-// lib/core/interceptors/error_interceptor.dart
+// lib/core/interceptors/error_interceptor.dart - FIXED
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -11,24 +11,109 @@ class ErrorInterceptor extends Interceptor {
   void onError(DioException err, ErrorInterceptorHandler handler) {
     if (kDebugMode) {
       debugPrint('ErrorInterceptor: ${err.toString()}');
+      debugPrint('Response Status: ${err.response?.statusCode}');
       debugPrint('Response Data: ${err.response?.data}');
+      debugPrint('Error Type: ${err.type}');
+      debugPrint('Error Message: ${err.message ?? 'No message'}');
     }
 
-    // Convert DioException to Failure using ErrorHandler
-    final failure = ErrorHandler.handleException(err);
+    // Handle null response gracefully
+    if (err.response == null || err.response?.data == null) {
+      _handleNullResponse(err);
+      handler.next(err);
+      return;
+    }
 
-    // Show user-friendly error message
-    _showErrorMessage(failure, err);
+    try {
+      // Convert DioException to Failure using ErrorHandler
+      final failure = ErrorHandler.handleException(err);
 
-    // Log error for debugging/analytics
-    ErrorHandler.logError(err, StackTrace.current, context: {
-      'url': err.requestOptions.uri.toString(),
-      'method': err.requestOptions.method,
-      'statusCode': err.response?.statusCode,
-      'errorType': err.type.toString(),
-    });
+      // Show user-friendly error message
+      _showErrorMessage(failure, err);
+
+      // Log error for debugging/analytics
+      ErrorHandler.logError(err, StackTrace.current, context: {
+        'url': err.requestOptions.uri.toString(),
+        'method': err.requestOptions.method,
+        'statusCode': err.response?.statusCode,
+        'errorType': err.type.toString(),
+      });
+    } catch (e) {
+      if (kDebugMode) {
+        debugPrint('Error in ErrorInterceptor: $e');
+      }
+      _handleNullResponse(err);
+    }
 
     handler.next(err);
+  }
+
+  /// Handle case when response is null (connection issues)
+  void _handleNullResponse(DioException err) {
+    String title = 'Koneksi Bermasalah';
+    String message = 'Tidak dapat terhubung ke server';
+
+    switch (err.type) {
+      case DioExceptionType.connectionTimeout:
+        title = 'Koneksi Timeout';
+        message = 'Koneksi ke server timeout. Periksa internet Anda';
+        break;
+      case DioExceptionType.receiveTimeout:
+        title = 'Timeout';
+        message = 'Server tidak merespon. Coba lagi nanti';
+        break;
+      case DioExceptionType.sendTimeout:
+        title = 'Timeout';
+        message = 'Gagal mengirim data. Periksa koneksi internet';
+        break;
+      case DioExceptionType.connectionError:
+        title = 'Tidak Ada Koneksi';
+        message = 'Periksa koneksi internet Anda';
+        break;
+      case DioExceptionType.badCertificate:
+        title = 'Keamanan';
+        message = 'Masalah sertifikat keamanan server';
+        break;
+      case DioExceptionType.cancel:
+        // Don't show error for cancelled requests
+        return;
+      case DioExceptionType.unknown:
+      default:
+        if (err.message?.contains('SocketException') == true) {
+          title = 'Tidak Ada Internet';
+          message = 'Periksa koneksi internet Anda';
+        } else if (err.message?.contains('HandshakeException') == true) {
+          title = 'Keamanan';
+          message = 'Masalah keamanan koneksi';
+        } else {
+          title = 'Error Koneksi';
+          message = 'Gagal terhubung ke server. Coba lagi nanti';
+        }
+        break;
+    }
+
+    _showSimpleErrorMessage(title, message);
+  }
+
+  /// Show simple error message for connection issues
+  void _showSimpleErrorMessage(String title, String message) {
+    final colorScheme = getx.Get.theme.colorScheme;
+
+    getx.Get.snackbar(
+      title,
+      message,
+      snackPosition: getx.SnackPosition.TOP,
+      backgroundColor: colorScheme.error,
+      colorText: colorScheme.onError,
+      duration: const Duration(seconds: 4),
+      margin: const EdgeInsets.all(16),
+      borderRadius: 8,
+      isDismissible: true,
+      icon: Icon(
+        Icons.wifi_off,
+        color: colorScheme.onError,
+      ),
+    );
   }
 
   /// Show user-friendly error messages based on failure type
@@ -94,18 +179,6 @@ class ErrorInterceptor extends Interceptor {
       return true;
     }
 
-    // Skip if already showing similar error
-    if (_isCurrentlyShowingSimilarError(failure)) {
-      return true;
-    }
-
-    return false;
-  }
-
-  /// Check if similar error is already being shown
-  bool _isCurrentlyShowingSimilarError(Failure failure) {
-    // This is a simple check - you might want to implement more sophisticated logic
-    // to prevent showing duplicate error messages
     return false;
   }
 
@@ -139,128 +212,5 @@ class ErrorInterceptor extends Interceptor {
     } else {
       return const Duration(seconds: 3); // Default
     }
-  }
-
-  /// Extract detailed error information from backend response
-  Map<String, dynamic> _extractErrorDetails(DioException err) {
-    final response = err.response;
-    final data = response?.data;
-
-    final details = <String, dynamic>{
-      'statusCode': response?.statusCode,
-      'message': 'An error occurred',
-      'code': null,
-      'errors': null,
-    };
-
-    if (data is Map<String, dynamic>) {
-      // Extract message (backend format: { message: "...", code: "...", errors: {...} })
-      if (data.containsKey('message')) {
-        details['message'] = data['message'].toString();
-      }
-
-      // Extract error code
-      if (data.containsKey('code')) {
-        details['code'] = data['code'].toString();
-      }
-
-      // Extract validation errors
-      if (data.containsKey('errors')) {
-        details['errors'] = data['errors'];
-      }
-    } else if (data is String) {
-      details['message'] = data;
-    }
-
-    return details;
-  }
-
-  /// Handle specific business logic errors that need special treatment
-  void _handleBusinessLogicError(Map<String, dynamic> errorDetails) {
-    final message = errorDetails['message'] as String;
-    final code = errorDetails['code'] as String?;
-
-    // Handle specific error codes from backend
-    switch (code) {
-      case 'ORDER_NOT_FOUND':
-        _showOrderNotFoundDialog();
-        break;
-      case 'DRIVER_NOT_AVAILABLE':
-        _showDriverNotAvailableDialog();
-        break;
-      case 'STORE_CLOSED':
-        _showStoreClosedDialog(message);
-        break;
-      case 'ITEM_OUT_OF_STOCK':
-        _showItemOutOfStockDialog(message);
-        break;
-      // Add more specific error handlers as needed
-    }
-  }
-
-  /// Show order not found dialog
-  void _showOrderNotFoundDialog() {
-    getx.Get.dialog(
-      AlertDialog(
-        title: const Text('Pesanan Tidak Ditemukan'),
-        content: const Text(
-            'Pesanan yang Anda cari tidak ditemukan. Mungkin sudah dihapus atau dibatalkan.'),
-        actions: [
-          TextButton(
-            onPressed: () => getx.Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Show driver not available dialog
-  void _showDriverNotAvailableDialog() {
-    getx.Get.dialog(
-      AlertDialog(
-        title: const Text('Driver Tidak Tersedia'),
-        content: const Text(
-            'Maaf, saat ini tidak ada driver yang tersedia di area Anda. Silakan coba lagi nanti.'),
-        actions: [
-          TextButton(
-            onPressed: () => getx.Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Show store closed dialog
-  void _showStoreClosedDialog(String message) {
-    getx.Get.dialog(
-      AlertDialog(
-        title: const Text('Toko Tutup'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => getx.Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Show item out of stock dialog
-  void _showItemOutOfStockDialog(String message) {
-    getx.Get.dialog(
-      AlertDialog(
-        title: const Text('Stok Habis'),
-        content: Text(message),
-        actions: [
-          TextButton(
-            onPressed: () => getx.Get.back(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
   }
 }
