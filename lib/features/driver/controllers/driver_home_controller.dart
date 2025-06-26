@@ -537,7 +537,7 @@ class DriverHomeController extends GetxController {
   }
 
   void goToOrders() {
-    Get.toNamed(Routes.DRIVER_ORDER_HISTORY);
+    Get.toNamed(Routes.DRIVER_ORDERS_HISTORY);
   }
 
   void goToRequests() {

@@ -44,6 +44,7 @@ abstract class Routes {
   static const DELIVERY = '/driver/delivery';
   static const NAVIGATION = '/driver/navigation';
   static const DRIVER_ORDERS = '/driver/orders';
+  static const DRIVER_ORDERS_HISTORY = '/driver/orders/history';
   static const DRIVER_EARNINGS = '/driver/earnings';
   static const DRIVER_PROFILE = '/driver/profile';
   static const DRIVER_SETTINGS = '/driver/settings';
