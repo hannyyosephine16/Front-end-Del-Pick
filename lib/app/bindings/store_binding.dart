@@ -1,4 +1,5 @@
 // lib/app/bindings/store_binding.dart - CORRECTED VERSION
+import 'package:del_pick/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/store_repository.dart';
 import 'package:del_pick/data/repositories/menu_repository.dart';
@@ -46,7 +47,11 @@ class StoreBinding extends Bindings {
 
     // Repositories
     Get.lazyPut<StoreRepository>(
-      () => StoreRepository(Get.find<StoreRemoteDataSource>()),
+      () => StoreRepository(
+        Get.find<StoreRemoteDataSource>(),
+        Get.find<AuthRemoteDataSource>(),
+        Get.find<AuthLocalDataSource>(),
+      ),
     );
 
     Get.lazyPut<MenuRepository>(

@@ -8,11 +8,13 @@ import 'package:del_pick/core/constants/order_status_constants.dart';
 import 'package:del_pick/core/utils/result.dart';
 
 import '../../../data/models/store/store_model.dart';
-import '../../../data/repositories/store_repository.dart';
+import '../../../data/datasources/local/auth_local_datasource.dart';
+import '../../../features/auth/controllers/auth_controller.dart';
 
 class StoreDashboardController extends GetxController {
   final OrderRepository _orderRepository;
-  final StoreRepository _storeRepository = Get.find<StoreRepository>();
+  final AuthLocalDataSource _authLocalDataSource =
+      Get.find<AuthLocalDataSource>();
 
   StoreDashboardController({required OrderRepository orderRepository})
       : _orderRepository = orderRepository;
@@ -36,7 +38,7 @@ class StoreDashboardController extends GetxController {
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Filter options based on backend order statuses
+  // ✅ FIXED: Filter options sesuai dengan backend order statuses
   static const List<Map<String, dynamic>> filterOptions = [
     {'key': 'all', 'label': 'All Orders', 'icon': Icons.list_alt},
     {'key': 'pending', 'label': 'Pending', 'icon': Icons.schedule},
@@ -51,7 +53,7 @@ class StoreDashboardController extends GetxController {
       'label': 'On Delivery',
       'icon': Icons.local_shipping
     },
-    {'key': 'delivered', 'label': 'Completed', 'icon': Icons.check_circle},
+    {'key': 'delivered', 'label': 'Delivered', 'icon': Icons.check_circle},
     {'key': 'cancelled', 'label': 'Cancelled', 'icon': Icons.cancel},
     {'key': 'rejected', 'label': 'Rejected', 'icon': Icons.block},
   ];
@@ -90,15 +92,68 @@ class StoreDashboardController extends GetxController {
     });
   }
 
-  // Load initial data
+  // ✅ Load initial data termasuk current store info
   Future<void> loadInitialData() async {
+    await loadCurrentStore();
     await Future.wait([
       loadOrders(refresh: true),
       loadDashboardCounters(),
     ]);
   }
 
-  // ✅ FIXED: Load store orders with proper pagination handling
+  // ✅ FIXED: Load current store information dari AuthLocalDataSource
+  Future<void> loadCurrentStore() async {
+    try {
+      // Ambil store data dari local storage (sudah disimpan saat login)
+      final storeData = await _authLocalDataSource.getStoreData();
+
+      if (storeData != null) {
+        // Convert Map ke StoreModel
+        _currentStore.value = StoreModel.fromJson(storeData);
+
+        // Set UI state berdasarkan status store dari backend
+        _isStoreOpen.value = _currentStore.value?.status == 'active';
+
+        print(
+            'Store loaded: ${_currentStore.value?.name} - Status: ${_currentStore.value?.status}');
+      } else {
+        // Fallback: ambil dari complete login session
+        final loginSession = await _authLocalDataSource.getLoginSession();
+
+        if (loginSession != null && loginSession['store'] != null) {
+          final storeData = loginSession['store'] as Map<String, dynamic>;
+          _currentStore.value = StoreModel.fromJson(storeData);
+          _isStoreOpen.value = _currentStore.value?.status == 'active';
+
+          print('Store loaded from session: ${_currentStore.value?.name}');
+        } else {
+          // Last fallback: coba ambil dari user.owner (sesuai response structure)
+          if (loginSession != null && loginSession['user'] != null) {
+            final userData = loginSession['user'] as Map<String, dynamic>;
+            if (userData['owner'] != null) {
+              final ownerData = userData['owner'] as Map<String, dynamic>;
+              _currentStore.value = StoreModel.fromJson(ownerData);
+              _isStoreOpen.value = _currentStore.value?.status == 'active';
+
+              print(
+                  'Store loaded from user.owner: ${_currentStore.value?.name}');
+            }
+          }
+
+          if (_currentStore.value == null) {
+            // Default state jika tidak ada store data
+            _isStoreOpen.value = false;
+            print('No store data found in local storage');
+          }
+        }
+      }
+    } catch (e) {
+      print('Error loading current store: $e');
+      _isStoreOpen.value = false; // Default fallback
+    }
+  }
+
+  // ✅ FIXED: Load store orders dengan endpoint yang benar (/orders/store)
   Future<void> loadOrders({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
@@ -118,10 +173,11 @@ class StoreDashboardController extends GetxController {
 
       // Add status filter if not 'all'
       if (_selectedFilter.value != 'all') {
-        params['status'] = _selectedFilter.value;
+        params['order_status'] = _selectedFilter
+            .value; // ✅ FIXED: Gunakan order_status sesuai backend
       }
 
-      // ✅ FIXED: Use proper backend response structure
+      // ✅ FIXED: Gunakan endpoint store orders yang benar
       final Result<PaginatedResponse<OrderModel>> result =
           await _orderRepository.getStoreOrders(
         params: params,
@@ -137,7 +193,6 @@ class StoreDashboardController extends GetxController {
           _orders.addAll(newOrders);
         }
 
-        // ✅ FIXED: Check pagination properly using PaginatedResponse methods
         _canLoadMore.value = paginatedResponse.hasNextPage;
 
         if (newOrders.isNotEmpty) {
@@ -156,32 +211,32 @@ class StoreDashboardController extends GetxController {
     }
   }
 
-  // ✅ FIXED: Load specific order counts for dashboard widgets
+  // ✅ FIXED: Load dashboard counters dengan status yang benar
   Future<void> loadDashboardCounters() async {
     try {
       // Load pending orders
       final pendingResult = await _orderRepository.getStoreOrders(
-        params: {'status': 'pending', 'limit': 50},
+        params: {
+          'order_status': 'pending',
+          'limit': 100
+        }, // ✅ FIXED: Gunakan order_status
       );
-
       if (pendingResult.isSuccess && pendingResult.data != null) {
         _pendingOrders.value = pendingResult.data!.items;
       }
 
       // Load preparing orders
       final preparingResult = await _orderRepository.getStoreOrders(
-        params: {'status': 'preparing', 'limit': 50},
+        params: {'order_status': 'preparing', 'limit': 100},
       );
-
       if (preparingResult.isSuccess && preparingResult.data != null) {
         _preparingOrders.value = preparingResult.data!.items;
       }
 
       // Load ready for pickup orders
       final readyResult = await _orderRepository.getStoreOrders(
-        params: {'status': 'ready_for_pickup', 'limit': 50},
+        params: {'order_status': 'ready_for_pickup', 'limit': 100},
       );
-
       if (readyResult.isSuccess && readyResult.data != null) {
         _readyForPickupOrders.value = readyResult.data!.items;
       }
@@ -190,7 +245,7 @@ class StoreDashboardController extends GetxController {
     }
   }
 
-  // ✅ FIXED: Load more orders for pagination
+  // ✅ Load more orders for pagination
   Future<void> loadMoreOrders() async {
     if (_isLoadingMore.value || !_canLoadMore.value) return;
 
@@ -203,7 +258,8 @@ class StoreDashboardController extends GetxController {
       };
 
       if (_selectedFilter.value != 'all') {
-        params['status'] = _selectedFilter.value;
+        params['order_status'] =
+            _selectedFilter.value; // ✅ FIXED: Gunakan order_status
       }
 
       final Result<PaginatedResponse<OrderModel>> result =
@@ -248,16 +304,18 @@ class StoreDashboardController extends GetxController {
     await Future.wait([
       loadOrders(refresh: true),
       loadDashboardCounters(),
+      refreshStoreData(), // ✅ ADDED: Refresh store data juga
     ]);
   }
 
-  // ✅ Process order - approve or reject (sesuai backend endpoint /orders/:id/process)
+  // ✅ FIXED: Process order sesuai backend endpoint POST /orders/:id/process
   Future<void> processOrder(int orderId, String action) async {
     if (_isProcessingOrder.value) return;
 
     _isProcessingOrder.value = true;
 
     try {
+      // ✅ Backend expects action: 'approve' or 'reject'
       final result = await _orderRepository.processOrder(orderId, action);
 
       if (result.isSuccess) {
@@ -273,7 +331,8 @@ class StoreDashboardController extends GetxController {
           duration: const Duration(seconds: 3),
         );
 
-        // Update local order status without full refresh
+        // ✅ FIXED: Update status sesuai backend response
+        // approve -> preparing, reject -> rejected
         _updateLocalOrderStatus(
             orderId, action == 'approve' ? 'preparing' : 'rejected');
 
@@ -301,13 +360,14 @@ class StoreDashboardController extends GetxController {
     }
   }
 
-  // ✅ Update order status to ready for pickup (sesuai backend endpoint /orders/:id/status)
+  // ✅ FIXED: Update order status sesuai backend endpoint PATCH /orders/:id/status
   Future<void> updateOrderToReadyForPickup(int orderId) async {
     if (_isProcessingOrder.value) return;
 
     _isProcessingOrder.value = true;
 
     try {
+      // ✅ Backend expects order_status field
       final result = await _orderRepository.updateOrderStatus(orderId, {
         'order_status': 'ready_for_pickup',
       });
@@ -349,6 +409,26 @@ class StoreDashboardController extends GetxController {
     }
   }
 
+  // ✅ REMOVED: Toggle store availability (hanya admin yang bisa)
+  // Store owner tidak bisa mengubah status store, hanya admin
+  void showStoreStatusInfo() {
+    final statusText = _isStoreOpen.value ? 'Active' : 'Inactive';
+    final statusColor = _isStoreOpen.value ? Colors.green : Colors.red;
+
+    Get.snackbar(
+      'Store Status',
+      'Your store status is currently: $statusText\n\nOnly admin can change store status.',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: statusColor.withOpacity(0.1),
+      colorText: statusColor,
+      duration: const Duration(seconds: 3),
+      icon: Icon(
+        _isStoreOpen.value ? Icons.store : Icons.store_mall_directory_outlined,
+        color: statusColor,
+      ),
+    );
+  }
+
   // Approve order with confirmation dialog
   Future<void> approveOrder(OrderModel order) async {
     final confirmed = await Get.dialog<bool>(
@@ -358,11 +438,13 @@ class StoreDashboardController extends GetxController {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Order: ${order.id}'),
+            Text('Order ID: #${order.id}'),
+            Text('Customer: ${order.customer?.name ?? 'Unknown'}'),
             Text('Total: Rp ${order.grandTotal.toStringAsFixed(0)}'),
+            Text('Items: ${order.items?.length}'),
             const SizedBox(height: 8),
             const Text(
-                'This will approve the order and change status to "preparing". Are you sure?'),
+                'This will approve the order and change status to "preparing". Make sure you can fulfill this order.'),
           ],
         ),
         actions: [
@@ -393,7 +475,8 @@ class StoreDashboardController extends GetxController {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Order: ${order.id}'),
+            Text('Order ID: #${order.id}'),
+            Text('Customer: ${order.customer?.name ?? 'Unknown'}'),
             Text('Total: Rp ${order.grandTotal.toStringAsFixed(0)}'),
             const SizedBox(height: 8),
             const Text('This will reject the order permanently. Are you sure?'),
@@ -438,7 +521,8 @@ class StoreDashboardController extends GetxController {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Order: ${order.id}'),
+            Text('Order ID: #${order.id}'),
+            Text('Customer: ${order.customer?.name ?? 'Unknown'}'),
             const SizedBox(height: 8),
             const Text('Mark this order as ready for pickup by driver?'),
           ],
@@ -474,6 +558,20 @@ class StoreDashboardController extends GetxController {
     _pendingOrders.removeWhere((order) => order.id == orderId);
     _preparingOrders.removeWhere((order) => order.id == orderId);
     _readyForPickupOrders.removeWhere((order) => order.id == orderId);
+
+    // Add to appropriate list based on new status
+    final updatedOrder =
+        _orders.firstWhereOrNull((order) => order.id == orderId);
+    if (updatedOrder != null) {
+      switch (newStatus) {
+        case 'preparing':
+          _preparingOrders.add(updatedOrder);
+          break;
+        case 'ready_for_pickup':
+          _readyForPickupOrders.add(updatedOrder);
+          break;
+      }
+    }
   }
 
   // Navigation methods
@@ -493,7 +591,7 @@ class StoreDashboardController extends GetxController {
     Get.toNamed('/store/analytics');
   }
 
-  // ✅ FIXED: Get dashboard statistics with proper null checking
+  // ✅ FIXED: Dashboard statistics dengan perhitungan yang benar
   Map<String, dynamic> getDashboardStatistics() {
     final totalOrders = _orders.length;
     final pendingCount = _pendingOrders.length;
@@ -531,7 +629,7 @@ class StoreDashboardController extends GetxController {
     };
   }
 
-  // Check if order can be processed based on current status
+  // ✅ FIXED: Check permissions berdasarkan order status yang tepat
   bool canApproveOrder(OrderModel order) {
     return order.orderStatus == 'pending';
   }
@@ -544,7 +642,7 @@ class StoreDashboardController extends GetxController {
     return order.orderStatus == 'preparing';
   }
 
-  // Get order actions based on status
+  // ✅ FIXED: Get order actions dengan validasi status yang benar
   List<Map<String, dynamic>> getOrderActions(OrderModel order) {
     final actions = <Map<String, dynamic>>[];
 
@@ -584,5 +682,71 @@ class StoreDashboardController extends GetxController {
     });
 
     return actions;
+  }
+
+  // ✅ ADDED: Get order status color dan text untuk UI
+  Color getOrderStatusColor(String status) {
+    switch (status) {
+      case 'pending':
+        return Colors.orange;
+      case 'preparing':
+        return Colors.blue;
+      case 'ready_for_pickup':
+        return Colors.purple;
+      case 'on_delivery':
+        return Colors.indigo;
+      case 'delivered':
+        return Colors.green;
+      case 'cancelled':
+      case 'rejected':
+        return Colors.red;
+      default:
+        return Colors.grey;
+    }
+  }
+
+  String getOrderStatusText(String status) {
+    switch (status) {
+      case 'pending':
+        return 'Pending Approval';
+      case 'preparing':
+        return 'Preparing Order';
+      case 'ready_for_pickup':
+        return 'Ready for Pickup';
+      case 'on_delivery':
+        return 'Out for Delivery';
+      case 'delivered':
+        return 'Delivered';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'rejected':
+        return 'Rejected';
+      default:
+        return status.toUpperCase();
+    }
+  }
+
+  // ✅ ADDED: Refresh store data dari server (jika diperlukan)
+  Future<void> refreshStoreData() async {
+    try {
+      // Gunakan AuthController untuk refresh profile yang akan update store data
+      final authController = Get.find<AuthController>();
+      await authController.refreshUserDataInBackground();
+
+      // Reload store data dari local storage yang sudah di-update
+      await loadCurrentStore();
+    } catch (e) {
+      print('Error refreshing store data: $e');
+    }
+  }
+
+  // ✅ ADDED: Get store ID untuk API calls
+  int? get currentStoreId {
+    return _currentStore.value?.id;
+  }
+
+  // ✅ ADDED: Check if store data is loaded
+  bool get hasStoreData {
+    return _currentStore.value != null;
   }
 }

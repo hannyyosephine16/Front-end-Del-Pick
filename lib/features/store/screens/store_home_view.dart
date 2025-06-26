@@ -1,656 +1,694 @@
-// // lib/features/store/views/store_home_view.dart
-// import 'package:flutter/material.dart' hide ErrorWidget;
+// import 'package:flutter/material.dart';
 // import 'package:get/get.dart';
-// import 'package:del_pick/app/themes/app_colors.dart';
-// import 'package:del_pick/app/themes/app_text_styles.dart';
-// import 'package:del_pick/app/themes/app_dimensions.dart';
-// import 'package:del_pick/app/routes/app_routes.dart';
-// import 'package:del_pick/features/auth/controllers/auth_controller.dart';
-// import 'package:del_pick/features/store/controllers/store_home_controller.dart';
+// import 'package:del_pick/data/repositories/order_repository.dart';
 // import 'package:del_pick/data/models/order/order_model.dart';
-// import 'package:del_pick/core/widgets/loading_widget.dart';
-// import 'package:del_pick/core/widgets/error_widget.dart';
+// import 'package:del_pick/data/models/base/paginated_response.dart';
+// import 'package:del_pick/core/errors/error_handler.dart';
+// import 'package:del_pick/core/constants/order_status_constants.dart';
+// import 'package:del_pick/core/utils/result.dart';
 //
-// class StoreHomeView extends StatelessWidget {
-//   const StoreHomeView({Key? key}) : super(key: key);
+// import '../../../data/models/store/store_model.dart';
+// import '../../../data/repositories/store_repository.dart';
+//
+// class StoreDashboardController extends GetxController {
+//   final OrderRepository _orderRepository;
+//   final StoreRepository _storeRepository = Get.find<StoreRepository>();
+//
+//   StoreDashboardController({required OrderRepository orderRepository})
+//       : _orderRepository = orderRepository;
+//
+//   // Observable state
+//   final Rx<StoreModel?> _currentStore = Rx<StoreModel?>(null);
+//   final RxList<OrderModel> _orders = <OrderModel>[].obs;
+//   final RxList<OrderModel> _pendingOrders = <OrderModel>[].obs;
+//   final RxList<OrderModel> _preparingOrders = <OrderModel>[].obs;
+//   final RxList<OrderModel> _readyForPickupOrders = <OrderModel>[].obs;
+//   final RxBool _isLoading = false.obs;
+//   final RxBool _isLoadingMore = false.obs;
+//   final RxBool _hasError = false.obs;
+//   final RxString _errorMessage = ''.obs;
+//   final RxString _selectedFilter = 'all'.obs;
+//   final RxBool _canLoadMore = true.obs;
+//   final RxBool _isProcessingOrder = false.obs;
+//   final RxBool _isStoreOpen = true.obs;
+//
+//   // Pagination
+//   int _currentPage = 1;
+//   final int _itemsPerPage = 10;
+//
+//   // ✅ FIXED: Filter options sesuai dengan backend order statuses
+//   static const List<Map<String, dynamic>> filterOptions = [
+//     {'key': 'all', 'label': 'All Orders', 'icon': Icons.list_alt},
+//     {'key': 'pending', 'label': 'Pending', 'icon': Icons.schedule},
+//     {'key': 'preparing', 'label': 'Preparing', 'icon': Icons.restaurant},
+//     {
+//       'key': 'ready_for_pickup',
+//       'label': 'Ready for Pickup',
+//       'icon': Icons.inventory
+//     },
+//     {
+//       'key': 'on_delivery',
+//       'label': 'On Delivery',
+//       'icon': Icons.local_shipping
+//     },
+//     {'key': 'delivered', 'label': 'Delivered', 'icon': Icons.check_circle},
+//     {'key': 'cancelled', 'label': 'Cancelled', 'icon': Icons.cancel},
+//     {'key': 'rejected', 'label': 'Rejected', 'icon': Icons.block},
+//   ];
+//
+//   // Getters
+//   StoreModel? get currentStore => _currentStore.value;
+//   List<OrderModel> get orders => _orders;
+//   List<OrderModel> get pendingOrders => _pendingOrders;
+//   List<OrderModel> get preparingOrders => _preparingOrders;
+//   List<OrderModel> get readyForPickupOrders => _readyForPickupOrders;
+//   bool get isStoreOpen => _isStoreOpen.value;
+//   bool get isLoading => _isLoading.value;
+//   bool get isLoadingMore => _isLoadingMore.value;
+//   bool get hasError => _hasError.value;
+//   String get errorMessage => _errorMessage.value;
+//   String get selectedFilter => _selectedFilter.value;
+//   bool get canLoadMore => _canLoadMore.value;
+//   bool get hasOrders => _orders.isNotEmpty;
+//   bool get isProcessingOrder => _isProcessingOrder.value;
+//
+//   // Dashboard counters
+//   int get pendingOrderCount => _pendingOrders.length;
+//   int get preparingOrderCount => _preparingOrders.length;
+//   int get readyForPickupCount => _readyForPickupOrders.length;
+//   int get completedOrderCount =>
+//       orders.where((order) => order.orderStatus == 'delivered').length;
 //
 //   @override
-//   Widget build(BuildContext context) {
-//     final AuthController authController = Get.find<AuthController>();
-//     final StoreHomeController storeController = Get.find<StoreHomeController>();
-//
-//     return Scaffold(
-//       backgroundColor: Colors.grey[50],
-//       appBar: AppBar(
-//         backgroundColor: AppColors.primary,
-//         elevation: 0,
-//         title: Row(
-//           children: [
-//             Container(
-//               padding: const EdgeInsets.all(8),
-//               decoration: BoxDecoration(
-//                 color: Colors.white,
-//                 borderRadius: BorderRadius.circular(8),
-//               ),
-//               child: Icon(Icons.store, color: AppColors.primary, size: 20),
-//             ),
-//             const SizedBox(width: 12),
-//             Expanded(
-//               child: Column(
-//                 crossAxisAlignment: CrossAxisAlignment.start,
-//                 children: [
-//                   Obx(() => Text(
-//                         authController.currentUser.value?.name ?? 'Store Name',
-//                         style: AppTextStyles.appBarTitle,
-//                         overflow: TextOverflow.ellipsis,
-//                       )),
-//                   Obx(() => Text(
-//                         'Status: ${storeController.getStoreStatus()}',
-//                         style: const TextStyle(
-//                           color: Colors.white70,
-//                           fontSize: 12,
-//                         ),
-//                       )),
-//                 ],
-//               ),
-//             ),
-//           ],
-//         ),
-//         actions: [
-//           // Store Status Toggle
-//           Obx(() => Switch(
-//                 value: storeController.isStoreOpen,
-//                 onChanged: (value) => storeController.toggleStoreStatus(value),
-//                 activeColor: Colors.white,
-//               )),
-//           const SizedBox(width: 8),
-//
-//           // Profile Button
-//           PopupMenuButton<String>(
-//             icon: CircleAvatar(
-//               backgroundColor: Colors.white,
-//               radius: 16,
-//               child: Icon(
-//                 Icons.person,
-//                 color: AppColors.primary,
-//                 size: 20,
-//               ),
-//             ),
-//             onSelected: (String result) {
-//               switch (result) {
-//                 case 'profile':
-//                   storeController.navigateToStoreProfile();
-//                   break;
-//                 case 'settings':
-//                   Get.toNamed(Routes.STORE_SETTINGS);
-//                   break;
-//                 case 'logout':
-//                   _showLogoutDialog();
-//                   break;
-//               }
-//             },
-//             itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
-//               const PopupMenuItem<String>(
-//                 value: 'profile',
-//                 child: ListTile(
-//                   leading: Icon(Icons.person_outline),
-//                   title: Text('Profil Toko'),
-//                   contentPadding: EdgeInsets.zero,
-//                 ),
-//               ),
-//               const PopupMenuItem<String>(
-//                 value: 'settings',
-//                 child: ListTile(
-//                   leading: Icon(Icons.settings_outlined),
-//                   title: Text('Settings'),
-//                   contentPadding: EdgeInsets.zero,
-//                 ),
-//               ),
-//               const PopupMenuDivider(),
-//               const PopupMenuItem<String>(
-//                 value: 'logout',
-//                 child: ListTile(
-//                   leading: Icon(Icons.logout, color: Colors.red),
-//                   title: Text('Logout', style: TextStyle(color: Colors.red)),
-//                   contentPadding: EdgeInsets.zero,
-//                 ),
-//               ),
-//             ],
-//           ),
-//           const SizedBox(width: 16),
-//         ],
-//       ),
-//       body: Obx(() {
-//         // Show loading state
-//         if (storeController.isLoading.value && storeController.orders.isEmpty) {
-//           return const Center(child: LoadingWidget());
-//         }
-//
-//         // Show error state
-//         if (storeController.hasError && storeController.orders.isEmpty) {
-//           return Center(
-//             child: ErrorWidget(
-//               message: storeController.errorMessage,
-//               onRetry: () => storeController.refreshData(),
-//             ),
-//           );
-//         }
-//
-//         return RefreshIndicator(
-//           onRefresh: () => storeController.refreshData(),
-//           child: SingleChildScrollView(
-//             padding: const EdgeInsets.all(AppDimensions.paddingLG),
-//             child: Column(
-//               crossAxisAlignment: CrossAxisAlignment.start,
-//               children: [
-//                 // Today's Summary Card
-//                 _buildTodaySummaryCard(storeController),
-//
-//                 const SizedBox(height: 24),
-//
-//                 // Quick Stats Grid
-//                 _buildQuickStatsGrid(storeController),
-//
-//                 const SizedBox(height: 24),
-//
-//                 // Recent Orders Section
-//                 _buildRecentOrdersSection(storeController),
-//
-//                 const SizedBox(height: 24),
-//
-//                 // Quick Actions
-//                 _buildQuickActions(storeController),
-//
-//                 const SizedBox(
-//                     height: 100), // Extra space for bottom navigation
-//               ],
-//             ),
-//           ),
-//         );
-//       }),
-//     );
-//   }
-//
-//   // Today's Summary Card with real data
-//   Widget _buildTodaySummaryCard(StoreHomeController controller) {
-//     return Obx(() {
-//       final stats = controller.getDashboardStatistics();
-//
-//       return Container(
-//         width: double.infinity,
-//         padding: const EdgeInsets.all(20),
-//         decoration: BoxDecoration(
-//           gradient: LinearGradient(
-//             colors: [AppColors.primary, AppColors.primaryDark],
-//             begin: Alignment.topLeft,
-//             end: Alignment.bottomRight,
-//           ),
-//           borderRadius: BorderRadius.circular(16),
-//           boxShadow: [
-//             BoxShadow(
-//               color: AppColors.primary.withOpacity(0.3),
-//               blurRadius: 10,
-//               offset: const Offset(0, 4),
-//             ),
-//           ],
-//         ),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 const Text(
-//                   'Penjualan Hari Ini',
-//                   style: TextStyle(
-//                     color: Colors.white70,
-//                     fontSize: 14,
-//                   ),
-//                 ),
-//                 const Icon(
-//                   Icons.trending_up,
-//                   color: Colors.white70,
-//                   size: 20,
-//                 ),
-//               ],
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               'Rp ${stats['totalRevenue']?.toStringAsFixed(0) ?? '0'}',
-//               style: const TextStyle(
-//                 color: Colors.white,
-//                 fontSize: 28,
-//                 fontWeight: FontWeight.bold,
-//               ),
-//             ),
-//             const SizedBox(height: 4),
-//             Text(
-//               '${stats['todayOrders'] ?? 0} Pesanan Hari Ini • ${stats['completedOrders'] ?? 0} Selesai',
-//               style: const TextStyle(
-//                 color: Colors.white70,
-//                 fontSize: 12,
-//               ),
-//             ),
-//           ],
-//         ),
-//       );
+//   void onInit() {
+//     super.onInit();
+//     loadInitialData();
+//     ever(_isStoreOpen, (bool isOpen) {
+//       if (isOpen) {
+//         refreshData();
+//       }
 //     });
 //   }
 //
-//   // Quick Stats Grid with real data
-//   Widget _buildQuickStatsGrid(StoreHomeController controller) {
-//     return Obx(() => GridView.count(
-//           shrinkWrap: true,
-//           physics: const NeverScrollableScrollPhysics(),
-//           crossAxisCount: 2,
-//           crossAxisSpacing: 12,
-//           mainAxisSpacing: 12,
-//           childAspectRatio: 1.3,
-//           children: [
-//             _buildStatCard(
-//               'Pesanan Baru',
-//               '${controller.pendingOrderCount}',
-//               Icons.shopping_cart,
-//               AppColors.warning,
-//               onTap: () => controller.navigateToOrderList(status: 'pending'),
-//             ),
-//             _buildStatCard(
-//               'Siap Diantar',
-//               '${controller.readyForPickupCount}',
-//               Icons.check_circle,
-//               AppColors.success,
-//               onTap: () =>
-//                   controller.navigateToOrderList(status: 'ready_for_pickup'),
-//             ),
-//             _buildStatCard(
-//               'Sedang Diproses',
-//               '${controller.preparingOrderCount}',
-//               Icons.restaurant_menu,
-//               Colors.purple,
-//               onTap: () => controller.navigateToMenuManagement(),
-//             ),
-//             _buildStatCard(
-//               'Total Pesanan',
-//               '${controller.orders.length}',
-//               Icons.analytics,
-//               AppColors.info,
-//               onTap: () => controller.navigateToStoreAnalytics(),
-//             ),
-//           ],
-//         ));
+//   // ✅ Load initial data termasuk current store info
+//   Future<void> loadInitialData() async {
+//     await loadCurrentStore();
+//     await Future.wait([
+//       loadOrders(refresh: true),
+//       loadDashboardCounters(),
+//     ]);
 //   }
 //
-//   // Recent Orders Section with real data
-//   Widget _buildRecentOrdersSection(StoreHomeController controller) {
-//     return Column(
-//       crossAxisAlignment: CrossAxisAlignment.start,
-//       children: [
-//         Row(
-//           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//           children: [
-//             Text(
-//               'Pesanan Terbaru',
-//               style: AppTextStyles.h5,
-//             ),
-//             TextButton(
-//               onPressed: () => controller.navigateToOrderList(),
-//               child: const Text('Lihat Semua'),
-//             ),
-//           ],
-//         ),
-//         const SizedBox(height: 12),
+//   // ✅ FIXED: Load current store information (untuk sementara dari auth user info)
+//   Future<void> loadCurrentStore() async {
+//     try {
+//       // TODO: Implementasi getCurrentStore() di StoreRepository atau
+//       // ambil store info dari AuthController/user session
 //
-//         // Show recent orders from controller
-//         Obx(() {
-//           if (controller.orders.isEmpty) {
-//             return Container(
-//               padding: const EdgeInsets.all(32),
-//               child: Column(
-//                 children: [
-//                   Icon(
-//                     Icons.shopping_bag_outlined,
-//                     size: 64,
-//                     color: Colors.grey[400],
-//                   ),
-//                   const SizedBox(height: 16),
-//                   Text(
-//                     'Belum ada pesanan',
-//                     style: AppTextStyles.bodyMedium.copyWith(
-//                       color: Colors.grey[600],
-//                     ),
-//                   ),
-//                 ],
-//               ),
-//             );
-//           } else {
-//             // Show latest 3 orders
-//             return Column(
-//               children: controller.orders
-//                   .take(3)
-//                   .map((order) => Padding(
-//                         padding: const EdgeInsets.only(bottom: 12),
-//                         child: _buildOrderCard(
-//                           order: order,
-//                           controller: controller,
-//                         ),
-//                       ))
-//                   .toList(),
-//             );
-//           }
-//         }),
-//       ],
-//     );
+//       // Sementara set default values
+//       _isStoreOpen.value = true; // Default store open
+//
+//       // Atau bisa ambil dari AuthController jika ada store info di user session
+//       // final authController = Get.find<AuthController>();
+//       // if (authController.currentUser?.store != null) {
+//       //   _currentStore.value = authController.currentUser?.store;
+//       //   _isStoreOpen.value = _currentStore.value?.status == 'active';
+//       // }
+//     } catch (e) {
+//       print('Error loading current store: $e');
+//       _isStoreOpen.value = true; // Default fallback
+//     }
 //   }
 //
-//   // Order Card with real order data
-//   Widget _buildOrderCard({
-//     required OrderModel order,
-//     required StoreHomeController controller,
-//   }) {
-//     // Determine status color and action text based on order status
-//     Color statusColor;
-//     String actionText;
-//     VoidCallback? onActionPressed;
-//
-//     switch (order.orderStatus) {
-//       case 'pending':
-//         statusColor = AppColors.warning;
-//         actionText = 'Terima';
-//         onActionPressed = () => controller.approveOrder(order);
-//         break;
-//       case 'preparing':
-//         statusColor = AppColors.info;
-//         actionText = 'Siap';
-//         onActionPressed = () => controller.markOrderReadyForPickup(order);
-//         break;
-//       case 'ready_for_pickup':
-//         statusColor = AppColors.success;
-//         actionText = 'Menunggu Driver';
-//         onActionPressed = null;
-//         break;
-//       case 'on_delivery':
-//         statusColor = Colors.blue;
-//         actionText = 'Diantar';
-//         onActionPressed = null;
-//         break;
-//       case 'delivered':
-//         statusColor = AppColors.success;
-//         actionText = 'Selesai';
-//         onActionPressed = null;
-//         break;
-//       case 'cancelled':
-//         statusColor = AppColors.error;
-//         actionText = 'Dibatalkan';
-//         onActionPressed = null;
-//         break;
-//       case 'rejected':
-//         statusColor = AppColors.error;
-//         actionText = 'Ditolak';
-//         onActionPressed = null;
-//         break;
-//       default:
-//         statusColor = Colors.grey;
-//         actionText = 'Unknown';
-//         onActionPressed = null;
+//   // ✅ FIXED: Load store orders dengan endpoint yang benar (/orders/store)
+//   Future<void> loadOrders({bool refresh = false}) async {
+//     if (refresh) {
+//       _currentPage = 1;
+//       _canLoadMore.value = true;
+//       _orders.clear();
 //     }
 //
-//     return GestureDetector(
-//       onTap: () => controller.navigateToOrderDetail(order.id),
-//       child: Container(
-//         padding: const EdgeInsets.all(16),
-//         decoration: BoxDecoration(
-//           color: Colors.white,
-//           borderRadius: BorderRadius.circular(12),
-//           boxShadow: [
-//             BoxShadow(
-//               color: Colors.grey.withOpacity(0.1),
-//               blurRadius: 8,
-//               offset: const Offset(0, 2),
-//             ),
-//           ],
-//         ),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           children: [
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Column(
-//                   crossAxisAlignment: CrossAxisAlignment.start,
-//                   children: [
-//                     Text('#${order.id}', style: AppTextStyles.cardTitle),
-//                     const SizedBox(height: 4),
-//                     Text(
-//                       order.customer?.name ?? 'Customer',
-//                       style: AppTextStyles.bodyMedium,
-//                     ),
-//                   ],
-//                 ),
-//                 Column(
-//                   crossAxisAlignment: CrossAxisAlignment.end,
-//                   children: [
-//                     Container(
-//                       padding: const EdgeInsets.symmetric(
-//                           horizontal: 8, vertical: 4),
-//                       decoration: BoxDecoration(
-//                         color: statusColor.withOpacity(0.1),
-//                         borderRadius: BorderRadius.circular(12),
-//                       ),
-//                       child: Text(
-//                         order.statusDisplayName,
-//                         style: TextStyle(
-//                           color: statusColor,
-//                           fontSize: 12,
-//                           fontWeight: FontWeight.w500,
-//                         ),
-//                       ),
-//                     ),
-//                     const SizedBox(height: 4),
-//                     Text(
-//                       order.formattedTime,
-//                       style: AppTextStyles.bodySmall.copyWith(
-//                         color: Colors.grey[600],
-//                       ),
-//                     ),
-//                   ],
-//                 ),
-//               ],
-//             ),
-//             const SizedBox(height: 12),
-//             Text(
-//               order.itemsSummary,
-//               style: AppTextStyles.bodyMedium.copyWith(
-//                 color: Colors.grey[700],
-//               ),
-//             ),
-//             const SizedBox(height: 12),
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Text(
-//                   order.formattedTotal,
-//                   style: AppTextStyles.price,
-//                 ),
-//                 if (onActionPressed != null)
-//                   Obx(() => ElevatedButton(
-//                         onPressed: controller.isProcessingOrder.value
-//                             ? null
-//                             : onActionPressed,
-//                         style: ElevatedButton.styleFrom(
-//                           backgroundColor: statusColor,
-//                           foregroundColor: Colors.white,
-//                           padding: const EdgeInsets.symmetric(
-//                               horizontal: 16, vertical: 8),
-//                           minimumSize: Size.zero,
-//                           shape: RoundedRectangleBorder(
-//                             borderRadius: BorderRadius.circular(20),
-//                           ),
-//                         ),
-//                         child: controller.isProcessingOrder.value
-//                             ? const SizedBox(
-//                                 width: 12,
-//                                 height: 12,
-//                                 child: CircularProgressIndicator(
-//                                   strokeWidth: 2,
-//                                   color: Colors.white,
-//                                 ),
-//                               )
-//                             : Text(
-//                                 actionText,
-//                                 style: const TextStyle(fontSize: 12),
-//                               ),
-//                       ))
-//                 else
-//                   Container(
-//                     padding:
-//                         const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-//                     decoration: BoxDecoration(
-//                       color: statusColor.withOpacity(0.1),
-//                       borderRadius: BorderRadius.circular(20),
-//                     ),
-//                     child: Text(
-//                       actionText,
-//                       style: TextStyle(
-//                         fontSize: 12,
-//                         color: statusColor,
-//                         fontWeight: FontWeight.w500,
-//                       ),
-//                     ),
-//                   ),
-//               ],
-//             ),
-//           ],
-//         ),
+//     _isLoading.value = true;
+//     _hasError.value = false;
+//     _errorMessage.value = '';
+//
+//     try {
+//       final Map<String, dynamic> params = {
+//         'page': _currentPage,
+//         'limit': _itemsPerPage,
+//       };
+//
+//       // Add status filter if not 'all'
+//       if (_selectedFilter.value != 'all') {
+//         params['order_status'] = _selectedFilter
+//             .value; // ✅ FIXED: Gunakan order_status sesuai backend
+//       }
+//
+//       // ✅ FIXED: Gunakan endpoint store orders yang benar
+//       final Result<PaginatedResponse<OrderModel>> result =
+//           await _orderRepository.getStoreOrders(
+//         params: params,
+//       );
+//
+//       if (result.isSuccess && result.data != null) {
+//         final paginatedResponse = result.data!;
+//         final newOrders = paginatedResponse.items;
+//
+//         if (refresh) {
+//           _orders.assignAll(newOrders);
+//         } else {
+//           _orders.addAll(newOrders);
+//         }
+//
+//         _canLoadMore.value = paginatedResponse.hasNextPage;
+//
+//         if (newOrders.isNotEmpty) {
+//           _currentPage++;
+//         }
+//       } else {
+//         _hasError.value = true;
+//         _errorMessage.value = result.message ?? 'Failed to load orders';
+//       }
+//     } catch (e) {
+//       _hasError.value = true;
+//       _errorMessage.value = ErrorHandler.getErrorMessage(
+//           ErrorHandler.handleException(e as Exception));
+//     } finally {
+//       _isLoading.value = false;
+//     }
+//   }
+//
+//   // ✅ FIXED: Load dashboard counters dengan status yang benar
+//   Future<void> loadDashboardCounters() async {
+//     try {
+//       // Load pending orders
+//       final pendingResult = await _orderRepository.getStoreOrders(
+//         params: {
+//           'order_status': 'pending',
+//           'limit': 100
+//         }, // ✅ FIXED: Gunakan order_status
+//       );
+//       if (pendingResult.isSuccess && pendingResult.data != null) {
+//         _pendingOrders.value = pendingResult.data!.items;
+//       }
+//
+//       // Load preparing orders
+//       final preparingResult = await _orderRepository.getStoreOrders(
+//         params: {'order_status': 'preparing', 'limit': 100},
+//       );
+//       if (preparingResult.isSuccess && preparingResult.data != null) {
+//         _preparingOrders.value = preparingResult.data!.items;
+//       }
+//
+//       // Load ready for pickup orders
+//       final readyResult = await _orderRepository.getStoreOrders(
+//         params: {'order_status': 'ready_for_pickup', 'limit': 100},
+//       );
+//       if (readyResult.isSuccess && readyResult.data != null) {
+//         _readyForPickupOrders.value = readyResult.data!.items;
+//       }
+//     } catch (e) {
+//       print('Error loading dashboard counters: $e');
+//     }
+//   }
+//
+//   // ✅ Load more orders for pagination
+//   Future<void> loadMoreOrders() async {
+//     if (_isLoadingMore.value || !_canLoadMore.value) return;
+//
+//     _isLoadingMore.value = true;
+//
+//     try {
+//       final Map<String, dynamic> params = {
+//         'page': _currentPage,
+//         'limit': _itemsPerPage,
+//       };
+//
+//       if (_selectedFilter.value != 'all') {
+//         params['order_status'] =
+//             _selectedFilter.value; // ✅ FIXED: Gunakan order_status
+//       }
+//
+//       final Result<PaginatedResponse<OrderModel>> result =
+//           await _orderRepository.getStoreOrders(
+//         params: params,
+//       );
+//
+//       if (result.isSuccess && result.data != null) {
+//         final paginatedResponse = result.data!;
+//         final newOrders = paginatedResponse.items;
+//         _orders.addAll(newOrders);
+//
+//         _canLoadMore.value = paginatedResponse.hasNextPage;
+//
+//         if (newOrders.isNotEmpty) {
+//           _currentPage++;
+//         }
+//       }
+//     } catch (e) {
+//       Get.snackbar(
+//         'Error',
+//         'Failed to load more orders',
+//         snackPosition: SnackPosition.BOTTOM,
+//         backgroundColor: Colors.red,
+//         colorText: Colors.white,
+//       );
+//     } finally {
+//       _isLoadingMore.value = false;
+//     }
+//   }
+//
+//   // Change filter and reload data
+//   void changeFilter(String filter) {
+//     if (_selectedFilter.value != filter) {
+//       _selectedFilter.value = filter;
+//       loadOrders(refresh: true);
+//     }
+//   }
+//
+//   // Refresh all data
+//   Future<void> refreshData() async {
+//     await Future.wait([
+//       loadOrders(refresh: true),
+//       loadDashboardCounters(),
+//     ]);
+//   }
+//
+//   // ✅ FIXED: Process order sesuai backend endpoint POST /orders/:id/process
+//   Future<void> processOrder(int orderId, String action) async {
+//     if (_isProcessingOrder.value) return;
+//
+//     _isProcessingOrder.value = true;
+//
+//     try {
+//       // ✅ Backend expects action: 'approve' or 'reject'
+//       final result = await _orderRepository.processOrder(orderId, action);
+//
+//       if (result.isSuccess) {
+//         final actionText = action == 'approve' ? 'approved' : 'rejected';
+//         final statusText = action == 'approve' ? 'preparing' : 'rejected';
+//
+//         Get.snackbar(
+//           'Order ${actionText.capitalize!}',
+//           'Order has been $actionText and status changed to $statusText',
+//           snackPosition: SnackPosition.BOTTOM,
+//           backgroundColor: action == 'approve' ? Colors.green : Colors.orange,
+//           colorText: Colors.white,
+//           duration: const Duration(seconds: 3),
+//         );
+//
+//         // ✅ FIXED: Update status sesuai backend response
+//         // approve -> preparing, reject -> rejected
+//         _updateLocalOrderStatus(
+//             orderId, action == 'approve' ? 'preparing' : 'rejected');
+//
+//         // Refresh dashboard counters
+//         await loadDashboardCounters();
+//       } else {
+//         Get.snackbar(
+//           'Error',
+//           result.message ?? 'Failed to process order',
+//           snackPosition: SnackPosition.BOTTOM,
+//           backgroundColor: Colors.red,
+//           colorText: Colors.white,
+//         );
+//       }
+//     } catch (e) {
+//       Get.snackbar(
+//         'Error',
+//         'Failed to process order: ${e.toString()}',
+//         snackPosition: SnackPosition.BOTTOM,
+//         backgroundColor: Colors.red,
+//         colorText: Colors.white,
+//       );
+//     } finally {
+//       _isProcessingOrder.value = false;
+//     }
+//   }
+//
+//   // ✅ FIXED: Update order status sesuai backend endpoint PATCH /orders/:id/status
+//   Future<void> updateOrderToReadyForPickup(int orderId) async {
+//     if (_isProcessingOrder.value) return;
+//
+//     _isProcessingOrder.value = true;
+//
+//     try {
+//       // ✅ Backend expects order_status field
+//       final result = await _orderRepository.updateOrderStatus(orderId, {
+//         'order_status': 'ready_for_pickup',
+//       });
+//
+//       if (result.isSuccess) {
+//         Get.snackbar(
+//           'Order Updated',
+//           'Order is now ready for pickup by driver',
+//           snackPosition: SnackPosition.BOTTOM,
+//           backgroundColor: Colors.blue,
+//           colorText: Colors.white,
+//           duration: const Duration(seconds: 3),
+//         );
+//
+//         // Update local order status
+//         _updateLocalOrderStatus(orderId, 'ready_for_pickup');
+//
+//         // Refresh dashboard counters
+//         await loadDashboardCounters();
+//       } else {
+//         Get.snackbar(
+//           'Error',
+//           result.message ?? 'Failed to update order status',
+//           snackPosition: SnackPosition.BOTTOM,
+//           backgroundColor: Colors.red,
+//           colorText: Colors.white,
+//         );
+//       }
+//     } catch (e) {
+//       Get.snackbar(
+//         'Error',
+//         'Failed to update order status: ${e.toString()}',
+//         snackPosition: SnackPosition.BOTTOM,
+//         backgroundColor: Colors.red,
+//         colorText: Colors.white,
+//       );
+//     } finally {
+//       _isProcessingOrder.value = false;
+//     }
+//   }
+//
+//   // ✅ REMOVED: Toggle store availability (hanya admin yang bisa)
+//   // Store owner tidak bisa mengubah status store, hanya admin
+//   void showStoreStatusInfo() {
+//     final statusText = _isStoreOpen.value ? 'Active' : 'Inactive';
+//     final statusColor = _isStoreOpen.value ? Colors.green : Colors.red;
+//
+//     Get.snackbar(
+//       'Store Status',
+//       'Your store status is currently: $statusText\n\nOnly admin can change store status.',
+//       snackPosition: SnackPosition.BOTTOM,
+//       backgroundColor: statusColor.withOpacity(0.1),
+//       colorText: statusColor,
+//       duration: const Duration(seconds: 3),
+//       icon: Icon(
+//         _isStoreOpen.value ? Icons.store : Icons.store_mall_directory_outlined,
+//         color: statusColor,
 //       ),
 //     );
 //   }
 //
-//   // Quick Actions with controller navigation
-//   Widget _buildQuickActions(StoreHomeController controller) {
-//     return Row(
-//       children: [
-//         Expanded(
-//           child: ElevatedButton.icon(
-//             onPressed: () => controller.navigateToMenuManagement(),
-//             icon: const Icon(Icons.add),
-//             label: const Text('Kelola Menu'),
-//             style: ElevatedButton.styleFrom(
-//               backgroundColor: AppColors.success,
-//               foregroundColor: Colors.white,
-//               padding: const EdgeInsets.symmetric(vertical: 12),
-//               shape: RoundedRectangleBorder(
-//                 borderRadius: BorderRadius.circular(8),
-//               ),
-//             ),
-//           ),
-//         ),
-//         const SizedBox(width: 12),
-//         Expanded(
-//           child: ElevatedButton.icon(
-//             onPressed: () => controller.navigateToStoreAnalytics(),
-//             icon: const Icon(Icons.analytics),
-//             label: const Text('Laporan'),
-//             style: ElevatedButton.styleFrom(
-//               backgroundColor: AppColors.info,
-//               foregroundColor: Colors.white,
-//               padding: const EdgeInsets.symmetric(vertical: 12),
-//               shape: RoundedRectangleBorder(
-//                 borderRadius: BorderRadius.circular(8),
-//               ),
-//             ),
-//           ),
-//         ),
-//       ],
-//     );
-//   }
-//
-//   Widget _buildStatCard(
-//     String title,
-//     String value,
-//     IconData icon,
-//     Color color, {
-//     VoidCallback? onTap,
-//   }) {
-//     return GestureDetector(
-//       onTap: onTap,
-//       child: Container(
-//         padding: const EdgeInsets.all(16),
-//         decoration: BoxDecoration(
-//           color: Colors.white,
-//           borderRadius: BorderRadius.circular(12),
-//           boxShadow: [
-//             BoxShadow(
-//               color: Colors.grey.withOpacity(0.1),
-//               blurRadius: 8,
-//               offset: const Offset(0, 2),
-//             ),
-//           ],
-//         ),
-//         child: Column(
-//           crossAxisAlignment: CrossAxisAlignment.start,
-//           mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//           children: [
-//             Row(
-//               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-//               children: [
-//                 Container(
-//                   padding: const EdgeInsets.all(8),
-//                   decoration: BoxDecoration(
-//                     color: color.withOpacity(0.1),
-//                     borderRadius: BorderRadius.circular(8),
-//                   ),
-//                   child: Icon(icon, color: color, size: 20),
-//                 ),
-//                 if (title == 'Pesanan Baru' && value != '0')
-//                   Container(
-//                     width: 8,
-//                     height: 8,
-//                     decoration: BoxDecoration(
-//                       color: AppColors.warning,
-//                       borderRadius: BorderRadius.circular(4),
-//                     ),
-//                   ),
-//               ],
-//             ),
-//             const SizedBox(height: 8),
-//             Text(
-//               value,
-//               style: AppTextStyles.h3,
-//             ),
-//             Text(
-//               title,
-//               style: AppTextStyles.bodySmall.copyWith(
-//                 color: Colors.grey[600],
-//               ),
-//             ),
-//           ],
-//         ),
-//       ),
-//     );
-//   }
-//
-//   void _showLogoutDialog() {
-//     Get.dialog(
+//   // Approve order with confirmation dialog
+//   Future<void> approveOrder(OrderModel order) async {
+//     final confirmed = await Get.dialog<bool>(
 //       AlertDialog(
-//         title: const Text('Logout Confirmation'),
-//         content: const Text('Are you sure you want to logout?'),
+//         title: const Text('Approve Order'),
+//         content: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text('Order ID: #${order.id}'),
+//             Text('Customer: ${order.customer?.name ?? 'Unknown'}'),
+//             Text('Total: Rp ${order.grandTotal.toStringAsFixed(0)}'),
+//             Text('Items: ${order.items.length}'),
+//             const SizedBox(height: 8),
+//             const Text(
+//                 'This will approve the order and change status to "preparing". Make sure you can fulfill this order.'),
+//           ],
+//         ),
 //         actions: [
 //           TextButton(
-//             onPressed: () => Get.back(),
+//             onPressed: () => Get.back(result: false),
 //             child: const Text('Cancel'),
 //           ),
-//           TextButton(
-//             onPressed: () {
-//               Get.back();
-//               Get.find<AuthController>().logout();
-//             },
-//             child: const Text(
-//               'Logout',
-//               style: TextStyle(color: Colors.red),
-//             ),
+//           ElevatedButton(
+//             onPressed: () => Get.back(result: true),
+//             style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+//             child: const Text('Approve'),
 //           ),
 //         ],
 //       ),
 //     );
+//
+//     if (confirmed == true) {
+//       await processOrder(order.id, 'approve');
+//     }
+//   }
+//
+//   // Reject order with confirmation dialog
+//   Future<void> rejectOrder(OrderModel order) async {
+//     final confirmed = await Get.dialog<bool>(
+//       AlertDialog(
+//         title: const Text('Reject Order'),
+//         content: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text('Order ID: #${order.id}'),
+//             Text('Customer: ${order.customer?.name ?? 'Unknown'}'),
+//             Text('Total: Rp ${order.grandTotal.toStringAsFixed(0)}'),
+//             const SizedBox(height: 8),
+//             const Text('This will reject the order permanently. Are you sure?'),
+//           ],
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Get.back(result: false),
+//             child: const Text('Cancel'),
+//           ),
+//           TextButton(
+//             onPressed: () => Get.back(result: true),
+//             style: TextButton.styleFrom(foregroundColor: Colors.red),
+//             child: const Text('Reject'),
+//           ),
+//         ],
+//       ),
+//     );
+//
+//     if (confirmed == true) {
+//       await processOrder(order.id, 'reject');
+//     }
+//   }
+//
+//   // Mark order as ready for pickup with confirmation
+//   Future<void> markOrderReadyForPickup(OrderModel order) async {
+//     if (order.orderStatus != 'preparing') {
+//       Get.snackbar(
+//         'Error',
+//         'Only preparing orders can be marked as ready for pickup',
+//         snackPosition: SnackPosition.BOTTOM,
+//         backgroundColor: Colors.orange,
+//         colorText: Colors.white,
+//       );
+//       return;
+//     }
+//
+//     final confirmed = await Get.dialog<bool>(
+//       AlertDialog(
+//         title: const Text('Ready for Pickup'),
+//         content: Column(
+//           mainAxisSize: MainAxisSize.min,
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text('Order ID: #${order.id}'),
+//             Text('Customer: ${order.customer?.name ?? 'Unknown'}'),
+//             const SizedBox(height: 8),
+//             const Text('Mark this order as ready for pickup by driver?'),
+//           ],
+//         ),
+//         actions: [
+//           TextButton(
+//             onPressed: () => Get.back(result: false),
+//             child: const Text('Cancel'),
+//           ),
+//           ElevatedButton(
+//             onPressed: () => Get.back(result: true),
+//             style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+//             child: const Text('Mark Ready'),
+//           ),
+//         ],
+//       ),
+//     );
+//
+//     if (confirmed == true) {
+//       await updateOrderToReadyForPickup(order.id);
+//     }
+//   }
+//
+//   // Update local order status for immediate UI update
+//   void _updateLocalOrderStatus(int orderId, String newStatus) {
+//     final orderIndex = _orders.indexWhere((order) => order.id == orderId);
+//     if (orderIndex != -1) {
+//       final updatedOrder = _orders[orderIndex].copyWith(orderStatus: newStatus);
+//       _orders[orderIndex] = updatedOrder;
+//     }
+//
+//     // Update filtered lists
+//     _pendingOrders.removeWhere((order) => order.id == orderId);
+//     _preparingOrders.removeWhere((order) => order.id == orderId);
+//     _readyForPickupOrders.removeWhere((order) => order.id == orderId);
+//
+//     // Add to appropriate list based on new status
+//     final updatedOrder =
+//         _orders.firstWhereOrNull((order) => order.id == orderId);
+//     if (updatedOrder != null) {
+//       switch (newStatus) {
+//         case 'preparing':
+//           _preparingOrders.add(updatedOrder);
+//           break;
+//         case 'ready_for_pickup':
+//           _readyForPickupOrders.add(updatedOrder);
+//           break;
+//       }
+//     }
+//   }
+//
+//   // Navigation methods
+//   void navigateToOrderDetail(int orderId) {
+//     Get.toNamed('/store/order_detail', arguments: {'orderId': orderId});
+//   }
+//
+//   void navigateToMenuManagement() {
+//     Get.toNamed('/store/menu_management');
+//   }
+//
+//   void navigateToStoreProfile() {
+//     Get.toNamed('/store/profile');
+//   }
+//
+//   void navigateToStoreAnalytics() {
+//     Get.toNamed('/store/analytics');
+//   }
+//
+//   // ✅ FIXED: Dashboard statistics dengan perhitungan yang benar
+//   Map<String, dynamic> getDashboardStatistics() {
+//     final totalOrders = _orders.length;
+//     final pendingCount = _pendingOrders.length;
+//     final preparingCount = _preparingOrders.length;
+//     final readyForPickupCount = _readyForPickupOrders.length;
+//
+//     final completedOrders =
+//         _orders.where((order) => order.orderStatus == 'delivered').length;
+//
+//     final cancelledOrders = _orders
+//         .where((order) => ['cancelled', 'rejected'].contains(order.orderStatus))
+//         .length;
+//
+//     final totalRevenue = _orders
+//         .where((order) => order.orderStatus == 'delivered')
+//         .fold(0.0, (sum, order) => sum + order.grandTotal);
+//
+//     final now = DateTime.now();
+//     final todayOrders = _orders.where((order) {
+//       final orderDate = order.createdAt;
+//       return orderDate.year == now.year &&
+//           orderDate.month == now.month &&
+//           orderDate.day == now.day;
+//     }).length;
+//
+//     return {
+//       'totalOrders': totalOrders,
+//       'pendingOrders': pendingCount,
+//       'preparingOrders': preparingCount,
+//       'readyForPickupOrders': readyForPickupCount,
+//       'completedOrders': completedOrders,
+//       'cancelledOrders': cancelledOrders,
+//       'totalRevenue': totalRevenue,
+//       'todayOrders': todayOrders,
+//     };
+//   }
+//
+//   // ✅ FIXED: Check permissions berdasarkan order status yang tepat
+//   bool canApproveOrder(OrderModel order) {
+//     return order.orderStatus == 'pending';
+//   }
+//
+//   bool canRejectOrder(OrderModel order) {
+//     return order.orderStatus == 'pending';
+//   }
+//
+//   bool canMarkReadyForPickup(OrderModel order) {
+//     return order.orderStatus == 'preparing';
+//   }
+//
+//   // ✅ FIXED: Get order actions dengan validasi status yang benar
+//   List<Map<String, dynamic>> getOrderActions(OrderModel order) {
+//     final actions = <Map<String, dynamic>>[];
+//
+//     if (canApproveOrder(order)) {
+//       actions.add({
+//         'label': 'Approve',
+//         'icon': Icons.check,
+//         'color': Colors.green,
+//         'action': () => approveOrder(order),
+//       });
+//     }
+//
+//     if (canRejectOrder(order)) {
+//       actions.add({
+//         'label': 'Reject',
+//         'icon': Icons.close,
+//         'color': Colors.red,
+//         'action': () => rejectOrder(order),
+//       });
+//     }
+//
+//     if (canMarkReadyForPickup(order)) {
+//       actions.add({
+//         'label': 'Ready for Pickup',
+//         'icon': Icons.inventory,
+//         'color': Colors.blue,
+//         'action': () => markOrderReadyForPickup(order),
+//       });
+//     }
+//
+//     // Always allow viewing details
+//     actions.add({
+//       'label': 'View Details',
+//       'icon': Icons.visibility,
+//       'color': Colors.grey[600],
+//       'action': () => navigateToOrderDetail(order.id),
+//     });
+//
+//     return actions;
+//   }
+//
+//   // ✅ ADDED: Get order status color dan text untuk UI
+//   Color getOrderStatusColor(String status) {
+//     switch (status) {
+//       case 'pending':
+//         return Colors.orange;
+//       case 'preparing':
+//         return Colors.blue;
+//       case 'ready_for_pickup':
+//         return Colors.purple;
+//       case 'on_delivery':
+//         return Colors.indigo;
+//       case 'delivered':
+//         return Colors.green;
+//       case 'cancelled':
+//       case 'rejected':
+//         return Colors.red;
+//       default:
+//         return Colors.grey;
+//     }
+//   }
+//
+//   String getOrderStatusText(String status) {
+//     switch (status) {
+//       case 'pending':
+//         return 'Pending Approval';
+//       case 'preparing':
+//         return 'Preparing Order';
+//       case 'ready_for_pickup':
+//         return 'Ready for Pickup';
+//       case 'on_delivery':
+//         return 'Out for Delivery';
+//       case 'delivered':
+//         return 'Delivered';
+//       case 'cancelled':
+//         return 'Cancelled';
+//       case 'rejected':
+//         return 'Rejected';
+//       default:
+//         return status.toUpperCase();
+//     }
 //   }
 // }

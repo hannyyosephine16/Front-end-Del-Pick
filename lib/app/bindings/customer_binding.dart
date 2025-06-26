@@ -1,4 +1,7 @@
 // lib/app/bindings/customer_binding.dart - FIXED VERSION
+import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
+import 'package:del_pick/data/datasources/remote/auth_remote_datasource.dart';
+import 'package:del_pick/data/providers/auth_provider.dart';
 import 'package:get/get.dart';
 
 // Controllers
@@ -97,7 +100,11 @@ class CustomerBinding extends Bindings {
     // =====================================================
 
     Get.lazyPut<StoreRepository>(
-      () => StoreRepository(Get.find<StoreProvider>() as StoreRemoteDataSource),
+      () => StoreRepository(
+        Get.find<StoreProvider>() as StoreRemoteDataSource,
+        Get.find<AuthProvider>() as AuthRemoteDataSource,
+        Get.find<AuthProvider>() as AuthLocalDataSource,
+      ),
       fenix: true,
     );
 

@@ -74,7 +74,7 @@ class AuthController extends GetxController {
 
         // Refresh data di background jika ada koneksi
         if (_connectivityService.isConnected) {
-          _refreshUserDataInBackground();
+          refreshUserDataInBackground();
         }
         return;
       }
@@ -503,7 +503,7 @@ class AuthController extends GetxController {
     storeData.value = null;
   }
 
-  Future<void> _refreshUserDataInBackground() async {
+  Future<void> refreshUserDataInBackground() async {
     try {
       final result = await _authRepository.getProfile();
       if (result.isSuccess && result.data != null) {
@@ -558,7 +558,7 @@ class AuthController extends GetxController {
 
   Future<void> refreshUser() async {
     if (isLoggedIn.value && _connectivityService.isConnected) {
-      await _refreshUserDataInBackground();
+      await refreshUserDataInBackground();
     }
   }
 
