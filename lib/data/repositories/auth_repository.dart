@@ -1,4 +1,5 @@
-// lib/data/repositories/auth_repository.dart - FIXED
+// lib/data/repositories/auth_repository.dart - FINAL
+import 'package:flutter/foundation.dart';
 import 'package:del_pick/data/datasources/remote/auth_remote_datasource.dart';
 import 'package:del_pick/data/datasources/local/auth_local_datasource.dart';
 import 'package:del_pick/data/models/auth/user_model.dart';
@@ -12,42 +13,71 @@ class AuthRepository {
 
   AuthRepository(this._remoteDataSource, this._localDataSource);
 
+  // ✅ Login dengan error handling yang proper
   Future<Result<LoginResponseModel>> login({
     required String email,
     required String password,
   }) async {
     try {
+      if (kDebugMode) {
+        debugPrint('🔄 AuthRepository.login: $email');
+      }
+
+      // Call remote data source
       final response = await _remoteDataSource.login(
         email: email,
         password: password,
       );
 
-      // final loginResponse = LoginResponseModel.fromJson(response);
+      if (kDebugMode) {
+        debugPrint('✅ Remote login response received');
+        debugPrint('📝 Response keys: ${response.keys.toList()}');
+      }
+
+      // Create LoginResponseModel
       final loginResponse = LoginResponseModel.fromBackendResponse(response);
+
+      if (kDebugMode) {
+        debugPrint('✅ LoginResponseModel created successfully');
+        debugPrint('📝 User: ${loginResponse.user.name}');
+        debugPrint('📝 Role: ${loginResponse.user.role}');
+      }
+
       // Save to local storage
       await _localDataSource.saveAuthToken(loginResponse.token);
       await _localDataSource.saveUser(loginResponse.user);
 
-      // ✅ Save role-specific data jika ada
+      // Save role-specific data if available
       if (loginResponse.hasDriver && loginResponse.driver != null) {
-        // Simpan driver data ke local storage jika diperlukan
-        await _localDataSource
-            .saveDriverData(loginResponse.driver! as Map<String, dynamic>);
+        await _localDataSource.saveDriverData(loginResponse.driver!.toJson());
+        if (kDebugMode) {
+          debugPrint('✅ Driver data saved');
+        }
       }
 
       if (loginResponse.hasStore && loginResponse.store != null) {
-        // Simpan store data ke local storage jika diperlukan
-        await _localDataSource
-            .saveStoreData(loginResponse.store! as Map<String, dynamic>);
+        await _localDataSource.saveStoreData(loginResponse.store!.toJson());
+        if (kDebugMode) {
+          debugPrint('✅ Store data saved');
+        }
       }
+
       return Result.success(loginResponse);
     } on AppException catch (e) {
+      if (kDebugMode) {
+        debugPrint('❌ AppException in login: ${e.toString()}');
+      }
       return Result.failure(e.message);
-    } catch (e) {
-      return Result.failure(e.toString());
+    } catch (e, stackTrace) {
+      if (kDebugMode) {
+        debugPrint('❌ Unexpected error in login: ${e.toString()}');
+        debugPrint('📝 StackTrace: $stackTrace');
+      }
+      return Result.failure('Login failed: ${e.toString()}');
     }
   }
 
+  // ✅ Register
   Future<Result<UserModel>> register({
     required String name,
     required String email,
@@ -56,6 +86,10 @@ class AuthRepository {
     required String role,
   }) async {
     try {
+      if (kDebugMode) {
+        debugPrint('🔄 AuthRepository.register: $email, role: $role');
+      }
+
       final response = await _remoteDataSource.register(
         name: name,
         email: email,
@@ -65,14 +99,20 @@ class AuthRepository {
       );
 
       final user = UserModel.fromJson(response);
+
+      if (kDebugMode) {
+        debugPrint('✅ Registration successful: ${user.name}');
+      }
+
       return Result.success(user);
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('Registration failed: ${e.toString()}');
     }
   }
 
+  // ✅ Get profile
   Future<Result<UserModel>> getProfile() async {
     try {
       final response = await _remoteDataSource.getProfile();
@@ -85,10 +125,11 @@ class AuthRepository {
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('Get profile failed: ${e.toString()}');
     }
   }
 
+  // ✅ Update profile
   Future<Result<UserModel>> updateProfile({
     String? name,
     String? email,
@@ -117,10 +158,11 @@ class AuthRepository {
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('Update profile failed: ${e.toString()}');
     }
   }
 
+  // ✅ Update FCM token
   Future<Result<void>> updateFcmToken(String fcmToken) async {
     try {
       await _remoteDataSource.updateFcmToken(fcmToken);
@@ -129,10 +171,11 @@ class AuthRepository {
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('Update FCM token failed: ${e.toString()}');
     }
   }
 
+  // ✅ Forgot password
   Future<Result<void>> forgotPassword(String email) async {
     try {
       await _remoteDataSource.forgotPassword(email);
@@ -140,10 +183,11 @@ class AuthRepository {
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('Forgot password failed: ${e.toString()}');
     }
   }
 
+  // ✅ Reset password
   Future<Result<void>> resetPassword({
     required String token,
     required String password,
@@ -154,10 +198,11 @@ class AuthRepository {
     } on AppException catch (e) {
       return Result.failure(e.message);
     } catch (e) {
-      return Result.failure(e.toString());
+      return Result.failure('Reset password failed: ${e.toString()}');
     }
   }
 
+  // ✅ Logout
   Future<Result<void>> logout() async {
     try {
       await _remoteDataSource.logout();
@@ -168,10 +213,11 @@ class AuthRepository {
       return Result.failure(e.message);
     } catch (e) {
       await _localDataSource.clearAuthData(); // Clear local data anyway
-      return Result.failure(e.toString());
+      return Result.failure('Logout failed: ${e.toString()}');
     }
   }
 
+  // ✅ Helper methods
   Future<bool> isLoggedIn() async {
     return await _localDataSource.hasValidToken();
   }
@@ -182,5 +228,9 @@ class AuthRepository {
 
   Future<String?> getAuthToken() async {
     return await _localDataSource.getAuthToken();
+  }
+
+  Future<void> clearAuthData() async {
+    await _localDataSource.clearAuthData();
   }
 }
