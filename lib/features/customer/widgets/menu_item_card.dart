@@ -1,15 +1,12 @@
 // lib/features/customer/widgets/menu_item_card.dart
+import 'package:del_pick/features/shared/widgets/netwrok_image_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/models/menu/menu_item_model.dart';
-import 'package:del_pick/core/widgets/network_image_widget.dart';
-import 'package:del_pick/core/widgets/price_widget.dart';
 import 'package:del_pick/core/widgets/custom_button.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
-
-import '../../shared/widgets/netwrok_image_widget.dart';
 
 class MenuItemCard extends StatelessWidget {
   final MenuItemModel menuItem;
@@ -148,7 +145,7 @@ class MenuItemCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
-        menuItem.category,
+        menuItem.category!,
         style: AppTextStyles.caption.copyWith(
           color: AppColors.primary,
           fontWeight: FontWeight.w500,
@@ -210,11 +207,10 @@ class MenuItemCard extends StatelessWidget {
       );
     }
 
-    return CustomButton(
+    return CustomButton.primary(
       text: 'Tambah',
       onPressed: () => _showAddToCartDialog(),
-      style: CustomButtonStyle.primary,
-      size: CustomButtonSize.small,
+      size: ButtonSize.small,
       icon: Icons.add_shopping_cart,
     );
   }
@@ -410,15 +406,14 @@ class _AddToCartDialogState extends State<AddToCartDialog> {
           Row(
             children: [
               Expanded(
-                child: CustomButton(
+                child: CustomButton.secondary(
                   text: 'Batal',
                   onPressed: () => Get.back(),
-                  style: CustomButtonStyle.secondary,
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: CustomButton(
+                child: CustomButton.primary(
                   text: 'Tambah ke Keranjang',
                   onPressed: () {
                     widget.onConfirm(
@@ -429,7 +424,6 @@ class _AddToCartDialogState extends State<AddToCartDialog> {
                     );
                     Get.back();
                   },
-                  style: CustomButtonStyle.primary,
                 ),
               ),
             ],

@@ -1,14 +1,17 @@
+// lib/features/customer/views/menu_screen.dart
 import 'package:flutter/material.dart' hide MenuController;
 import 'package:get/get.dart';
 import 'package:del_pick/features/customer/controllers/menu_controller.dart';
 import 'package:del_pick/features/customer/widgets/menu_item_card.dart';
 import 'package:del_pick/core/widgets/loading_widget.dart';
-import 'package:del_pick/features/customer/widgets/custom_error_widget.dart';
+import 'package:del_pick/core/widgets/error_widget.dart' as core_widgets;
 import 'package:del_pick/core/widgets/empty_state_widget.dart';
 import 'package:del_pick/core/widgets/custom_text_field.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
 import 'package:del_pick/app/themes/app_dimensions.dart';
+
+import '../widgets/custom_error_widget.dart';
 
 class MenuScreen extends GetView<MenuController> {
   const MenuScreen({super.key});
@@ -24,7 +27,7 @@ class MenuScreen extends GetView<MenuController> {
 
         if (controller.hasError) {
           return CustomErrorWidget(
-            error: controller.errorMessage,
+            message: controller.errorMessage,
             onRetry: () => controller.refreshMenuItems(),
           );
         }
@@ -111,7 +114,7 @@ class MenuScreen extends GetView<MenuController> {
 
       return Container(
         width: double.infinity,
-        padding: const EdgeInsets.all(AppDimensions.padding),
+        padding: const EdgeInsets.all(AppDimensions.paddingLG),
         decoration: BoxDecoration(
           color: AppColors.primary.withOpacity(0.1),
           border: Border(
@@ -169,11 +172,11 @@ class MenuScreen extends GetView<MenuController> {
     });
   }
 
-  Widget _buildStoreRating(store) {
+  Widget _buildStoreRating(dynamic store) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
+        const Icon(
           Icons.star,
           color: Colors.amber,
           size: 16,
@@ -189,7 +192,7 @@ class MenuScreen extends GetView<MenuController> {
     );
   }
 
-  Widget _buildStoreOpenHours(store) {
+  Widget _buildStoreOpenHours(dynamic store) {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -200,7 +203,7 @@ class MenuScreen extends GetView<MenuController> {
         ),
         const SizedBox(width: 4),
         Text(
-          '${store.openTime} - ${store.closeTime}',
+          '${store.openTime ?? ''} - ${store.closeTime ?? ''}',
           style: AppTextStyles.caption.copyWith(
             color: AppColors.textSecondary,
           ),
@@ -209,7 +212,7 @@ class MenuScreen extends GetView<MenuController> {
     );
   }
 
-  Widget _buildStoreDistance(store) {
+  Widget _buildStoreDistance(dynamic store) {
     if (store.distance == null) return const SizedBox.shrink();
 
     return Row(
@@ -233,17 +236,20 @@ class MenuScreen extends GetView<MenuController> {
 
   Widget _buildSearchBar() {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(AppDimensions.paddingMD),
       child: CustomTextField(
         hintText: 'Cari menu...',
         prefixIcon: Icons.search,
         onChanged: controller.searchMenuItems,
-        suffixIcon: Obx(() => controller.searchQuery.isNotEmpty
-            ? IconButton(
-                icon: const Icon(Icons.clear),
-                onPressed: controller.clearSearch,
-              )
-            : null),
+        suffixIcon: Obx(() {
+          if (controller.searchQuery.isNotEmpty) {
+            return IconButton(
+              icon: const Icon(Icons.clear),
+              onPressed: controller.clearSearch,
+            );
+          }
+          return null;
+        }),
       ),
     );
   }
@@ -256,7 +262,7 @@ class MenuScreen extends GetView<MenuController> {
       return Container(
         height: 50,
         padding: const EdgeInsets.symmetric(
-          horizontal: AppDimensions.padding,
+          horizontal: AppDimensions.paddingLG,
         ),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
@@ -266,7 +272,7 @@ class MenuScreen extends GetView<MenuController> {
             final isSelected = controller.selectedCategory == category;
 
             return Padding(
-              padding: const EdgeInsets.only(right: 8),
+              padding: const EdgeInsets.only(right: AppDimensions.spacingSM),
               child: FilterChip(
                 label: Text(category),
                 selected: isSelected,
@@ -296,12 +302,12 @@ class MenuScreen extends GetView<MenuController> {
         final menuItems = controller.menuItems;
 
         return GridView.builder(
-          padding: const EdgeInsets.all(AppDimensions.padding),
+          padding: const EdgeInsets.all(AppDimensions.paddingLG),
           gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: 2,
             childAspectRatio: 0.75,
-            crossAxisSpacing: AppDimensions.spacing,
-            mainAxisSpacing: AppDimensions.spacing,
+            crossAxisSpacing: AppDimensions.spacingMD,
+            mainAxisSpacing: AppDimensions.spacingMD,
           ),
           itemCount: menuItems.length,
           itemBuilder: (context, index) {

@@ -1,3 +1,4 @@
+// lib/core/widgets/custom_button.dart
 import 'package:flutter/material.dart';
 import 'package:del_pick/app/themes/app_colors.dart';
 import 'package:del_pick/app/themes/app_text_styles.dart';
@@ -65,17 +66,17 @@ class CustomButton extends StatelessWidget {
     this.width,
     this.height,
     this.isExpanded = false,
-  }) : type = ButtonType.primary,
-       child = null,
-       backgroundColor = null,
-       foregroundColor = null,
-       borderColor = null,
-       borderRadius = null,
-       padding = null,
-       mainAxisAlignment = MainAxisAlignment.center,
-       crossAxisAlignment = CrossAxisAlignment.center,
-       elevation = null,
-       textStyle = null;
+    this.backgroundColor,
+    this.foregroundColor,
+    this.textStyle,
+  })  : type = ButtonType.primary,
+        child = null,
+        borderColor = null,
+        borderRadius = null,
+        padding = null,
+        mainAxisAlignment = MainAxisAlignment.center,
+        crossAxisAlignment = CrossAxisAlignment.center,
+        elevation = null;
 
   const CustomButton.secondary({
     super.key,
@@ -88,17 +89,17 @@ class CustomButton extends StatelessWidget {
     this.width,
     this.height,
     this.isExpanded = false,
-  }) : type = ButtonType.secondary,
-       child = null,
-       backgroundColor = null,
-       foregroundColor = null,
-       borderColor = null,
-       borderRadius = null,
-       padding = null,
-       mainAxisAlignment = MainAxisAlignment.center,
-       crossAxisAlignment = CrossAxisAlignment.center,
-       elevation = null,
-       textStyle = null;
+    this.backgroundColor,
+    this.foregroundColor,
+    this.textStyle,
+  })  : type = ButtonType.secondary,
+        child = null,
+        borderColor = null,
+        borderRadius = null,
+        padding = null,
+        mainAxisAlignment = MainAxisAlignment.center,
+        crossAxisAlignment = CrossAxisAlignment.center,
+        elevation = null;
 
   const CustomButton.outlined({
     super.key,
@@ -111,17 +112,17 @@ class CustomButton extends StatelessWidget {
     this.width,
     this.height,
     this.isExpanded = false,
-  }) : type = ButtonType.outlined,
-       child = null,
-       backgroundColor = null,
-       foregroundColor = null,
-       borderColor = null,
-       borderRadius = null,
-       padding = null,
-       mainAxisAlignment = MainAxisAlignment.center,
-       crossAxisAlignment = CrossAxisAlignment.center,
-       elevation = null,
-       textStyle = null;
+    this.borderColor,
+    this.foregroundColor,
+    this.textStyle,
+  })  : type = ButtonType.outlined,
+        child = null,
+        backgroundColor = null,
+        borderRadius = null,
+        padding = null,
+        mainAxisAlignment = MainAxisAlignment.center,
+        crossAxisAlignment = CrossAxisAlignment.center,
+        elevation = null;
 
   const CustomButton.text({
     super.key,
@@ -134,17 +135,17 @@ class CustomButton extends StatelessWidget {
     this.width,
     this.height,
     this.isExpanded = false,
-  }) : type = ButtonType.text,
-       child = null,
-       backgroundColor = null,
-       foregroundColor = null,
-       borderColor = null,
-       borderRadius = null,
-       padding = null,
-       mainAxisAlignment = MainAxisAlignment.center,
-       crossAxisAlignment = CrossAxisAlignment.center,
-       elevation = null,
-       textStyle = null;
+    this.foregroundColor,
+    this.textStyle,
+  })  : type = ButtonType.text,
+        child = null,
+        backgroundColor = null,
+        borderColor = null,
+        borderRadius = null,
+        padding = null,
+        mainAxisAlignment = MainAxisAlignment.center,
+        crossAxisAlignment = CrossAxisAlignment.center,
+        elevation = null;
 
   const CustomButton.icon({
     super.key,
@@ -158,16 +159,16 @@ class CustomButton extends StatelessWidget {
     this.width,
     this.height,
     this.elevation,
-  }) : type = ButtonType.icon,
-       text = null,
-       child = null,
-       borderColor = null,
-       borderRadius = null,
-       padding = null,
-       isExpanded = false,
-       mainAxisAlignment = MainAxisAlignment.center,
-       crossAxisAlignment = CrossAxisAlignment.center,
-       textStyle = null;
+  })  : type = ButtonType.icon,
+        text = null,
+        child = null,
+        borderColor = null,
+        borderRadius = null,
+        padding = null,
+        isExpanded = false,
+        mainAxisAlignment = MainAxisAlignment.center,
+        crossAxisAlignment = CrossAxisAlignment.center,
+        textStyle = null;
 
   @override
   Widget build(BuildContext context) {
@@ -231,19 +232,18 @@ class CustomButton extends StatelessWidget {
       height: height ?? _getIconButtonSize(),
       child: IconButton(
         onPressed: _getOnPressed(),
-        icon:
-            isLoading
-                ? SizedBox(
-                  width: _getIconSize(),
-                  height: _getIconSize(),
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    valueColor: AlwaysStoppedAnimation<Color>(
-                      foregroundColor ?? AppColors.primary,
-                    ),
+        icon: isLoading
+            ? SizedBox(
+                width: _getIconSize(),
+                height: _getIconSize(),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    foregroundColor ?? AppColors.primary,
                   ),
-                )
-                : Icon(icon, size: _getIconSize(), color: foregroundColor),
+                ),
+              )
+            : Icon(icon, size: _getIconSize(), color: foregroundColor),
         style: IconButton.styleFrom(
           backgroundColor: backgroundColor,
           foregroundColor: foregroundColor,
