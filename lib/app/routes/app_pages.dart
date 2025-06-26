@@ -4,7 +4,7 @@ import 'package:del_pick/features/customer/screens/order_history_screen.dart';
 import 'package:del_pick/features/driver/screens/driver_home_screen.dart';
 import 'package:del_pick/features/store/screens/order_detail_screen.dart';
 import 'package:del_pick/features/store/screens/store_dashboard_screen.dart';
-import 'package:del_pick/features/store/screens/store_orders_screen.dart';
+import 'package:del_pick/features/store/screens/store_orders_list_screen.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/app/routes/app_routes.dart';
 import 'package:del_pick/core/middleware/auth_middleware.dart';
@@ -61,6 +61,9 @@ import 'package:del_pick/app/bindings/auth_binding.dart';
 import 'package:del_pick/app/bindings/customer_binding.dart';
 import 'package:del_pick/app/bindings/driver_binding.dart';
 import 'package:del_pick/app/bindings/store_binding.dart';
+
+import '../../data/repositories/order_repository.dart';
+import '../../features/store/controllers/store_dashboard_controller.dart';
 
 class AppPages {
   AppPages._();
@@ -288,10 +291,16 @@ class AppPages {
     ),
 
     // ✅ === STORE ROUTES ===
+
     GetPage(
       name: Routes.STORE_DASHBOARD,
       page: () => const StoreDashboardScreen(),
       binding: StoreBinding(),
+      // binding: BindingsBuilder(() {
+      //   Get.lazyPut(() => StoreDashboardController(
+      //       orderRepository: Get.find<OrderRepository>()
+      //   ));
+      // }),
       middlewares: [
         AuthMiddleware(),
       ],

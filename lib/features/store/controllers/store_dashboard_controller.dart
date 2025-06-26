@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:del_pick/data/repositories/order_repository.dart';
 import 'package:del_pick/data/models/order/order_model.dart';
-import 'package:del_pick/data/models/base/base_model.dart';
+import 'package:del_pick/data/models/base/paginated_response.dart';
 import 'package:del_pick/core/errors/error_handler.dart';
 import 'package:del_pick/core/constants/order_status_constants.dart';
+import 'package:del_pick/core/utils/result.dart';
 
 class StoreDashboardController extends GetxController {
   final OrderRepository _orderRepository;
@@ -16,22 +17,29 @@ class StoreDashboardController extends GetxController {
   final RxList<OrderModel> _orders = <OrderModel>[].obs;
   final RxList<OrderModel> _pendingOrders = <OrderModel>[].obs;
   final RxList<OrderModel> _preparingOrders = <OrderModel>[].obs;
+  final RxList<OrderModel> _readyForPickupOrders = <OrderModel>[].obs;
   final RxBool _isLoading = false.obs;
   final RxBool _isLoadingMore = false.obs;
   final RxBool _hasError = false.obs;
   final RxString _errorMessage = ''.obs;
   final RxString _selectedFilter = 'all'.obs;
   final RxBool _canLoadMore = true.obs;
+  final RxBool _isProcessingOrder = false.obs;
 
   // Pagination
   int _currentPage = 1;
   final int _itemsPerPage = 10;
 
-  // Filter options for store
+  // Filter options based on backend order statuses
   static const List<Map<String, dynamic>> filterOptions = [
     {'key': 'all', 'label': 'All Orders', 'icon': Icons.list_alt},
     {'key': 'pending', 'label': 'Pending', 'icon': Icons.schedule},
     {'key': 'preparing', 'label': 'Preparing', 'icon': Icons.restaurant},
+    {
+      'key': 'ready_for_pickup',
+      'label': 'Ready for Pickup',
+      'icon': Icons.inventory
+    },
     {
       'key': 'on_delivery',
       'label': 'On Delivery',
@@ -39,12 +47,14 @@ class StoreDashboardController extends GetxController {
     },
     {'key': 'delivered', 'label': 'Completed', 'icon': Icons.check_circle},
     {'key': 'cancelled', 'label': 'Cancelled', 'icon': Icons.cancel},
+    {'key': 'rejected', 'label': 'Rejected', 'icon': Icons.block},
   ];
 
   // Getters
   List<OrderModel> get orders => _orders;
   List<OrderModel> get pendingOrders => _pendingOrders;
   List<OrderModel> get preparingOrders => _preparingOrders;
+  List<OrderModel> get readyForPickupOrders => _readyForPickupOrders;
   bool get isLoading => _isLoading.value;
   bool get isLoadingMore => _isLoadingMore.value;
   bool get hasError => _hasError.value;
@@ -52,17 +62,28 @@ class StoreDashboardController extends GetxController {
   String get selectedFilter => _selectedFilter.value;
   bool get canLoadMore => _canLoadMore.value;
   bool get hasOrders => _orders.isNotEmpty;
+  bool get isProcessingOrder => _isProcessingOrder.value;
+
+  // Dashboard counters
   int get pendingOrderCount => _pendingOrders.length;
   int get preparingOrderCount => _preparingOrders.length;
+  int get readyForPickupCount => _readyForPickupOrders.length;
 
   @override
   void onInit() {
     super.onInit();
-    loadOrders();
-    loadOrdersByStatus();
+    loadInitialData();
   }
 
-  // Load store orders
+  // Load initial data
+  Future<void> loadInitialData() async {
+    await Future.wait([
+      loadOrders(refresh: true),
+      loadDashboardCounters(),
+    ]);
+  }
+
+  // ✅ FIXED: Load store orders with proper pagination handling
   Future<void> loadOrders({bool refresh = false}) async {
     if (refresh) {
       _currentPage = 1;
@@ -75,17 +96,25 @@ class StoreDashboardController extends GetxController {
     _errorMessage.value = '';
 
     try {
-      final result = await _orderRepository.getOrdersByStore(
-        params: {
-          'page': _currentPage,
-          'limit': _itemsPerPage,
-          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
-        },
+      final Map<String, dynamic> params = {
+        'page': _currentPage,
+        'limit': _itemsPerPage,
+      };
+
+      // Add status filter if not 'all'
+      if (_selectedFilter.value != 'all') {
+        params['status'] = _selectedFilter.value;
+      }
+
+      // ✅ FIXED: Use proper backend response structure
+      final Result<PaginatedResponse<OrderModel>> result =
+          await _orderRepository.getStoreOrders(
+        params: params,
       );
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items from PaginatedResponse
-        final newOrders = result.data!.items;
+        final paginatedResponse = result.data!;
+        final newOrders = paginatedResponse.items;
 
         if (refresh) {
           _orders.assignAll(newOrders);
@@ -93,14 +122,15 @@ class StoreDashboardController extends GetxController {
           _orders.addAll(newOrders);
         }
 
-        _canLoadMore.value = newOrders.length >= _itemsPerPage;
+        // ✅ FIXED: Check pagination properly using PaginatedResponse methods
+        _canLoadMore.value = paginatedResponse.hasNextPage;
 
         if (newOrders.isNotEmpty) {
           _currentPage++;
         }
       } else {
         _hasError.value = true;
-        _errorMessage.value = result.errorMessage;
+        _errorMessage.value = result.message ?? 'Failed to load orders';
       }
     } catch (e) {
       _hasError.value = true;
@@ -111,54 +141,67 @@ class StoreDashboardController extends GetxController {
     }
   }
 
-  // Load orders by specific status for dashboard widgets
-  Future<void> loadOrdersByStatus() async {
+  // ✅ FIXED: Load specific order counts for dashboard widgets
+  Future<void> loadDashboardCounters() async {
     try {
       // Load pending orders
-      final pendingResult = await _orderRepository.getOrdersByStore(
-        params: {'status': 'pending', 'limit': 20},
+      final pendingResult = await _orderRepository.getStoreOrders(
+        params: {'status': 'pending', 'limit': 50},
       );
 
       if (pendingResult.isSuccess && pendingResult.data != null) {
-        // ✅ FIXED: Use .items from PaginatedResponse
         _pendingOrders.value = pendingResult.data!.items;
       }
 
       // Load preparing orders
-      final preparingResult = await _orderRepository.getOrdersByStore(
-        params: {'status': 'preparing', 'limit': 20},
+      final preparingResult = await _orderRepository.getStoreOrders(
+        params: {'status': 'preparing', 'limit': 50},
       );
 
       if (preparingResult.isSuccess && preparingResult.data != null) {
-        // ✅ FIXED: Use .items from PaginatedResponse
         _preparingOrders.value = preparingResult.data!.items;
       }
+
+      // Load ready for pickup orders
+      final readyResult = await _orderRepository.getStoreOrders(
+        params: {'status': 'ready_for_pickup', 'limit': 50},
+      );
+
+      if (readyResult.isSuccess && readyResult.data != null) {
+        _readyForPickupOrders.value = readyResult.data!.items;
+      }
     } catch (e) {
-      print('Error loading orders by status: $e');
+      print('Error loading dashboard counters: $e');
     }
   }
 
-  // Load more orders (pagination)
+  // ✅ FIXED: Load more orders for pagination
   Future<void> loadMoreOrders() async {
     if (_isLoadingMore.value || !_canLoadMore.value) return;
 
     _isLoadingMore.value = true;
 
     try {
-      final result = await _orderRepository.getOrdersByStore(
-        params: {
-          'page': _currentPage,
-          'limit': _itemsPerPage,
-          if (_selectedFilter.value != 'all') 'status': _selectedFilter.value,
-        },
+      final Map<String, dynamic> params = {
+        'page': _currentPage,
+        'limit': _itemsPerPage,
+      };
+
+      if (_selectedFilter.value != 'all') {
+        params['status'] = _selectedFilter.value;
+      }
+
+      final Result<PaginatedResponse<OrderModel>> result =
+          await _orderRepository.getStoreOrders(
+        params: params,
       );
 
       if (result.isSuccess && result.data != null) {
-        // ✅ FIXED: Use .items from PaginatedResponse
-        final newOrders = result.data!.items;
+        final paginatedResponse = result.data!;
+        final newOrders = paginatedResponse.items;
         _orders.addAll(newOrders);
 
-        _canLoadMore.value = newOrders.length >= _itemsPerPage;
+        _canLoadMore.value = paginatedResponse.hasNextPage;
 
         if (newOrders.isNotEmpty) {
           _currentPage++;
@@ -177,7 +220,7 @@ class StoreDashboardController extends GetxController {
     }
   }
 
-  // Change filter
+  // Change filter and reload data
   void changeFilter(String filter) {
     if (_selectedFilter.value != filter) {
       _selectedFilter.value = filter;
@@ -189,33 +232,42 @@ class StoreDashboardController extends GetxController {
   Future<void> refreshData() async {
     await Future.wait([
       loadOrders(refresh: true),
-      loadOrdersByStatus(),
+      loadDashboardCounters(),
     ]);
   }
 
-  // Process order (approve/reject)
+  // ✅ Process order - approve or reject (sesuai backend endpoint /orders/:id/process)
   Future<void> processOrder(int orderId, String action) async {
+    if (_isProcessingOrder.value) return;
+
+    _isProcessingOrder.value = true;
+
     try {
-      final result = await _orderRepository.processOrder(orderId, {
-        'action': action, // 'approve' or 'reject'
-      });
+      final result = await _orderRepository.processOrder(orderId, action);
 
       if (result.isSuccess) {
         final actionText = action == 'approve' ? 'approved' : 'rejected';
+        final statusText = action == 'approve' ? 'preparing' : 'rejected';
+
         Get.snackbar(
           'Order ${actionText.capitalize!}',
-          'Order has been $actionText successfully',
+          'Order has been $actionText and status changed to $statusText',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: action == 'approve' ? Colors.green : Colors.orange,
           colorText: Colors.white,
+          duration: const Duration(seconds: 3),
         );
 
-        // Refresh data
-        await refreshData();
+        // Update local order status without full refresh
+        _updateLocalOrderStatus(
+            orderId, action == 'approve' ? 'preparing' : 'rejected');
+
+        // Refresh dashboard counters
+        await loadDashboardCounters();
       } else {
         Get.snackbar(
           'Error',
-          result.errorMessage,
+          result.message ?? 'Failed to process order',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
@@ -224,20 +276,80 @@ class StoreDashboardController extends GetxController {
     } catch (e) {
       Get.snackbar(
         'Error',
-        'Failed to process order',
+        'Failed to process order: ${e.toString()}',
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red,
         colorText: Colors.white,
       );
+    } finally {
+      _isProcessingOrder.value = false;
     }
   }
 
-  // Approve order
+  // ✅ Update order status to ready for pickup (sesuai backend endpoint /orders/:id/status)
+  Future<void> updateOrderToReadyForPickup(int orderId) async {
+    if (_isProcessingOrder.value) return;
+
+    _isProcessingOrder.value = true;
+
+    try {
+      final result = await _orderRepository.updateOrderStatus(orderId, {
+        'order_status': 'ready_for_pickup',
+      });
+
+      if (result.isSuccess) {
+        Get.snackbar(
+          'Order Updated',
+          'Order is now ready for pickup by driver',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.blue,
+          colorText: Colors.white,
+          duration: const Duration(seconds: 3),
+        );
+
+        // Update local order status
+        _updateLocalOrderStatus(orderId, 'ready_for_pickup');
+
+        // Refresh dashboard counters
+        await loadDashboardCounters();
+      } else {
+        Get.snackbar(
+          'Error',
+          result.message ?? 'Failed to update order status',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to update order status: ${e.toString()}',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    } finally {
+      _isProcessingOrder.value = false;
+    }
+  }
+
+  // Approve order with confirmation dialog
   Future<void> approveOrder(OrderModel order) async {
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Approve Order'),
-        content: Text('Are you sure you want to approve order ${order.code}?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Order: ${order.id}'),
+            Text('Total: Rp ${order.grandTotal.toStringAsFixed(0)}'),
+            const SizedBox(height: 8),
+            const Text(
+                'This will approve the order and change status to "preparing". Are you sure?'),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -245,6 +357,7 @@ class StoreDashboardController extends GetxController {
           ),
           ElevatedButton(
             onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             child: const Text('Approve'),
           ),
         ],
@@ -256,12 +369,21 @@ class StoreDashboardController extends GetxController {
     }
   }
 
-  // Reject order
+  // Reject order with confirmation dialog
   Future<void> rejectOrder(OrderModel order) async {
     final confirmed = await Get.dialog<bool>(
       AlertDialog(
         title: const Text('Reject Order'),
-        content: Text('Are you sure you want to reject order ${order.code}?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Order: ${order.id}'),
+            Text('Total: Rp ${order.grandTotal.toStringAsFixed(0)}'),
+            const SizedBox(height: 8),
+            const Text('This will reject the order permanently. Are you sure?'),
+          ],
+        ),
         actions: [
           TextButton(
             onPressed: () => Get.back(result: false),
@@ -269,8 +391,8 @@ class StoreDashboardController extends GetxController {
           ),
           TextButton(
             onPressed: () => Get.back(result: true),
-            child: const Text('Reject'),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Reject'),
           ),
         ],
       ),
@@ -279,6 +401,64 @@ class StoreDashboardController extends GetxController {
     if (confirmed == true) {
       await processOrder(order.id, 'reject');
     }
+  }
+
+  // Mark order as ready for pickup with confirmation
+  Future<void> markOrderReadyForPickup(OrderModel order) async {
+    if (order.orderStatus != 'preparing') {
+      Get.snackbar(
+        'Error',
+        'Only preparing orders can be marked as ready for pickup',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.orange,
+        colorText: Colors.white,
+      );
+      return;
+    }
+
+    final confirmed = await Get.dialog<bool>(
+      AlertDialog(
+        title: const Text('Ready for Pickup'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Order: ${order.id}'),
+            const SizedBox(height: 8),
+            const Text('Mark this order as ready for pickup by driver?'),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () => Get.back(result: true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+            child: const Text('Mark Ready'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await updateOrderToReadyForPickup(order.id);
+    }
+  }
+
+  // Update local order status for immediate UI update
+  void _updateLocalOrderStatus(int orderId, String newStatus) {
+    final orderIndex = _orders.indexWhere((order) => order.id == orderId);
+    if (orderIndex != -1) {
+      final updatedOrder = _orders[orderIndex].copyWith(orderStatus: newStatus);
+      _orders[orderIndex] = updatedOrder;
+    }
+
+    // Update filtered lists
+    _pendingOrders.removeWhere((order) => order.id == orderId);
+    _preparingOrders.removeWhere((order) => order.id == orderId);
+    _readyForPickupOrders.removeWhere((order) => order.id == orderId);
   }
 
   // Navigation methods
@@ -290,34 +470,104 @@ class StoreDashboardController extends GetxController {
     Get.toNamed('/store/menu_management');
   }
 
-  void navigateToStoreSettings() {
-    Get.toNamed('/store/settings');
+  void navigateToStoreProfile() {
+    Get.toNamed('/store/profile');
   }
 
-  // Get dashboard statistics
+  void navigateToStoreAnalytics() {
+    Get.toNamed('/store/analytics');
+  }
+
+  // ✅ FIXED: Get dashboard statistics with proper null checking
   Map<String, dynamic> getDashboardStatistics() {
     final totalOrders = _orders.length;
     final pendingCount = _pendingOrders.length;
     final preparingCount = _preparingOrders.length;
-    final completedOrders = _orders
-        .where((order) => order.orderStatus == OrderStatusConstants.delivered)
-        .length;
+    final readyForPickupCount = _readyForPickupOrders.length;
+
+    final completedOrders =
+        _orders.where((order) => order.orderStatus == 'delivered').length;
+
     final cancelledOrders = _orders
-        .where((order) => order.orderStatus == OrderStatusConstants.cancelled)
+        .where((order) => ['cancelled', 'rejected'].contains(order.orderStatus))
         .length;
 
-    // ✅ FIXED: Use grandTotal instead of total
     final totalRevenue = _orders
-        .where((order) => order.orderStatus == OrderStatusConstants.delivered)
+        .where((order) => order.orderStatus == 'delivered')
         .fold(0.0, (sum, order) => sum + order.grandTotal);
+
+    final now = DateTime.now();
+    final todayOrders = _orders.where((order) {
+      final orderDate = order.createdAt;
+      return orderDate.year == now.year &&
+          orderDate.month == now.month &&
+          orderDate.day == now.day;
+    }).length;
 
     return {
       'totalOrders': totalOrders,
       'pendingOrders': pendingCount,
       'preparingOrders': preparingCount,
+      'readyForPickupOrders': readyForPickupCount,
       'completedOrders': completedOrders,
       'cancelledOrders': cancelledOrders,
       'totalRevenue': totalRevenue,
+      'todayOrders': todayOrders,
     };
+  }
+
+  // Check if order can be processed based on current status
+  bool canApproveOrder(OrderModel order) {
+    return order.orderStatus == 'pending';
+  }
+
+  bool canRejectOrder(OrderModel order) {
+    return order.orderStatus == 'pending';
+  }
+
+  bool canMarkReadyForPickup(OrderModel order) {
+    return order.orderStatus == 'preparing';
+  }
+
+  // Get order actions based on status
+  List<Map<String, dynamic>> getOrderActions(OrderModel order) {
+    final actions = <Map<String, dynamic>>[];
+
+    if (canApproveOrder(order)) {
+      actions.add({
+        'label': 'Approve',
+        'icon': Icons.check,
+        'color': Colors.green,
+        'action': () => approveOrder(order),
+      });
+    }
+
+    if (canRejectOrder(order)) {
+      actions.add({
+        'label': 'Reject',
+        'icon': Icons.close,
+        'color': Colors.red,
+        'action': () => rejectOrder(order),
+      });
+    }
+
+    if (canMarkReadyForPickup(order)) {
+      actions.add({
+        'label': 'Ready for Pickup',
+        'icon': Icons.inventory,
+        'color': Colors.blue,
+        'action': () => markOrderReadyForPickup(order),
+      });
+    }
+
+    // Always allow viewing details
+    actions.add({
+      'label': 'View Details',
+      'icon': Icons.visibility,
+      'color': Colors.grey[600],
+      'action': () => navigateToOrderDetail(order.id),
+    });
+
+    return actions;
   }
 }

@@ -1,7 +1,7 @@
 // lib/features/store/screens/store_main_screen.dart
 import 'package:flutter/material.dart';
 import 'package:del_pick/features/store/screens/store_dashboard_screen.dart';
-import 'package:del_pick/features/store/screens/store_orders_screen.dart';
+import 'package:del_pick/features/store/screens/store_orders_list_screen.dart';
 import 'package:del_pick/features/auth/screens/profile_screen.dart'; // Universal ProfileScreen
 
 class StoreMainScreen extends StatefulWidget {
